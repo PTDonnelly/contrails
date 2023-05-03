@@ -18,7 +18,7 @@ def format_plot(ax, ylabel: str, ylim: tuple):
     ax.tick_params(axis='both', size=6, pad=2)
 
 def plot_iwabuchi():
-    optical_dir = 'optical_data/'
+    optical_dir = "C:\\Users\\padra\\Documents\\Research\\projects\\contrails\\scattering_calculations\\optical_data\\"
     filename = 'iwabuchi_optical_properties'
     wavelengths, real, imaginary = get_iwabuchi(optical_dir, filename)
     xmin, xmax = 7.0, 15.0

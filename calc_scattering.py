@@ -37,7 +37,7 @@ def get_particle():
     
     # Particle radius in microns
     # radii = [float(i+1) for i in range(10)]
-    radii = [1, 5, 10]
+    radii = [5]
     
     # Particle shape
     shapes = ["spheroid"]#, "cylinder"]
@@ -51,7 +51,7 @@ def get_particle():
 def load_optical_data() -> list:
     """Read and decompose optical constants from Iwaguchi and Yang (2011)"""
     
-    optical_dir = 'optical_data/'
+    optical_dir = "C:\\Users\\padra\\Documents\\Research\\projects\\contrails\\scattering_calculations\\optical_data\\"
     filename = 'iwabuchi_optical_properties'
     data = np.loadtxt(f"{optical_dir}{filename}.txt", comments='#', delimiter=None, unpack=True)
     return data[0, :], data[1:13, :], data[13:, :]
@@ -74,7 +74,7 @@ def get_refractive_index(ref_wavelengths: np.ndarray):
 
     return complex_new
 
-def get_scattering_parameters(scatterer: object, filename: object, wavelength: float):
+def get_scattering_parameters(scatterer: object, filename: object):
                         
     # Calculate the scattering and absorption cross-sections
     sca_intensity = scatter.sca_intensity(scatterer)  # Scattering intensity (phase function)
@@ -86,9 +86,9 @@ def get_scattering_parameters(scatterer: object, filename: object, wavelength: f
 
     # Write the scattering properties to the file
     if (ssa < 0) or (ssa > 1):
-        filename.write(f"{wavelength:.8e}\t{np.nan:<14}\t{np.nan:<14}\t{np.nan:<14}\t{np.nan:<14}\t{np.nan:<14}\t{np.nan:<14}\n")
+        filename.write(f"{scatterer.wavelength:.8e}\t{np.nan:<14}\t{np.nan:<14}\t{np.nan:<14}\t{np.nan:<14}\t{np.nan:<14}\t{np.nan:<14}\n")
     else:
-        filename.write(f"{wavelength:.8e}\t{sca_intensity:.8e}\t{ldr:.8e}\t{sca_xsect:.8e}\t{ext_xsect:.8e}\t{ssa:.8e}\t{asym:.8e}\n")
+        filename.write(f"{scatterer.wavelength:.8e}\t{sca_intensity:.8e}\t{ldr:.8e}\t{sca_xsect:.8e}\t{ext_xsect:.8e}\t{ssa:.8e}\t{asym:.8e}\n")
 
 def main():
     
@@ -101,14 +101,20 @@ def main():
     # Create the complex refractive index look-up table 
     refractive_indices = get_refractive_index(wavelengths)
 
-    # Create directory to store scattering data
-    scattering_dir = create_dir("C:\\Users\\padra\\Documents\\Research\\projects\\contrails\\scattering_data\\")
+    # Define the temperature regimes of the refractive indices in Iwabuchi and Yang (2011)
+    temperatures = [(160 + i * 10) for i in range(refractive_indices.shape[0])]
 
+    # Create directory to store scattering data
+    scattering_dir = create_dir("C:\\Users\\padra\\Documents\\Research\\projects\\contrails\\scattering_calculations\\scattering_data\\")
+
+    # Instantiate the Tmatrix object
+    scatterer = tmatrix.Scatterer()
+    
     # Iterate over the particle shapes
-    for shape, shape_id in zip(particle["shapes"], particle["shape_ids"]):
-            
+    for shape, shape_id in zip(particle["shapes"], particle["shape_ids"]):      
+        
         # Iterate over temperature regimes
-        for temperature_idx in range(refractive_indices.shape[0]):
+        for temperature_idx, temperature in enumerate(temperatures):
             
             # Iterate over the particle axis_ratios
             for axis_ratio in particle["axis_ratios"]:
@@ -117,8 +123,10 @@ def main():
                 for radius in particle["radii"]:
 
                     # Open a file to save the scattering properties
-                    outfile = f"{scattering_dir}{shape}_T_{160 + temperature_idx*10}_AR_{axis_ratio}_radius_{radius}.txt"
-                    with open(outfile, "w") as f:
+                    outfile = f"{shape}_T_{temperature}_AR_{axis_ratio}_radius_{radius}.txt"
+                    outpath = os.path.join(scattering_dir, outfile)
+                    print(outpath)
+                    with open(outpath, "w") as f:
                         
                         # Write a header for each column
                         f.write(f"{'lambda':<14}\t{'I_scat':<14}\t{'LDR':<14}\t{'x_scat':<14}\t{'x_ext':<14}\t{'ssa':<14}\t{'asym':<14}\n")
@@ -126,13 +134,15 @@ def main():
                         # Iterate over the range of wavelengths
                         for wavelength, m in zip(wavelengths, refractive_indices[temperature_idx, :]):
                             
-                            # Create a Tmatrix object for the spherical particle
-                            scatterer = tmatrix.Scatterer(radius=radius, wavelength=wavelength, m=m, axis_ratio=axis_ratio, shape=shape_id)
+                            # Update the scatterer attributes
+                            scatterer.radius = radius
+                            scatterer.wavelength = wavelength
+                            scatterer.m = m
+                            scatterer.axis_ratio = axis_ratio
+                            scatterer.shape = shape_id
 
                             # Calculate scattering properties and write to file
-                            get_scattering_parameters(scatterer=scatterer, filename=f, wavelength=wavelength)
-
-                    print(f"Scattering properties saved to {outfile}")
+                            get_scattering_parameters(scatterer=scatterer, filename=f)
 
 if __name__ == "__main__":
     main()
