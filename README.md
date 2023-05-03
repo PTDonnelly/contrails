@@ -1,4 +1,4 @@
-# IASI Atmospheric Retrieval
+# Quick IASI Spectral Analysis and Inversion Tool (QUISAIT)
 
 This repository contains a Python implementation of atmospheric retrieval from Infrared Atmospheric Sounding Interferometer (IASI) measurements using the 4A/OP forward model and optimal estimation.
 
@@ -8,7 +8,7 @@ The code is organized into the following classes and functions:
 
 1. `ForwardModel`: Class representing the 4A/OP forward model.
 2. `Retrieval`: Class that handles the atmospheric retrieval process.
-3. `Inputs`: Class for reading the IASI Level 2 product file and calculating retrieval parameters.
+3. `Inputs`: Class for reading the IASI Level 1C calibrated spectra and Level 2 products and calculating retrieval parameters.
 4. `main()`: The main function that initializes the inputs, runs the retrieval, and displays the results.
 
 ## Dependencies
@@ -24,13 +24,13 @@ The code is organized into the following classes and functions:
 1. Clone the repository:
 
    ```
-   git clone https://github.com/yourusername/iasi_atmospheric_retrieval.git
+   git clone https://github.com/yourusername/quisait.git
    ```
 
 2. Navigate to the repository folder:
 
    ```
-   cd iasi_atmospheric_retrieval
+   cd quisait
    ```
 
 3. Install the required dependencies:
