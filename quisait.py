@@ -134,14 +134,15 @@ class Retrieval:
         return oe.retrieve()
 
 class Inputs:
-    def __init__(self, filepath: str):
+    def __init__(self, config: dict):
         """
         Initialize the Inputs class with the given filepath.
         
         Args:
-            filepath (str): Path to the IASI Level 2 product file (netCDF format).
+            config (dict): Configuration dictionary for the forward model.
         """
-        self.filepath = filepath
+        self.level_1_filepath = config["level_1_filepath"]
+        self.level_2_filepath = config["level_2_filepath"]
         self.wavenumbers = None
         self.radiance = None
 
@@ -150,7 +151,7 @@ class Inputs:
         Read the IASI data from the netCDF file and extract relevant variables.
         """
         # Open the NetCDF file
-        with nc.Dataset(self.filepath, mode='r') as f:
+        with nc.Dataset(self.level_2_filepath, mode='r') as f:
             # Extract the desired variables
             self.latitude = f.variables['latitude'][:]
             self.longitude = f.variables['longitude'][:]
@@ -253,13 +254,13 @@ def main():
     in the Python interpreter. 
     """
     # Specify configuration for retrieval run
-    forward_model_config = {}
-    
-    # Path to the IASI Level 2 product file (netCDF format)
-    filepath = "path/to/iasi_level2_product.nc"
+    forward_model_config = {
+                            "level_1_filepath": "path/to/iasi_level1_product.nc",
+                            "level_2_filepath": "path/to/iasi_level2_product.nc"
+    }
 
     # Instantiate the Inputs class to calculate retrieval parameters
-    inputs = Inputs(filepath)
+    inputs = Inputs(forward_model_config)
 
     # Construct retrieval parameters
     x_a = inputs.get_a_priori_state_vector()
