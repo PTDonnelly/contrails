@@ -26,7 +26,9 @@ for year in years:
 
             # Construct command-line executable
             command = build_command(path_in, year, month, day, iasi_channels, filter, file_out)
-            print(command)
 
-            # Execute OBR command
+            # Extract IASI spectra (execute OBR command and produce intermediate binary files)
             subprocess.run(command, shell=True)
+
+            # Filter IASI spectra (read and filter intermediate binary files)
+
