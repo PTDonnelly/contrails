@@ -5,55 +5,41 @@ from typing import List, Tuple, Union, BinaryIO
 import snoop
 from sorcery import dict_of
 
-def count_channels(f: object) -> int:
-    """Determine the number of channels in the binary file.
-    
-    Args:
-        f (object): A file object pointing to the binary file.
-    
-    Returns:
-        number_of_channels (int): The number of channels in the binary file.
-    """
-    
-    # Read 4 uint32 values and discard them
-    np.fromfile(f, dtype='uint32', count=4)
-    # Read 1 uint8 value and discard it
-    np.fromfile(f, dtype='uint8', count=1)
-    # Read 1 bool value and discard it
-    np.fromfile(f, dtype='bool', count=1)
+def verify_header(f: object, header_size: int) -> None:
+    f.seek(0)
+    np.fromfile(f, dtype='uint32', count=1)
+    np.fromfile(f, dtype='uint8', count=header_size)
+    header_size_check = np.fromfile(f, dtype='uint32', count=1)[0]
+    assert header_size == header_size_check, "Header size mismatch"
 
-    # Read the number of channels (1 uint32 value)
-    number_of_channels = np.fromfile(f, dtype='uint32', count=1)[0]
-
-    # Move pointer back to beginning of binary file
-    f.seek(0, 0)
-
-    return number_of_channels
-
-def read_header(f: object) -> int:
-    """Read the header of the binary file and verify its size.
+def read_header(f: object) -> Tuple[int, int, int]:
+    """Read the header of the binary file and extract metadata.
     
     Args:
         f (object): A file object pointing to the binary file.
     
     Returns:
         header_size (int): The size of the header in bytes.
-    
-    Raises:
-        AssertionError: If the header size values do not match.
+        number_of_channels (int): The number of channels in the binary file.
     """
     
     # Read the header size (1 uint32 value)
     header_size = np.fromfile(f, dtype='uint32', count=1)[0]
-    # Skip the header content by reading header_size uint8 values
-    np.fromfile(f, dtype='uint8', count=header_size)
-    # Read the header size again (1 uint32 value)
-    header_size_check = np.fromfile(f, dtype='uint32', count=1)[0]
-    # Verify that header is read properly
-    assert header_size == header_size_check, "Header size mismatch"
-    return header_size
+    
+    # Skip
+    np.fromfile(f, dtype='uint8', count=1)
+    np.fromfile(f, dtype='uint32', count=3)
+    np.fromfile(f, dtype='bool', count=1)
 
-def read_record(f: object) -> Union[int, None]:
+    # Read the number of channels (1 uint32 value)
+    number_of_channels = np.fromfile(f, dtype='uint32', count=1)[0]
+
+    # Reset pointer and verify second header_size
+    verify_header(f, header_size)
+
+    return header_size, number_of_channels
+
+def read_record(f: object, header_size: int) -> Union[int, None]:
     """Read the size of a record in the binary file.
     
     Args:
@@ -62,8 +48,12 @@ def read_record(f: object) -> Union[int, None]:
     Returns:
         record_size (Union[int, None]): The size of the record in bytes if it exists, otherwise None.
     """
-    
-    # Read the record size (1 uint32 value)
+
+    # Reset the pointer
+    f.seek(0)
+    # Skip bytes until the record size
+    np.fromfile(f, dtype='uint8', count=header_size+8)
+    # Read the record size
     record_size = np.fromfile(f, dtype='uint32', count=1)[0]
     if (record_size == 0):
         return None
@@ -86,7 +76,10 @@ def count_measurements(f: BinaryIO, header_size: int, record_size: int) -> int:
     file_size = f.seek(0, 2)
     return (file_size - header_size - 8) // (record_size + 8)
 
-def read_field_data(f:object, fields: list, targets: list, header_size: int, record_size: int, number_of_measurements: int) -> dict:
+def vectorized_datetime(year: int, month: int, day: int, hour: int, minute: int, millisecond: int):
+    return datetime(year, month, day, hour, minute, millisecond // 1000)
+
+def read_record_data(f:object, fields: list, targets: list, header_size: int, record_size: int, number_of_measurements: int) -> dict:
     """
     Read and store field data from a binary file.
 
@@ -105,41 +98,36 @@ def read_field_data(f:object, fields: list, targets: list, header_size: int, rec
     field_data = {}
 
     # Iterate over the fields list and read the field data
-    for i, (field, dtype, _, cumsize) in enumerate(fields):
+    for i, (field, dtype, dtype_size, cumsize) in enumerate(fields):
         if (i < 8) or (field in targets):
-           
-            # Move the file cursor to the correct position
-            f.seek(header_size + 12 + cumsize)
+            
+            print(i, field, dtype, dtype_size, cumsize)
+
+            # Skip file header
+            pointer = header_size + 12 + cumsize
+            f.seek(pointer, 0)
+            # print(f"POINTER: {pointer}")
+            
+            # Skip bytes up to the next measurement
+            byte_offset = record_size + 8 - dtype_size
+            print(f"OFFSET: {record_size} + 8 - {dtype_size} = {byte_offset}")
             
             # Read binary data, skip bytes, reshape into 2D array
-            field_data[field] = np.fromfile(f, dtype=dtype, count=number_of_measurements).reshape(number_of_measurements,-1)
+            field_data[field] = np.fromfile(f, dtype=dtype, count=number_of_measurements, offset=byte_offset)#.reshape(number_of_measurements,-1)
+            print(field_data[field])
+            print('')
+        # if i == 2:
+        #     exit()
 
-    # Create a timestamp for the observation
-    def vectorized_datetime(year, month, day, hour, minute, millisecond):
-        datetime_dict = dict_of(year, month, day, hour, minute, millisecond // 1000)
-        print(datetime_dict)
-        exit()
-        return datetime(year, month, day, hour, minute, millisecond // 1000)
-    
-    if "datetime" in targets:
-    #     field_data["datetime"] = datetime(field_data['yyyy'],
+    # # Create a timestamp for the observation
+    # if "datetime" in targets:       
+    #     v_datetime = np.vectorize(vectorized_datetime)
+    #     field_data["datetime"] = v_datetime(field_data['yyyy'],
     #                                         field_data['mm'],
     #                                         field_data['dd'],
     #                                         field_data['HH'],
     #                                         field_data['MM'],
-    #                                         field_data['ms'] // 1000)
-
-        v_datetime = np.vectorize(vectorized_datetime)
-
-        obs_date_num = v_datetime(field_data['yyyy'],
-                                    field_data['mm'],
-                                    field_data['dd'],
-                                    field_data['HH'],
-                                    field_data['MM'],
-                                    field_data['ms'])
-
-        field_data["datetime"] = obs_date_num
-        
+    #                                         field_data['ms'])
     return field_data
 
 def calculate_day_or_night(field_data: dict):
@@ -186,13 +174,13 @@ def calculate_day_or_night(field_data: dict):
     # Take the modulus again to ensure the time is within the 0 to 23 hours range
     return np.mod(time_shifted, 24)
 
-def store_space_time_coordinates(field_data, adjusted_time):
+def store_space_time_coordinates(field_data: dict, adjusted_time):
     return [field_data['lon'], field_data['lat'], adjusted_time < 12]
 
-def store_spectral_radiance(f, number_of_measurements, number_of_channels):
+def store_spectral_radiance(f, number_of_measurements, number_of_channels, output):
     return np.fromfile(f, dtype='float32', count=number_of_measurements*number_of_channels).reshape(number_of_measurements, number_of_channels)
 
-def store_target_parameters(field_data):
+def store_target_parameters(field_data: dict):
     return [data for field, data in field_data.items() if field in targets]
 
 # @snoop
@@ -210,20 +198,17 @@ def read_bin_L1C(fields: list, file: str, targets: list) -> Tuple[np.ndarray]:
 
     with open(file, 'rb') as f:
                
-        # Calculate number of channels   
-        number_of_channels = count_channels(f)
-
-        # Read and check header size
-        header_size = read_header(f)
+        # Extract metadata from header   
+        header_size, number_of_channels = read_header(f)
         
-        # Read record size
-        record_size = read_record(f)
+        # Extract metadata from record
+        record_size = read_record(f, header_size)
         
         # Calculate number of measurements
         number_of_measurements = count_measurements(f, header_size, record_size)
         
         # Read and store field data from binary file
-        field_data = read_field_data(f, fields, targets, header_size, record_size, number_of_measurements)
+        field_data = read_record_data(f, fields, targets, header_size, record_size, number_of_measurements)
 
         # Calculate adjusted time (in hours) to determine whether it is day or night
         adjusted_time = calculate_day_or_night(field_data)
@@ -276,7 +261,7 @@ fields = [
 test_file = "C:\\Users\\padra\\Documents\\Research\\data\\iasi\\test_file.bin"
 
 # Specify target IASI L1C products
-targets = ['sza','FQ1','FQ2','FQ3','CLfrac','SurfType', 'datetime']
+targets = ['sza','FQ1','FQ2','FQ3','CLfrac','SurfType']#, 'datetime']
 
 # Extract IASI L1C products from binary file
 read_bin_L1C(fields, test_file, targets)
