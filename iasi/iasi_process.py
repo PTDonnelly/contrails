@@ -77,7 +77,7 @@ def count_measurements(f: BinaryIO, header_size: int, record_size: int) -> int:
     return (file_size - header_size - 8) // (record_size + 8)
 
 def vectorized_datetime(year: int, month: int, day: int, hour: int, minute: int, millisecond: int):
-    return datetime(year, month, day, hour, minute, millisecond // 1000)
+    return datetime(int(year), int(month), int(day), int(hour), int(minute), int(millisecond // 1000))
 
 def read_record_data(f:object, fields: list, targets: list, header_size: int, record_size: int, number_of_measurements: int) -> dict:
     """
@@ -96,38 +96,41 @@ def read_record_data(f:object, fields: list, targets: list, header_size: int, re
     """
 
     field_data = {}
-
+    
     # Iterate over the fields list and read the field data
     for i, (field, dtype, dtype_size, cumsize) in enumerate(fields):
         if (i < 8) or (field in targets):
-            
-            print(i, field, dtype, dtype_size, cumsize)
+            print(f"Extracting: {field}")
 
             # Skip file header
             pointer = header_size + 12 + cumsize
             f.seek(pointer, 0)
-            # print(f"POINTER: {pointer}")
-            
+
+            print(f"POINTER: {pointer} field")
+            input()
+
             # Skip bytes up to the next measurement
             byte_offset = record_size + 8 - dtype_size
-            print(f"OFFSET: {record_size} + 8 - {dtype_size} = {byte_offset}")
-            
-            # Read binary data, skip bytes, reshape into 2D array
-            field_data[field] = np.fromfile(f, dtype=dtype, count=number_of_measurements, offset=byte_offset)#.reshape(number_of_measurements,-1)
-            print(field_data[field])
-            print('')
-        # if i == 2:
-        #     exit()
+    
+            # Allocate memory, read binary data, skip empty values, save to dictionary
+            data = np.empty(number_of_measurements)
+            for measurement in range(number_of_measurements):
+                value = np.fromfile(f, dtype=dtype, count=1, sep='', offset=byte_offset)
+                if len(value) == 0:
+                    data[measurement] = np.nan
+                else:
+                    data[measurement] = value
+            field_data[field] = data
 
-    # # Create a timestamp for the observation
-    # if "datetime" in targets:       
-    #     v_datetime = np.vectorize(vectorized_datetime)
-    #     field_data["datetime"] = v_datetime(field_data['yyyy'],
-    #                                         field_data['mm'],
-    #                                         field_data['dd'],
-    #                                         field_data['HH'],
-    #                                         field_data['MM'],
-    #                                         field_data['ms'])
+    # Create a timestamp for the observation
+    if "datetime" in targets:       
+        v_datetime = np.vectorize(vectorized_datetime)
+        field_data["datetime"] = v_datetime(field_data['year'],
+                                            field_data['month'],
+                                            field_data['day'],
+                                            field_data['hour'],
+                                            field_data['minute'],
+                                            field_data['millisecond'])
     return field_data
 
 def calculate_day_or_night(field_data: dict):
@@ -146,7 +149,7 @@ def calculate_day_or_night(field_data: dict):
     """
 
     # Define inputs
-    hour, minute, millisecond, longitude = field_data['HH'], field_data['MM'], field_data['ms'], field_data['lon']
+    hour, minute, millisecond, longitude = field_data['hour'], field_data['minute'], field_data['millisecond'], field_data['longitude']
 
     # Calculate the total time in hours, minutes, and milliseconds
     total_time = (hour * 1e4) + (minute * 1e2) + (millisecond / 1e3)
@@ -158,8 +161,6 @@ def calculate_day_or_night(field_data: dict):
     total_time_in_hours = (hour_component + minute_component + second_component_in_minutes) / 60
 
     # Convert longitude to time in hours and add it to the total time
-
-    print(type(total_time_in_hours), type(longitude))
     total_time_with_longitude = total_time_in_hours + (longitude / 15)
 
     # Add 24 hours to the total time to ensure it is always positive
@@ -175,10 +176,28 @@ def calculate_day_or_night(field_data: dict):
     return np.mod(time_shifted, 24)
 
 def store_space_time_coordinates(field_data: dict, adjusted_time):
-    return [field_data['lon'], field_data['lat'], adjusted_time < 12]
+    return [field_data['longitude'], field_data['latitude'], adjusted_time < 12]
 
-def store_spectral_radiance(f, number_of_measurements, number_of_channels, output):
-    return np.fromfile(f, dtype='float32', count=number_of_measurements*number_of_channels).reshape(number_of_measurements, number_of_channels)
+def store_spectral_radiance(f, header_size, record_size, number_of_measurements, number_of_channels):
+    print(f"Extracting: radiance")
+
+    # Skip file header and other record fields
+    anchor = fields[-1][-1] # End of the surface_type field
+    pointer = header_size + 12 + (anchor) + (4 * number_of_channels)
+    f.seek(pointer, 0)
+    
+    # Skip bytes until the next measurement
+    byte_offset = record_size + 8 - (4 * number_of_channels)
+
+    # Allocate memory, read binary data, skip empty values
+    data = np.empty((number_of_measurements, number_of_channels))
+    for measurement in range(number_of_measurements):
+        value = np.fromfile(f, dtype='float32', count=number_of_channels, sep='', offset=byte_offset)
+        if len(value) == 0:
+            data[measurement, :] = np.nan
+        else:
+            data[measurement, :] = value
+    return data
 
 def store_target_parameters(field_data: dict):
     return [data for field, data in field_data.items() if field in targets]
@@ -206,7 +225,8 @@ def read_bin_L1C(fields: list, file: str, targets: list) -> Tuple[np.ndarray]:
         
         # Calculate number of measurements
         number_of_measurements = count_measurements(f, header_size, record_size)
-        
+        number_of_measurements = 200
+
         # Read and store field data from binary file
         field_data = read_record_data(f, fields, targets, header_size, record_size, number_of_measurements)
 
@@ -216,52 +236,52 @@ def read_bin_L1C(fields: list, file: str, targets: list) -> Tuple[np.ndarray]:
         # Initialize the output with longitude, latitude, and adjusted
         output = store_space_time_coordinates(field_data, adjusted_time)
         
-        # Read the spectral radiance (L) matrix, append to the output
-        output.append(store_spectral_radiance(f, number_of_measurements, number_of_channels, output))
+        # Read the spectral radiance matrix, append to the output
+        output.append(store_spectral_radiance(f, header_size, record_size, number_of_measurements, number_of_channels))
 
         # Add target parameters to output
         output.extend(store_target_parameters(field_data))
 
-    # Return the output as a tuple of numpy arrays
+    # Return the output as a tuple of numpy arrays 
     return tuple(output)
 
 # Format of fields in binary file (field_name, data_type, data_size, cumulative_data_size)
 fields = [
-    ('yyyy', 'uint16', 2, 2),
-    ('mm', 'uint8', 1, 3),
-    ('dd', 'uint8', 1, 4),
-    ('HH', 'uint8', 1, 5),
-    ('MM', 'uint8', 1, 6),
-    ('ms', 'uint32', 4, 10),
-    ('lat', 'float32', 4, 14),
-    ('lon', 'float32', 4, 18),
-    ('sza', 'float32', 4, 22),
-    ('saazim', 'float32', 4, 26),
-    ('soza', 'float32', 4, 30),
-    ('soazim', 'float32', 4, 34),
-    ('ifov', 'uint32', 4, 38),
-    ('onum', 'uint32', 4, 42),
-    ('scanLN', 'uint32', 4, 46),
-    ('Hstat', 'float32', 4, 50),
-    ('dayver', 'uint16', 2, 52),
-    ('SC1', 'uint32', 4, 56),
-    ('EC1', 'uint32', 4, 60),
-    ('FQ1', 'uint32', 4, 64),
-    ('SC2', 'uint32', 4, 68),
-    ('EC2', 'uint32', 4, 72),
-    ('FQ2', 'uint32', 4, 76),
-    ('SC3', 'uint32', 4, 80),
-    ('EC3', 'uint32', 4, 84),
-    ('FQ3', 'uint32', 4, 88),
-    ('CLfrac', 'uint32', 4, 92),
-    ('SurfType', 'uint8', 1, 93)
+    ('year', 'uint16', 2, 2),
+    ('month', 'uint8', 1, 3),
+    ('day', 'uint8', 1, 4),
+    ('hour', 'uint8', 1, 5),
+    ('minute', 'uint8', 1, 6),
+    ('millisecond', 'uint32', 4, 10),
+    ('latitude', 'float32', 4, 14),
+    ('longitude', 'float32', 4, 18),
+    ('satellite_zenith_angle', 'float32', 4, 22),
+    ('bearing', 'float32', 4, 26),
+    ('solar_zentih_angle', 'float32', 4, 30),
+    ('solar_azimuth', 'float32', 4, 34),
+    ('field_of_view_number', 'uint32', 4, 38),
+    ('orbit_number', 'uint32', 4, 42),
+    ('scan_line_number', 'uint32', 4, 46),
+    ('height_of_station', 'float32', 4, 50),
+    ('day_version', 'uint16', 2, 52),
+    ('start_channel_1', 'uint32', 4, 56),
+    ('end_channel_1', 'uint32', 4, 60),
+    ('quality_flag_1', 'uint32', 4, 64),
+    ('start_channel_2', 'uint32', 4, 68),
+    ('end_channel_2', 'uint32', 4, 72),
+    ('quality_flag_2', 'uint32', 4, 76),
+    ('start_channel_3', 'uint32', 4, 80),
+    ('end_channel_3', 'uint32', 4, 84),
+    ('quality_flag_3', 'uint32', 4, 88),
+    ('cloud_fraction', 'uint32', 4, 92),
+    ('surface_type', 'uint8', 1, 93)
 ]
 
 # Specify location of IASI L1C products binary file
 test_file = "C:\\Users\\padra\\Documents\\Research\\data\\iasi\\test_file.bin"
 
 # Specify target IASI L1C products
-targets = ['sza','FQ1','FQ2','FQ3','CLfrac','SurfType']#, 'datetime']
+targets = ['surface_type']#'satellite_zenith_angle','quality_flag_1','quality_flag_2','quality_flag_3','cloud_fraction','surface_type', 'datetime']
 
 # Extract IASI L1C products from binary file
 read_bin_L1C(fields, test_file, targets)
