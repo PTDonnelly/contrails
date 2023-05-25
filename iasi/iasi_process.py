@@ -1,9 +1,6 @@
 from datetime import datetime
 import numpy as np
-import struct
-from typing import List, Tuple, Union, BinaryIO
-import snoop
-from sorcery import dict_of
+from typing import Tuple, Union, BinaryIO
 
 def verify_header(f: object, header_size: int) -> None:
     f.seek(0)
@@ -106,9 +103,6 @@ def read_record_data(f:object, fields: list, targets: list, header_size: int, re
             pointer = header_size + 12 + cumsize
             f.seek(pointer, 0)
 
-            print(f"POINTER: {pointer} field")
-            input()
-
             # Skip bytes up to the next measurement
             byte_offset = record_size + 8 - dtype_size
     
@@ -202,7 +196,6 @@ def store_spectral_radiance(f, header_size, record_size, number_of_measurements,
 def store_target_parameters(field_data: dict):
     return [data for field, data in field_data.items() if field in targets]
 
-# @snoop
 def read_bin_L1C(fields: list, file: str, targets: list) -> Tuple[np.ndarray]:
     """Read L1C binary data from a given file.
     
@@ -225,7 +218,7 @@ def read_bin_L1C(fields: list, file: str, targets: list) -> Tuple[np.ndarray]:
         
         # Calculate number of measurements
         number_of_measurements = count_measurements(f, header_size, record_size)
-        number_of_measurements = 200
+        number_of_measurements = 10
 
         # Read and store field data from binary file
         field_data = read_record_data(f, fields, targets, header_size, record_size, number_of_measurements)
@@ -243,7 +236,7 @@ def read_bin_L1C(fields: list, file: str, targets: list) -> Tuple[np.ndarray]:
         output.extend(store_target_parameters(field_data))
 
     # Return the output as a tuple of numpy arrays 
-    return tuple(output)
+    return output
 
 # Format of fields in binary file (field_name, data_type, data_size, cumulative_data_size)
 fields = [
@@ -284,4 +277,4 @@ test_file = "C:\\Users\\padra\\Documents\\Research\\data\\iasi\\test_file.bin"
 targets = ['surface_type']#'satellite_zenith_angle','quality_flag_1','quality_flag_2','quality_flag_3','cloud_fraction','surface_type', 'datetime']
 
 # Extract IASI L1C products from binary file
-read_bin_L1C(fields, test_file, targets)
+longitude, latitude, time, radiance, target_parameters = read_bin_L1C(fields, test_file, targets)
