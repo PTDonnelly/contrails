@@ -1,7 +1,8 @@
 from datetime import datetime
+import pandas as pd
 import numpy as np
 import subprocess
-from typing import Tuple, List,Union
+from typing import Tuple, List, Union
 import snoop
 
 class IASI_L1C:
@@ -17,6 +18,7 @@ class IASI_L1C:
         self.file_path = file_path
         self.targets = targets
 
+
     def __enter__(self) -> 'IASI_L1C':
         """
         Opens the binary file and prepares the preprocessing.
@@ -30,13 +32,14 @@ class IASI_L1C:
         # Get structure of file header and data record
         self.header_size, self.number_of_channels = self.read_header()
         self.record_size = self.read_record_size()
-        self.number_of_measurements = 100# self.count_measurements()
+        self.number_of_measurements = 10# self.count_measurements()
         self.print_metadata()
 
         # Get fields information and prepare to store extracted data
         self.fields = self.get_fields()
         self.field_data = {}
         return self
+
 
     def __exit__(self, type, value, traceback) -> None:
         """
@@ -49,6 +52,7 @@ class IASI_L1C:
         """
         self.f.close()
 
+
     def print_metadata(self):
         print(f"Header  : {self.header_size} bytes")
         print(f"Record  : {self.record_size} bytes")
@@ -56,6 +60,7 @@ class IASI_L1C:
         print(f"Data    : {self.number_of_measurements} measurements")
         return
     
+
     def read_header(self) -> Tuple[int, int]:
         """
         Reads the header of the binary file to obtain the header size and number of channels.
@@ -82,6 +87,7 @@ class IASI_L1C:
         self.verify_header(header_size)
         return header_size, number_of_channels
 
+
     def verify_header(self, header_size: int) -> None:
         """
         Verifies the header size by comparing it with the header size at the end of the header.
@@ -104,10 +110,12 @@ class IASI_L1C:
         # Check if header sizes match
         assert header_size == header_size_check, "Header size mismatch"
 
+
     def read_record_size(self) -> Union[int, None]:
         self.f.seek(self.header_size + 8)
         record_size = np.fromfile(self.f, dtype='uint32', count=1)[0]
         return None if record_size == 0 else record_size
+
 
     def get_fields(self) -> List[tuple]:
         # Format of fields in binary file (field_name, data_type, data_size, cumulative_data_size)
@@ -142,6 +150,7 @@ class IASI_L1C:
             ('surface_type', 'uint8', 1, 93)]
         return fields
         
+
     def count_measurements(self) -> int:
         """
         Calculate the number of measurements in the binary file based on its size, 
@@ -155,6 +164,7 @@ class IASI_L1C:
 
         # Calculate the number of measurements
         return (file_size - self.header_size - 8) // (self.record_size + 8)
+
 
     def read_field_data(self) -> None:
         """
@@ -188,6 +198,7 @@ class IASI_L1C:
         if "datetime" in self.targets:
             self.generate_datetime()
 
+
     def generate_datetime(self):
         """
         Generates the datetime field using the year, month, day, hour, minute and millisecond fields.
@@ -217,6 +228,7 @@ class IASI_L1C:
         datetime: The corresponding datetime object.
         """
         return datetime(int(year), int(month), int(day), int(hour), int(minute), int(millisecond // 1000))
+
 
     def calculate_adjusted_time(self) -> np.ndarray:
         """
@@ -255,6 +267,7 @@ class IASI_L1C:
         # Take the modulus again to ensure the time is within the 0 to 23 hours range
         return np.mod(time_shifted, 24)
     
+
     def store_space_time_coordinates(self) -> List:
         """
         Stores the space-time coordinates and a Boolean indicating whether the current time is day or night.
@@ -267,6 +280,7 @@ class IASI_L1C:
 
         # Return the longitude, latitude, and a Boolean indicating day (True) or night (False)
         return [self.field_data['longitude'], self.field_data['latitude'], ((6 < adjusted_time) & (adjusted_time < 18))]
+
 
     def store_spectral_radiance(self) -> np.ndarray:
         """
@@ -298,6 +312,7 @@ class IASI_L1C:
         # Return the array of spectral radiance data
         return data
 
+
     def store_target_parameters(self) -> List:
         """
         Stores the target parameters from the field data.
@@ -323,10 +338,10 @@ class IASI_L1C:
         return good_data
 
     @classmethod
-    def save_observations(cls, header: list, data: np.array) -> None:
+    def save_observations(cls, filename: str, header: list, data: np.array) -> None:
         
         # Open your file in write mode
-        with open('output.txt', 'w') as f:
+        with open(filename, 'w') as f:
         
             # Write the integers to the first line, separated by spaces
             f.write(' '.join(map(str, header)) + '\n')
@@ -334,6 +349,64 @@ class IASI_L1C:
             # Write the 2D numpy array to the file, line by line
             for row in np.transpose(data):
                 f.write(' '.join(map(str, row)) + '\n')
+
+    @classmethod
+    def read_observations(cls, filename: str) -> List[np.ndarray]:
+        """
+        Reads observation data from a file and converts them into a list of numpy arrays.
+        
+        :param filename: The name of the file to read from.
+        :return: A list of numpy arrays containing the observation data.
+        """
+        # Read the first line of the file to determine how to split the data.
+        splits = cls.read_splits(filename)
+        
+        # Process the data lines based on the splits and return the resulting list of arrays.
+        return cls.process_data_lines(filename, splits)
+
+    @staticmethod
+    def read_splits(filename: str) -> List[int]:
+        """
+        Reads the first line of a file and converts it into a list of integers.
+        
+        :param filename: The name of the file to read from.
+        :return: A list of integers representing how to split the data in the file.
+        """
+        with open(filename, 'r') as f:
+            first_line = f.readline()
+        return list(map(int, first_line.strip().split()))
+
+    @staticmethod
+    def process_data_lines(filename: str, splits: List[int]) -> List[List[np.ndarray]]:
+        """
+        Processes the data lines in a file based on a list of splits.
+        
+        :param filename: The name of the file to read from.
+        :param splits: A list of integers representing how to split the data.
+        :return: A list of numpy arrays containing the split data.
+        """
+        with open(filename, 'r') as f:
+            next(f)  # Skip the first line
+            lines = f.readlines()
+
+        # Remove the last split which is past the end of the array.
+        split_indices = np.cumsum(splits)[:-1]
+
+        list_of_arrays = []
+        for line in lines:
+            raw_data = np.array(line.strip().split(), dtype=object)
+            
+            # Split the raw array according to splits and convert to appropriate types
+            arrays = np.hsplit(raw_data, split_indices)
+            
+            # Convert the first two sections to float
+            arrays[0] = arrays[0].astype(float)
+            arrays[1] = arrays[1].astype(float)
+            
+            # Leave the third section as strings
+            list_of_arrays.append(arrays)
+        return np.vstack(list_of_arrays)
+
 
 def build_command(path_in: str, year: int, month: int, day: int, iasi_channels: list, filter: str, file_out: str):
     """Execute OBR command and produce intermediate binary files"""
@@ -388,9 +461,15 @@ def main():
                 # Check observation quality and filter out bad observations
                 good_data = IASI_L1C.filter_bad_observations(data=all_data, date=datetime(year, month, day))
 
+                # Save outputs to file
+                filename = f"iasi_L1C_{year}_{month}_{day}.txt"
                 header = [len(space_time_coordinates), len(radiance), len(target_parameters)]
-                IASI_L1C.save_observations(header, good_data)
+                IASI_L1C.save_observations(filename, header, good_data)
 
+                # arrays = IASI_L1C.read_observations(filename)
+                # location, spectra, target_parameters = arrays[:, 0], arrays[:, 1],arrays[:, 2]
+                # for spectrum in spectra:
+                #     print(spectrum)
 
 if __name__ == "__main__":
     main()
