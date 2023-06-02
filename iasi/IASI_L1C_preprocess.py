@@ -1,21 +1,22 @@
-from datetime import datetime
-import pandas as pd
-import numpy as np
+import os
 import subprocess
+from datetime import datetime
 from typing import Tuple, List, Union
-import snoop
+
+import numpy as np
+
 
 class IASI_L1C:
     """
-    Processing class to read and extract necessary data from binary file.
+    Processing class to read and extract data from binary file.
 
     Attributes:
-    file_path (str): Path to the binary file.
+    filepath (str): Path to the binary file.
     targets (List[str]): List of target variables to extract.
     """
-    def __init__(self, file_path: str, targets: List[str]):
-        """Initializes the IASI_L1C object with file_path and target variables."""
-        self.file_path = file_path
+    def __init__(self, filepath: str, targets: List[str]):
+        """Initializes the IASI_L1C object with filepath and target variables."""
+        self.filepath = filepath
         self.targets = targets
 
 
@@ -27,12 +28,13 @@ class IASI_L1C:
         self: The IASI_L1C object itself.
         """
         # Open binary file
-        self.f = open(self.file_path, 'rb')
+        print("Loading binary file:")
+        self.f = open(self.filepath, 'rb')
         
         # Get structure of file header and data record
         self.header_size, self.number_of_channels = self.read_header()
         self.record_size = self.read_record_size()
-        self.number_of_measurements = 10# self.count_measurements()
+        self.number_of_measurements = 5#self.count_measurements()
         self.print_metadata()
 
         # Get fields information and prepare to store extracted data
@@ -194,48 +196,21 @@ class IASI_L1C:
                 # Store the data in the field_data dictionary
                 self.field_data[field] = data
 
-        # Generate datetime field if it's listed in the targets
-        if "datetime" in self.targets:
-            self.generate_datetime()
+        # Store datetime components field at the end of dictionary for later construction
+        self.field_data["datetime"] = [self.field_data['year'],
+                                        self.field_data['month'],
+                                        self.field_data['day'],
+                                        self.field_data['hour'],
+                                        self.field_data['minute'],
+                                        self.field_data['millisecond']]
+        
 
-
-    def generate_datetime(self):
+    def calculate_local_time(self) -> np.ndarray:
         """
-        Generates the datetime field using the year, month, day, hour, minute and millisecond fields.
-        """
-        v_datetime = np.vectorize(self.vectorized_datetime)
-        self.field_data["datetime"] = v_datetime(self.field_data['year'],
-                                                self.field_data['month'],
-                                                self.field_data['day'],
-                                                self.field_data['hour'],
-                                                self.field_data['minute'],
-                                                self.field_data['millisecond'])
-
-    @staticmethod
-    def vectorized_datetime(year: int, month: int, day: int, hour: int, minute: int, millisecond: int) -> datetime:
-        """
-        Converts separate year, month, day, hour, minute and millisecond values into a datetime object.
-
-        Args:
-        year (int): The year component of the timestamp.
-        month (int): The month component of the timestamp.
-        day (int): The day component of the timestamp.
-        hour (int): The hour component of the timestamp.
-        minute (int): The minute component of the timestamp.
-        millisecond (int): The millisecond component of the timestamp.
+        Calculate the local time (in hours, UTC) that determines whether it is day or night at a specific longitude.
 
         Returns:
-        datetime: The corresponding datetime object.
-        """
-        return datetime(int(year), int(month), int(day), int(hour), int(minute), int(millisecond // 1000))
-
-
-    def calculate_adjusted_time(self) -> np.ndarray:
-        """
-        Calculate the adjusted time (in hours, UTC) that determines whether it is day or night at a specific longitude.
-
-        Returns:
-        np.ndarray: Adjusted time (in hours, UTC) within a 24 hour range, used to determine day (6-18) or night (0-6, 18-23).
+        np.ndarray: Local time (in hours, UTC) within a 24 hour range, used to determine day (6-18) or night (0-6, 18-23).
         """
 
         # Retrieve the necessary field data
@@ -275,11 +250,11 @@ class IASI_L1C:
         Returns:
             List: A list containing longitude, latitude and a Boolean indicating day or night. 
         """
-        # Calculate the adjusted time
-        adjusted_time = self.calculate_adjusted_time()
+        # Calculate the local time
+        local_time = self.calculate_local_time()
 
         # Return the longitude, latitude, and a Boolean indicating day (True) or night (False)
-        return [self.field_data['longitude'], self.field_data['latitude'], ((6 < adjusted_time) & (adjusted_time < 18))]
+        return [self.field_data['longitude'], self.field_data['latitude'], ((6 < local_time) & (local_time < 18))]
 
 
     def store_spectral_radiance(self) -> np.ndarray:
@@ -294,8 +269,8 @@ class IASI_L1C:
         # Determine the position of the anchor point for spectral radiance data in the binary file
         last_field_end = self.fields[-1][-1] # End of the surface_type field
 
-        # Calculate the starting point for reading spectral radiance data
-        start_read_position = self.header_size + 12 + last_field_end + (4 * self.number_of_channels)
+        # Go to spectral radiance data (skip header and previous record data, "12"s are related to reading )
+        start_read_position = self.header_size + 12 + last_field_end + (4 * self.number_of_channels) #12
         self.f.seek(start_read_position, 0)
         
         # Calculate the offset to skip to the next measurement
@@ -320,28 +295,88 @@ class IASI_L1C:
         Returns:
             List: A list of the target parameters from the field data.
         """
-        return [data for field, data in self.field_data.items() if field in self.targets]
+        return [data for field, data in self.field_data.items() if (field in self.targets)]
 
-    @classmethod
-    def filter_bad_observations(cls, data: np.array, date: object) -> np.array:
+
+    def store_datetime_components(self) -> List:
+        """
+        Stores the datetime components from the datetime field data.
+
+        Returns:
+            List: A list of the datetime components from the field data.
+        """
+        return [datetime for datetime in self.field_data['datetime']]
+
+
+    def extract_data(self) -> Tuple[List[int], np.array]:
+        """
+        Extracts relevant data from the observation dataset, processes it, and consolidates it into a 2D array.
+
+        Returns:
+            Tuple[List[int], np.array]: A tuple containing a header (which represents lengths of various components of data)
+            and a 2D numpy array of consolidated data.
+
+        """
+        # Extract and process binary data
+        self.read_field_data()
+        space_time_coordinates = self.store_space_time_coordinates()
+        radiances = self.store_spectral_radiance()
+        target_parameters = self.store_target_parameters()
+        datetimes = self.store_datetime_components()
+
+        # Concatenate processed observations into a single 2D array (number of parameters x number of measurements).
+        data = np.concatenate((space_time_coordinates, radiances, target_parameters, datetimes), axis=0)
+
+        # Construct a header that contains the lengths of each of the components of the concatenated data.
+        # This can be used for easy separation of columns in the future.
+        header = [len(space_time_coordinates), len(radiances), len(target_parameters), len(datetimes)]
+
+        return header, data
+
+
+    def filter_bad_observations(self, data: np.array, date: object) -> np.array:
+        """
+        Filters bad observations based on IASI L1 data quality flags and date.
+        
+        Args:
+            data (np.ndarray): A numpy array containing the observation data.
+            date (object): The date for filtering the observations.
+            
+        Returns:
+            np.ndarray: A filtered numpy array containing the good observations.
+        """
         if date <= datetime(2012, 2, 8):
             check_quality_flag = data[-3, :] == 0
             check_data = np.sum(data[2:-4, :], axis=1) > 0
             good_flag = np.logical_and(check_quality_flag, check_data)
         else:
-            check_quality_flags = np.logical_and(data[-6, :] == 0, data[-5, :] == 0, data[-4, :] == 0)
+            check_quality_flags = np.logical_and(self.field_data['quality_flag_1'][:] == 0,
+                                                self.field_data['quality_flag_2'][:] == 0,
+                                                self.field_data['quality_flag_3'][:] == 0)
+            # check_quality_flags = np.logical_and(data[-11, :] == 0, data[-10, :] == 0, data[-9, :] == 0)
             # check_data = np.sum(data[0:-6, :], axis=1) > 0
-            good_flag = check_quality_flags#np.logical_and(check_quality_flags)#, check_data)
+        good_flag = check_quality_flags #np.logical_and(check_quality_flags)#, check_data)
         
         good_data = data[:, good_flag]
         print(f"{np.round((data.shape[1] / good_data.shape[1]) * 100, 2)} % good data of {data.shape[1]} observations")
         return good_data
 
-    @classmethod
-    def save_observations(cls, filename: str, header: list, data: np.array) -> None:
+    @staticmethod
+    def save_observations(outpath: str, outfile: str, header: list, data: np.array) -> None:
+        """
+        Saves the observation data to a file.
         
+        Args:
+            outpath (str): The path to save the file.
+            outfile (str): The name of the output file.
+            header (list): A list of integers to be written as the first line.
+            data (np.ndarray): A numpy array containing the observation data.
+            
+        Returns:
+            None
+        """
         # Open your file in write mode
-        with open(filename, 'w') as f:
+        with open(f"{outpath}{outfile}", 'w') as f:
         
             # Write the integers to the first line, separated by spaces
             f.write(' '.join(map(str, header)) + '\n')
@@ -349,93 +384,41 @@ class IASI_L1C:
             # Write the 2D numpy array to the file, line by line
             for row in np.transpose(data):
                 f.write(' '.join(map(str, row)) + '\n')
-
-    @classmethod
-    def read_observations(cls, filename: str) -> List[np.ndarray]:
-        """
-        Reads observation data from a file and converts them into a list of numpy arrays.
-        
-        :param filename: The name of the file to read from.
-        :return: A list of numpy arrays containing the observation data.
-        """
-        # Read the first line of the file to determine how to split the data.
-        splits = cls.read_splits(filename)
-        
-        # Process the data lines based on the splits and return the resulting list of arrays.
-        return cls.process_data_lines(filename, splits)
-
-    @staticmethod
-    def read_splits(filename: str) -> List[int]:
-        """
-        Reads the first line of a file and converts it into a list of integers.
-        
-        :param filename: The name of the file to read from.
-        :return: A list of integers representing how to split the data in the file.
-        """
-        with open(filename, 'r') as f:
-            first_line = f.readline()
-        return list(map(int, first_line.strip().split()))
-
-    @staticmethod
-    def process_data_lines(filename: str, splits: List[int]) -> List[List[np.ndarray]]:
-        """
-        Processes the data lines in a file based on a list of splits.
-        
-        :param filename: The name of the file to read from.
-        :param splits: A list of integers representing how to split the data.
-        :return: A list of numpy arrays containing the split data.
-        """
-        with open(filename, 'r') as f:
-            next(f)  # Skip the first line
-            lines = f.readlines()
-
-        # Remove the last split which is past the end of the array.
-        split_indices = np.cumsum(splits)[:-1]
-
-        list_of_arrays = []
-        for line in lines:
-            raw_data = np.array(line.strip().split(), dtype=object)
-            
-            # Split the raw array according to splits and convert to appropriate types
-            arrays = np.hsplit(raw_data, split_indices)
-            
-            # Convert the first two sections to float
-            arrays[0] = arrays[0].astype(float)
-            arrays[1] = arrays[1].astype(float)
-            
-            # Leave the third section as strings
-            list_of_arrays.append(arrays)
-        return np.vstack(list_of_arrays)
+        return
 
 
-def build_command(path_in: str, year: int, month: int, day: int, iasi_channels: list, filter: str, file_out: str):
+def build_command(filepath_raw: str, year: int, month: int, day: int, iasi_channels: list, filter: str, file_out: str):
     """Execute OBR command and produce intermediate binary files"""
 
     run_dir = f"/home/pdonnelly/data/obr_v4 "
-    filepath = f"-d {path_in} "
+    filepath = f"-d {filepath_raw} "
     first_date = f"-fd {year:04d}-{month:02d}-{day:02d} "
     last_date = f"-ld {year:04d}-{month:02d}-{day:02d} "
     channels = f"-c {iasi_channels[0]}-{iasi_channels[-1]} "
     filter = "" #f"-mf {file_in}"
-    output = f"of bin -out {file_out} "
+    output = f"-of bin -out {file_out} "
     return f"{run_dir}{filepath}{first_date}{last_date}{channels}{filter}{output}"
 
-def main():
 
+def main():
+    """
+    Uses the OBR tool to extract data from raw unformatted binary files into intermediate binary files,
+    then stores the data products (number of parameters x number of measurements) in a text file for each given day.
+    """
     # Define inputs for OBR tool
-    path_in = '/bdd/IASI/L1C/'
+    filepath_raw = '/bdd/IASI/L1C/'
     years = [2020]
     months = [1] #, 2, 3]
     days = [1] #[day for day in range(28)] 
-    iasi_channels = [1, 2, 3]
+    iasi_channels = [(i + 1) for i in range(8461)] # [1, 2, 3]
     filter = 'W_XX-EUMETSAT-Darmstadt,SOUNDING+SATELLITE,METOPA+IASI_C_EUMC_20200101000253_68496_eps_o_l1.bin'
-    file_out = 'file_out.bin'
+    filename_tmp = "L1C_outfile_3.bin"
 
-    # Specify location of IASI L1C products binary file
-    file_path = "C:\\Users\\padra\\Documents\\Research\\data\\iasi\\test_file.bin"
+     # Specify target IASI L1C products
+    targets = ['satellite_zenith_angle','quality_flag_1','quality_flag_2','quality_flag_3','cloud_fraction','surface_type']
 
-    # Specify target IASI L1C products
-    targets = ['satellite_zenith_angle','quality_flag_1','quality_flag_2','quality_flag_3','cloud_fraction','surface_type', 'datetime']
+    # Specify location of IASI L1C products
+    filepath_data = "E:\\data\\iasi\\"
 
     # Loop through date-times
     for year in years:
@@ -443,33 +426,27 @@ def main():
             for day in days:
 
                 # Construct command-line executable
-                command = build_command(path_in, year, month, day, iasi_channels, filter, file_out)
+                command = build_command(filepath_raw, year, month, day, iasi_channels, filter, filename_tmp)
 
-                # # Extract IASI spectra from raw binary files (create intermediate binary files)
+                # # Extract IASI data from raw binary files (create intermediate binary files)
                 # subprocess.run(command, shell=True)
 
-                # Process extracted IASI spectra from intermediate binary files
-                with IASI_L1C(file_path, targets) as file:
-                    file.read_field_data()
-                    space_time_coordinates = file.store_space_time_coordinates()
-                    radiance = file.store_spectral_radiance()
-                    target_parameters = file.store_target_parameters()
-                
-                # Concatenate processed observations into a single 2-D array (number of parameters x number of measurements)
-                all_data = np.concatenate((space_time_coordinates, radiance, target_parameters), axis=0)
+                # Process extracted IASI data from intermediate binary files
+                intermediate_file = f"{filepath_data}{filename_tmp}"
+                with IASI_L1C(intermediate_file, targets) as file:
+                    
+                    # Extract and process binary data
+                    header, all_data = file.extract_data()
+                    
+                    # Check observation quality and filter out bad observations
+                    good_data = file.filter_bad_observations(all_data, date=datetime(year, month, day))
 
-                # Check observation quality and filter out bad observations
-                good_data = IASI_L1C.filter_bad_observations(data=all_data, date=datetime(year, month, day))
+                # # Delete intermediate binary file (after extracting spectra and metadata)
+                # os.remove(intermediate_file)
 
                 # Save outputs to file
-                filename = f"iasi_L1C_{year}_{month}_{day}.txt"
-                header = [len(space_time_coordinates), len(radiance), len(target_parameters)]
-                IASI_L1C.save_observations(filename, header, good_data)
-
-                # arrays = IASI_L1C.read_observations(filename)
-                # location, spectra, target_parameters = arrays[:, 0], arrays[:, 1],arrays[:, 2]
-                # for spectrum in spectra:
-                #     print(spectrum)
+                outfile = f"iasi_L1C_{year}_{month}_{day}.txt"
+                IASI_L1C.save_observations(filepath_data, outfile, header, good_data)
 
 if __name__ == "__main__":
     main()
