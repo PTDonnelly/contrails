@@ -34,7 +34,7 @@ class IASIExtractor:
         self.datapath_out = self._create_output_directory()
 
     def _create_output_directory(self):
-        datapath_out = f"/data/pdonnelly/IASI/metopc{self.year}"
+        datapath_out = f"/data/pdonnelly/IASI/metopc/{self.year}"
         os.makedirs(datapath_out, exist_ok=True)
         return datapath_out
 
@@ -58,7 +58,7 @@ class IASIExtractor:
 
     def _run_data_processing(self, datafile_in: str, datafile_out: str):
         command = self._get_command(datafile_in, datafile_out)
-        # subprocess.run(command, shell=True)
+        subprocess.run(command, shell=True)
         print(command)
 
     def _process_file(self, datafile_in: str):
