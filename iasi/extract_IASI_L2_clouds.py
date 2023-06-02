@@ -2,7 +2,6 @@ import os
 import subprocess
 from typing import List, Union
 
-import snoop
 class IASIExtractor:
     def __init__(self, year: int, months: List[int], days: List[int], data_level: str):
         """
