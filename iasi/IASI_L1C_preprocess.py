@@ -390,7 +390,7 @@ class IASI_L1C:
 def build_command(filepath_raw: str, year: int, month: int, day: int, iasi_channels: list, filter: str, file_out: str):
     """Execute OBR command and produce intermediate binary files"""
 
-    run_dir = f"/home/pdonnelly/data/obr_v4 "
+    run_dir = f"/data/pdonnelly/IASI/scripts/obr_v4 "
     filepath = f"-d {filepath_raw} "
     first_date = f"-fd {year:04d}-{month:02d}-{day:02d} "
     last_date = f"-ld {year:04d}-{month:02d}-{day:02d} "
