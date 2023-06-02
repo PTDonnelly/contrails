@@ -58,7 +58,7 @@ class IASIExtractor:
 
     def _run_data_processing(self, datafile_in: str, datafile_out: str):
         command = self._get_command(datafile_in, datafile_out)
-        subprocess.run(command, shell=True)
+        subprocess.run(['bash', command], check=True)
         # print(command)
 
     def _process_file(self, datafile_in: str):
