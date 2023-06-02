@@ -51,7 +51,7 @@ class IASIExtractor:
             
             return f"{executable} {filepath} {first_date} {last_date} {channels} {filter} {output}"
         elif self.data_level == 'L2':
-            executable = "/data/pdonnelly/IASI/scripts/BUFR_iasi_clp_reader_from20190514 "
+            executable = "/data/pdonnelly/IASI/scripts/BUFR_iasi_clp_reader_from20190514"
             return f"{executable} {datafile_in} {self.datapath_out}{datafile_out}"
         else:
             raise ValueError("Invalid data path type. Accepts 'L1C' or 'L2'.")
@@ -59,7 +59,7 @@ class IASIExtractor:
     def _run_data_processing(self, datafile_in: str, datafile_out: str):
         command = self._get_command(datafile_in, datafile_out)
         subprocess.run(command, shell=True)
-        print(command)
+        # print(command)
 
     def _process_file(self, datafile_in: str):
         datafile_out = datafile_in.split(",")[2]
