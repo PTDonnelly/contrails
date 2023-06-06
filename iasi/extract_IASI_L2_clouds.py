@@ -42,7 +42,14 @@ class IASIExtractor:
                     new_filename = f"{filename.name[:-len(old_suffix)]}{new_suffix}"
                     os.rename(filename.path, os.path.join(self.datapath_out, new_filename))
 
+
     def _delete_intermediate_file(self):
+        pass
+    
+    def _process_l1c():
+        pass
+    
+    def _process_l2():
         pass
 
     def process(self):
@@ -52,6 +59,9 @@ class IASIExtractor:
             self._process_l2()
         else:
             raise ValueError("Invalid data path type. Accepts 'l1C' or 'l2'.")
+        self._delete_intermediate_file()
+        return
+
 
     def _build_parameters(self):
         iasi_channels = [(i + 1) for i in range(8461)]
@@ -89,13 +99,12 @@ class IASIExtractor:
         self._create_run_directory()
         self._run_command()
     
-    def process_files_for_date(self):
+    def extract_data(self):
         if os.path.isdir(self.datapath_in):
             for datafile_in in os.scandir(self.datapath_in):
                 self.datafile_in = datafile_in.name
                 self.preprocess()
                 self.process()
-                self._delete_intermediate_file()
     
 
     def _get_datapath_out(self):
@@ -138,7 +147,7 @@ def main():
                 extractor.day = f"{day:02d}"
                 
                 extractor.get_datapaths()
-                extractor.process_files_for_date()
+                extractor.extract_data()
                 extractor.rename_files()
 
 
