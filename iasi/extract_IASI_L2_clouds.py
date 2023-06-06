@@ -61,8 +61,8 @@ class IASIExtractor:
 
     def _run_data_processing(self, datafile_in: str, datafile_out: str):
         command = self._get_command(datafile_in, datafile_out)
-        subprocess.run(['bash', command], check=True)
-        print(command)
+        subprocess.run(['bash', '-c', command], check=True)
+        print(type(command))
 
     def _process_file(self, datafile_in: str):
         datafile_out = datafile_in.split(",")[2]
@@ -74,7 +74,7 @@ class IASIExtractor:
         if self.data_level == 'L1C':
             return f"/bdd/metopc/l1c/iasi/{self.year}/{month}/{day}"
         elif self.data_level == 'L2':
-            return f"/bdd/metopc/l2/iasi/{self.year}/{month}/{day}/clp/"
+            return f"./bdd/metopc/l2/iasi/{self.year}/{month}/{day}/clp/"
         else:
             raise ValueError("Invalid data path type. Accepts 'L1C' or 'L2'.")
         
