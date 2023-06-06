@@ -35,22 +35,23 @@ class IASIExtractor:
         self.data_level: str = data_level
         self.datapath_in: str = None
         self.datapath_out: str = None
+        self.runpath: str = None
 
 
     def _get_command(self, datafile_in: str, datafile_out: str):
         if self.data_level == 'L1C':
             iasi_channels = [(i + 1) for i in range(8461)]
-            executable = f"/data/pdonnelly/IASI/scripts/obr_v4"
+            self.runpath = f"./bin/obr_v4"
             filepath = f"-d {datafile_in}"
             first_date = f"-fd {self.year}-{self.month}-{self.day}"
             last_date = f"-ld {self.year}-{self.month}-{self.day}"
             channels = f"-c {iasi_channels[0]}-{iasi_channels[-1]}"
             filter = "" #f"-mf {file_in}"
             output = f"-of bin -out {datafile_out}"
-            return f"{executable} {filepath} {first_date} {last_date} {channels} {filter} {output}"
+            return f"{self.runpath} {filepath} {first_date} {last_date} {channels} {filter} {output}"
         elif self.data_level == 'L2':
-            executable = "/data/pdonnelly/IASI/scripts/BUFR_iasi_clp_reader_from20190514"
-            return f"{executable} {self.datapath_in}{datafile_in} {self.datapath_out}{datafile_out}"
+            self.runpath = "./bin/BUFR_iasi_clp_reader_from20190514"
+            return f"{self.runpath} {self.datapath_in}{datafile_in} {self.datapath_out}{datafile_out}"
         else:
             raise ValueError("Invalid data path type. Accepts 'L1C' or 'L2'.")
 
