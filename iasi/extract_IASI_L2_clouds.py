@@ -55,7 +55,7 @@ class IASIExtractor:
             raise ValueError("Invalid data path type. Accepts 'L1C' or 'L2'.")
 
     
-    def _run_data_processing(self, datafile_in: str, datafile_out: str):
+    def _run_command(self, datafile_in: str, datafile_out: str):
         command = self._get_command(datafile_in, datafile_out)
         subprocess.run(['bash', '-c', command], check=True)
         print(type(command))
@@ -65,7 +65,7 @@ class IASIExtractor:
         datafile_out = datafile_in.split(",")[2]
         hour = datafile_out[27:29]
         if int(hour) >= 6 or int(hour) <= 18:
-            self._run_data_processing(datafile_in, datafile_out)
+            self._run_command(datafile_in, datafile_out)
 
     
     def _create_output_directory(self, datapath_out):
@@ -91,6 +91,8 @@ class IASIExtractor:
     def _get_datapaths(self):
         self.datapath_in = self._get_datapath_in()
         self.datapath_out = self._get_datapath_out()
+        return
+
 
     def _process_files_for_date(self):
         self._get_datapaths()
