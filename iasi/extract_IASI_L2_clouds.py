@@ -27,31 +27,33 @@ class IASIExtractor:
         process_files():
             Processes all files for all dates in the given year.
         """
-        self.year = year
-        self.months = months
-        self.days = days
-        self.month = None
-        self.day = None
-        self.data_level = data_level
-        self.datapath_in = None
-        self.datapath_out = self._create_output_directory()
+        self.year: str = f"{year:04d}"
+        self.months: List[int] = months
+        self.days: List[int] = days
+        self.month: str = None
+        self.day: str = None
+        self.data_level: str = data_level
+        self.datapath_in: str = None
+        self.datapath_out: str = None
 
     def _create_output_directory(self):
-        datapath_out = f"/data/pdonnelly/IASI/metopc/{self.year}"
+        datapath_out = f"/data/pdonnelly/IASI/metopc/{self.year}/{self.month}/{self.day}"
         os.makedirs(datapath_out, exist_ok=True)
         return datapath_out
 
     def _get_command(self, datafile_in: str, datafile_out: str):
+        
+        self.datapath_out = self._create_output_directory()
+
         if self.data_level == 'L1C':
             iasi_channels = [(i + 1) for i in range(8461)]
             executable = f"/data/pdonnelly/IASI/scripts/obr_v4"
             filepath = f"-d {datafile_in}"
-            first_date = f"-fd {self.year:04d}-{self.month:02d}-{self.day:02d}"
-            last_date = f"-ld {self.year:04d}-{self.month:02d}-{self.day:02d}"
+            first_date = f"-fd {self.year}-{self.month}-{self.day}"
+            last_date = f"-ld {self.year}-{self.month}-{self.day}"
             channels = f"-c {iasi_channels[0]}-{iasi_channels[-1]}"
             filter = "" #f"-mf {file_in}"
             output = f"-of bin -out {datafile_out}"
-            
             return f"{executable} {filepath} {first_date} {last_date} {channels} {filter} {output}"
         elif self.data_level == 'L2':
             executable = "/data/pdonnelly/IASI/scripts/BUFR_iasi_clp_reader_from20190514"
@@ -70,16 +72,16 @@ class IASIExtractor:
         if int(hour) >= 6 or int(hour) <= 18:
             self._run_data_processing(datafile_in, datafile_out)
 
-    def _get_datapath_in(self, month: str, day: str):
+    def _get_datapath_in(self):
         if self.data_level == 'L1C':
-            return f"/bdd/metopc/l1c/iasi/{self.year}/{month}/{day}"
+            return f"/bdd/metopc/l1c/iasi/{self.year}/{self.month}/{self.day}"
         elif self.data_level == 'L2':
-            return f"/bdd/metopc/l2/iasi/{self.year}/{month}/{day}/clp/"
+            return f"/bdd/metopc/l2/iasi/{self.year}/{self.month}/{self.day}/clp/"
         else:
             raise ValueError("Invalid data path type. Accepts 'L1C' or 'L2'.")
         
-    def _process_files_for_date(self, month: str, day: str):
-        self.datapath_in = self._get_datapath_in(month, day)
+    def _process_files_for_date(self):
+        self.datapath_in = self._get_datapath_in()
         if os.path.isdir(self.datapath_in):
             for datafile_in in os.scandir(self.datapath_in):
                 self._process_file(datafile_in.name)
@@ -87,8 +89,8 @@ class IASIExtractor:
     def process_files(self):
         for month in self.months:
             for day in range(1, self.days[month-1] + 1):
-                self.month, self.day = month, day
-                self._process_files_for_date(f"{month:02d}", f"{day:02d}")
+                self.month, self.day = f"{month:02d}", f"{day:02d}"
+                self._process_files_for_date()
 
     def rename_files_with_suffix(self, old_suffix: str, new_suffix: str):
         if os.path.isdir(self.datapath_out):
