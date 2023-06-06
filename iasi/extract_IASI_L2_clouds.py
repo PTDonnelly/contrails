@@ -36,15 +36,8 @@ class IASIExtractor:
         self.datapath_in: str = None
         self.datapath_out: str = None
 
-    def _create_output_directory(self):
-        datapath_out = f"/data/pdonnelly/IASI/metopc/{self.year}/{self.month}/{self.day}"
-        os.makedirs(datapath_out, exist_ok=True)
-        return datapath_out
 
     def _get_command(self, datafile_in: str, datafile_out: str):
-        
-        self.datapath_out = self._create_output_directory()
-
         if self.data_level == 'L1C':
             iasi_channels = [(i + 1) for i in range(8461)]
             executable = f"/data/pdonnelly/IASI/scripts/obr_v4"
@@ -61,16 +54,30 @@ class IASIExtractor:
         else:
             raise ValueError("Invalid data path type. Accepts 'L1C' or 'L2'.")
 
+    
     def _run_data_processing(self, datafile_in: str, datafile_out: str):
         command = self._get_command(datafile_in, datafile_out)
         subprocess.run(['bash', '-c', command], check=True)
         print(type(command))
 
+    
     def _process_file(self, datafile_in: str):
         datafile_out = datafile_in.split(",")[2]
         hour = datafile_out[27:29]
         if int(hour) >= 6 or int(hour) <= 18:
             self._run_data_processing(datafile_in, datafile_out)
+
+    
+    def _create_output_directory(self, datapath_out):
+        os.makedirs(datapath_out, exist_ok=True)
+        return
+    
+
+    def _get_datapath_out(self):
+        datapath_out = f"/data/pdonnelly/IASI/metopc/{self.year}/{self.month}/{self.day}"
+        self._create_output_directory(datapath_out)
+        return datapath_out
+    
 
     def _get_datapath_in(self):
         if self.data_level == 'L1C':
@@ -79,9 +86,14 @@ class IASIExtractor:
             return f"/bdd/metopc/l2/iasi/{self.year}/{self.month}/{self.day}/clp/"
         else:
             raise ValueError("Invalid data path type. Accepts 'L1C' or 'L2'.")
-        
-    def _process_files_for_date(self):
+    
+    
+    def _get_datapaths(self):
         self.datapath_in = self._get_datapath_in()
+        self.datapath_out = self._get_datapath_out()
+
+    def _process_files_for_date(self):
+        self._get_datapaths()
         if os.path.isdir(self.datapath_in):
             for datafile_in in os.scandir(self.datapath_in):
                 self._process_file(datafile_in.name)
