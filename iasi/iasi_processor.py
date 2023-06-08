@@ -1,34 +1,34 @@
-import os
-import subprocess
 from datetime import datetime
+import glob
+import numpy as np
+import pandas as pd
 from typing import Tuple, List, Union
 
 import numpy as np
 
 
-class IASI_L1C:
+class L1CProcessor:
     """
-    Processing class to read and extract data from binary file.
+    Processor for the intermediate binary file of IASI L1C products output by OBR script.
 
     Attributes:
     filepath (str): Path to the binary file.
     targets (List[str]): List of target variables to extract.
     """
     def __init__(self, filepath: str, targets: List[str]):
-        """Initializes the IASI_L1C object with filepath and target variables."""
         self.filepath = filepath
         self.targets = targets
 
 
-    def __enter__(self) -> 'IASI_L1C':
+    def __enter__(self) -> 'L1CProcessor':
         """
         Opens the binary file and prepares the preprocessing.
         
         Returns:
-        self: The IASI_L1C object itself.
+        self: The L1CProcessor object itself.
         """
         # Open binary file
-        print("Loading binary file:")
+        print("Loading intermediate L1C file:")
         self.f = open(self.filepath, 'rb')
         
         # Get structure of file header and data record
@@ -376,7 +376,7 @@ class IASI_L1C:
             None
         """
         # Open your file in write mode
-        with open(f"{outpath}{outfile}", 'w') as f:
+        with open(f"{outpath}{outfile}.txt", 'w') as f:
         
             # Write the integers to the first line, separated by spaces
             f.write(' '.join(map(str, header)) + '\n')
@@ -384,69 +384,86 @@ class IASI_L1C:
             # Write the 2D numpy array to the file, line by line
             for row in np.transpose(data):
                 f.write(' '.join(map(str, row)) + '\n')
+
+        # # Transpose the data to match the previous structure
+        # data = np.transpose(data)
+        
+        # # Create a DataFrame with the transposed data
+        # df = pd.DataFrame(data, columns=header)
+        
+        # # Save the DataFrame to a file in HDF5 format
+        # df.to_hdf(f"{outpath}{outfile}.h5", key='df', mode='w')
         return
 
+    
+    def extract_spectra(self, datapath_out: str, year: str, month: str, day: str):
+        # Extract and process binary data
+        header, all_data = self.extract_data()
+        
+        # Check observation quality and filter out bad observations
+        good_data = self.filter_bad_observations(all_data, date=datetime(self.year, self.month, self.day))
 
-def build_command(filepath_raw: str, year: int, month: int, day: int, iasi_channels: list, filter: str, file_out: str):
-    """Execute OBR command and produce intermediate binary files"""
+        # Define the output filename
+        outfile = f"IASI_L1C_{year}_{month}_{day}"
+        
+        # Save outputs to file
+        self.save_observations(datapath_out, header, good_data, outfile)
 
-    run_dir = f"/data/pdonnelly/IASI/scripts/obr_v4 "
-    filepath = f"-d {filepath_raw} "
-    first_date = f"-fd {year:04d}-{month:02d}-{day:02d} "
-    last_date = f"-ld {year:04d}-{month:02d}-{day:02d} "
-    channels = f"-c {iasi_channels[0]}-{iasi_channels[-1]} "
-    filter = "" #f"-mf {file_in}"
-    output = f"-of bin -out {file_out} "
-    return f"{run_dir}{filepath}{first_date}{last_date}{channels}{filter}{output}"
-
-
-def main():
+class L2Processor:
     """
-    Uses the OBR tool to extract data from raw unformatted binary files into intermediate binary files,
-    then stores the data products (number of parameters x number of measurements) in a text file for each given day.
+    Processor for the intermediate binary file of IASI L2 products output by OBR script.
+
+    Attributes:
+    filepath (str): Path to the binary file.
     """
-    # Define inputs for OBR tool
-    filepath_raw = '/bdd/IASI/L1C/'
-    years = [2020]
-    months = [1] #, 2, 3]
-    days = [1] #[day for day in range(28)] 
-    iasi_channels = [(i + 1) for i in range(8461)] # [1, 2, 3]
-    filter = 'W_XX-EUMETSAT-Darmstadt,SOUNDING+SATELLITE,METOPA+IASI_C_EUMC_20200101000253_68496_eps_o_l1.bin'
-    filename_tmp = "L1C_outfile_3.bin"
+    def __init__(self, filepath: str, lat_range: Tuple[int, int], lon_range: Tuple[int, int]):
+        self.filepath = filepath
+        self.lat_range = lat_range
+        self.lon_range = lon_range
+        self.filtered_data = None
 
-     # Specify target IASI L1C products
-    targets = ['satellite_zenith_angle','quality_flag_1','quality_flag_2','quality_flag_3','cloud_fraction','surface_type']
 
-    # Specify location of IASI L1C products
-    filepath_data = "E:\\data\\iasi\\"
+    def __enter__(self) -> 'L2Processor':
+        """
+        Opens the csv file and prepares the preprocessing.
+        
+        Returns:
+        self: The L2Processor object itself.
+        """
+        # Open csv file
+        print("Loading intermediate L2 file:")
+        self.df = pd.read_csv(self.filepath, sep='\s+', header=None)
+        self.df.columns = ['Latitude', 'Longitude', 'Datetime', 'Orbit Number','Scanline Number', 'Pixel Number',
+                        'Cloud Fraction', 'Cloud-top Temperature', 'Cloud-top Pressure', 'Cloud Phase',
+                        'Column11', 'Column12', 'Column13', 'Column14', 'Column15', 'Column16', 'Column17', 'Column18']
+        return self
 
-    # Loop through date-times
-    for year in years:
-        for month in months:
-            for day in days:
 
-                # Construct command-line executable
-                command = build_command(filepath_raw, year, month, day, iasi_channels, filter, filename_tmp)
+    def __exit__(self, type, value, traceback) -> None:
+        """
+        Ensure the file is closed when exiting the context.
 
-                # # Extract IASI data from raw binary files (create intermediate binary files)
-                # subprocess.run(command, shell=True)
+        Args:
+            type (Any): The exception type.
+            value (Any): The exception value.
+            traceback (Any): The traceback object.
+        """
+        self.df.close()
+    
 
-                # Process extracted IASI data from intermediate binary files
-                intermediate_file = f"{filepath_data}{filename_tmp}"
-                with IASI_L1C(intermediate_file, targets) as file:
-                    
-                    # Extract and process binary data
-                    header, all_data = file.extract_data()
-                    
-                    # Check observation quality and filter out bad observations
-                    good_data = file.filter_bad_observations(all_data, date=datetime(year, month, day))
+    def _save_data(self):
+        self.filtered_data.to_hdf(f"{self.filepath}.h5", key='df', mode='w')
 
-                # # Delete intermediate binary file (after extracting spectra and metadata)
-                # os.remove(intermediate_file)
 
-                # Save outputs to file
-                outfile = f"iasi_L1C_{year}_{month}_{day}.txt"
-                IASI_L1C.save_observations(filepath_data, outfile, header, good_data)
+    def _filter_data(self):
+        data = []
+        for _, row in self.df.iterrows():
+            if (self.lat_range[0] <= row['Latitude'] <= self.lat_range[1]) and (self.lon_range[0] <= row['Longitude'] <= self.lon_range[1]):
+                if (row['Cloud Phase'] == 2) and np.isfinite(row['Cloud-top Temperature']):
+                    data.append([row['Latitude'], row['Longitude'], row['Datetime'], row['Cloud Fraction'], row['Cloud-top Temperature'], row['Cloud-top Pressure'], row['Cloud Phase']])
+        self.filtered_data =  pd.DataFrame(data, columns=['Latitude', 'Longitude', 'Orbit', 'Datetime', 'Cloud Fraction', 'Cloud-top Temperature', 'Cloud-top Pressure', 'Cloud Phase'])
 
-if __name__ == "__main__":
-    main()
+    
+    def extract_ice_clouds(self):
+        self._filter_data()
+        self._save_data()
