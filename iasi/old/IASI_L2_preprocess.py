@@ -25,10 +25,14 @@ for datafile in datafile_list:
     df = pd.read_csv(datafile, sep='\s+', header=None)
 
     # Assign column names to the DataFrame
-    df.columns = ['Latitude', 'Longitude', 'Datetime', 'Orbit Number','Scanline Number', 'Pixel Number',
-                  'Cloud Fraction', 'Cloud-top Temperature', 'Cloud-top Pressure', 'Cloud Phase',
-                  'Column11', 'Column12', 'Column13', 'Column14', 'Column15', 'Column16', 'Column17', 'Column18']
-    
+    raw_columns =  ['Latitude', 'Longitude', 'Datetime', 'Orbit Number','Scanline Number', 'Pixel Number',
+                    'Cloud Fraction', 'Cloud-top Temperature', 'Cloud-top Pressure', 'Cloud Phase',
+                    'Column11', 'Column12', 'Column13', 'Column14', 'Column15', 'Column16', 'Column17', 'Column18']
+    df.columns = raw_columns
+
+    # Specify the columns that are to be extracted
+    extracted_columns = ['Latitude', 'Longitude', 'Datetime', 'Cloud Fraction', 'Cloud-top Temperature', 'Cloud-top Pressure', 'Cloud Phase']
+
     # Filter data points based on conditions and append to iasidata list
     data = []
     for index, row in df.iterrows():
@@ -37,11 +41,12 @@ for datafile in datafile_list:
             
             if (row['Cloud Phase'] == 2) and np.isfinite(row['Cloud-top Temperature']):
                 
-                print([row['Latitude'], row['Longitude'], row['Datetime'], row['Cloud Fraction'], row['Cloud-top Temperature'], row['Cloud-top Pressure'], row['Cloud Phase']])
-                data.append([row['Latitude'], row['Longitude'], row['Datetime'], row['Cloud Fraction'], row['Cloud-top Temperature'], row['Cloud-top Pressure'], row['Cloud Phase']])
-
+                data.append([row[column] for column in extracted_columns])
+    
     # Convert data list to a new DataFrame
-    filtered_data_df = pd.DataFrame(data, columns=['Latitude', 'Longitude', 'Orbit', 'Datetime', 'Cloud Fraction', 'Cloud-top Temperature', 'Cloud-top Pressure', 'Cloud Phase'])
+    filtered_data_df = pd.DataFrame(data, columns=extracted_columns)
 
     # Save the data to a file
-    filtered_data_df.to_hdf(f"{datafile}.h5", key='df', mode='w')
+    outfile = datafile.split('.')[0]
+    filtered_data_df.to_csv(f"{outfile}.csv", columns=extracted_columns, index=False, mode='w')
+    # filtered_data_df.to_hdf(f"{datafile}.h5", key='df', mode='w')

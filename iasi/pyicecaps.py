@@ -1,4 +1,6 @@
+from iasi_config import Config
 from iasi_extractor import IASIExtractor as extractor
+from iasi_correlator import IASICorrelator as correlator
 
 def main():
     """pyICECAPS: Python IASI Cloud Extraction and Processing for Spectrum Analysis.
@@ -7,8 +9,12 @@ def main():
     developed by IASI team, then produce conveniently-formatted spatio-temporal data
     of IASI products: L1C calibrated spectra or L2 cloud products.
     """
+    # Instantiate the IASIConfig for the data reduction run
+    config = Config()
+    config.set_parameters()
+
     # Instantiate an IASIExtractor to get data from raw binary files
-    ex = extractor()
+    ex = extractor(config)
     
     for year in ex.config.year_list:
         ex.year = f"{year:04d}"
@@ -22,6 +28,12 @@ def main():
                 ex.get_datapaths()
                 ex.process_files()
                 ex.rename_files()
+
+                # Correlate of ice cloud locations and spectra
+                ex.filter_spectra()
+                
+                # # Delete intermediate CSV/HDF files
+                # co.delete_intermediate()
 
 if __name__ == "__main__":
     main()

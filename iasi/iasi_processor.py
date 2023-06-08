@@ -15,9 +15,9 @@ class L1CProcessor:
     filepath (str): Path to the binary file.
     targets (List[str]): List of target variables to extract.
     """
-    def __init__(self, filepath: str, targets: List[str]):
+    def __init__(self, filepath: str, config: object):
         self.filepath = filepath
-        self.targets = targets
+        self.targets = config.targets
 
 
     def __enter__(self) -> 'L1CProcessor':
@@ -32,7 +32,7 @@ class L1CProcessor:
         self.f = open(self.filepath, 'rb')
         
         # Get structure of file header and data record
-        self.header_size, self.number_of_channels = self.read_header()
+        self.header_size, self.number_of_channels, self.channel_IDs = self.read_header()
         self.record_size = self.read_record_size()
         self.number_of_measurements = 5#self.count_measurements()
         self.print_metadata()
@@ -84,10 +84,17 @@ class L1CProcessor:
 
         # Read number of channels
         number_of_channels = np.fromfile(self.f, dtype='uint32', count=1)[0]
+        
+        # Read channel ID numbers
+        channel_IDs = np.fromfile(self.f, dtype='uint32', count=number_of_channels)[0]
+        
+        # Check this is a list of strings !!!
+        print(f"CHANNEL IDs: {channel_IDs}")
+        exit()
 
         # Verify the header size
         self.verify_header(header_size)
-        return header_size, number_of_channels
+        return header_size, number_of_channels, channel_IDs
 
 
     def verify_header(self, header_size: int) -> None:
@@ -197,12 +204,12 @@ class L1CProcessor:
                 self.field_data[field] = data
 
         # Store datetime components field at the end of dictionary for later construction
-        self.field_data["datetime"] = [self.field_data['year'],
-                                        self.field_data['month'],
-                                        self.field_data['day'],
-                                        self.field_data['hour'],
-                                        self.field_data['minute'],
-                                        self.field_data['millisecond']]
+        self.field_data["datetime"] = [int(self.field_data['year']),
+                                        int(self.field_data['month']),
+                                        int(self.field_data['day']),
+                                        int(self.field_data['hour']),
+                                        int(self.field_data['minute']),
+                                        int(self.field_data['millisecond']/10000)]
         
 
     def calculate_local_time(self) -> np.ndarray:
@@ -254,7 +261,7 @@ class L1CProcessor:
         local_time = self.calculate_local_time()
 
         # Return the longitude, latitude, and a Boolean indicating day (True) or night (False)
-        return [self.field_data['longitude'], self.field_data['latitude'], ((6 < local_time) & (local_time < 18))]
+        return self.field_data['latitude'], self.field_data['longitude'], (6 < local_time < 18)
 
 
     def store_spectral_radiance(self) -> np.ndarray:
@@ -295,18 +302,29 @@ class L1CProcessor:
         Returns:
             List: A list of the target parameters from the field data.
         """
-        return [data for field, data in self.field_data.items() if (field in self.targets)]
-
+        target_parameter_names = [field for field, _ in self.field_data.items() if (field in self.targets)]
+        target_parameters =  [data for field, data in self.field_data.items() if (field in self.targets)]
+        return target_parameter_names, target_parameters
 
     def store_datetime_components(self) -> List:
         """
         Stores the datetime components from the datetime field data.
 
         Returns:
-            List: A list of the datetime components from the field data.
+            List: A list of the datetime components from the field data (formatted like the outputs of the L2 reader)
         """
-        return [datetime for datetime in self.field_data['datetime']]
+        return [f"{d[0]}{d[1]}{d[2]}.{d[3]}{d[4]}{d[5]}" for d in self.field_data['datetime']]
 
+
+    def build_header(self, target_parameter_names: List[str]):
+        # Add the main data columns to the header
+        header = ["Latitude", "Longitude", "Datetime", "Local Time"]
+        # Add the IASI channel IDs: List[str]
+        header.extend(self.channel_IDs)
+        # Add the L1C target parameter names: List[str]
+        header.extend(target_parameter_names)
+        return header
+    
 
     def extract_data(self) -> Tuple[List[int], np.array]:
         """
@@ -319,18 +337,16 @@ class L1CProcessor:
         """
         # Extract and process binary data
         self.read_field_data()
-        space_time_coordinates = self.store_space_time_coordinates()
+        latitude, longitude, local_time = self.store_space_time_coordinates()
         radiances = self.store_spectral_radiance()
-        target_parameters = self.store_target_parameters()
+        target_parameter_names, target_parameters = self.store_target_parameters()
         datetimes = self.store_datetime_components()
 
         # Concatenate processed observations into a single 2D array (number of parameters x number of measurements).
-        data = np.concatenate((space_time_coordinates, radiances, target_parameters, datetimes), axis=0)
+        data = np.concatenate((latitude, longitude, datetimes, local_time, radiances, target_parameters), axis=0)
 
-        # Construct a header that contains the lengths of each of the components of the concatenated data.
-        # This can be used for easy separation of columns in the future.
-        header = [len(space_time_coordinates), len(radiances), len(target_parameters), len(datetimes)]
-
+        # Construct a header that contains the name of each data column
+        header = self.build_header(target_parameter_names)
         return header, data
 
 
@@ -375,24 +391,25 @@ class L1CProcessor:
         Returns:
             None
         """
-        # Open your file in write mode
-        with open(f"{outpath}{outfile}.txt", 'w') as f:
+        # # Open your file in write mode
+        # with open(f"{outpath}{outfile}.txt", 'w') as f:
         
-            # Write the integers to the first line, separated by spaces
-            f.write(' '.join(map(str, header)) + '\n')
+        #     # Write the integers to the first line, separated by spaces
+        #     f.write(' '.join(map(str, header)) + '\n')
 
-            # Write the 2D numpy array to the file, line by line
-            for row in np.transpose(data):
-                f.write(' '.join(map(str, row)) + '\n')
+        #     # Write the 2D numpy array to the file, line by line
+        #     for row in np.transpose(data):
+        #         f.write(' '.join(map(str, row)) + '\n')
 
         # # Transpose the data to match the previous structure
         # data = np.transpose(data)
         
-        # # Create a DataFrame with the transposed data
-        # df = pd.DataFrame(data, columns=header)
+        # Create a DataFrame with the transposed data
+        df = pd.DataFrame(data, columns=header)
         
-        # # Save the DataFrame to a file in HDF5 format
+        # Save the DataFrame to a file in HDF5 format
         # df.to_hdf(f"{outpath}{outfile}.h5", key='df', mode='w')
+        df.to_csv(f"{outpath}{outfile}.csv", columns=header, index=False, mode='w')
         return
 
     
@@ -403,10 +420,8 @@ class L1CProcessor:
         # Check observation quality and filter out bad observations
         good_data = self.filter_bad_observations(all_data, date=datetime(self.year, self.month, self.day))
 
-        # Define the output filename
+        # Define the output filename and save outputs
         outfile = f"IASI_L1C_{year}_{month}_{day}"
-        
-        # Save outputs to file
         self.save_observations(datapath_out, header, good_data, outfile)
 
 class L2Processor:
@@ -416,11 +431,13 @@ class L2Processor:
     Attributes:
     filepath (str): Path to the binary file.
     """
-    def __init__(self, filepath: str, lat_range: Tuple[int, int], lon_range: Tuple[int, int]):
+    def __init__(self, filepath: str, config: object):
         self.filepath = filepath
-        self.lat_range = lat_range
-        self.lon_range = lon_range
+        self.lat_range = config.latitude_range
+        self.lon_range = config.longitude_range
+        self.extracted_columns = None
         self.filtered_data = None
+        self.cloud_phase = config.cloud_phase
 
 
     def __enter__(self) -> 'L2Processor':
@@ -452,16 +469,27 @@ class L2Processor:
     
 
     def _save_data(self):
-        self.filtered_data.to_hdf(f"{self.filepath}.h5", key='df', mode='w')
+        # Save the data to a file
+        outfile = self.filepath.split('.')[0]
+        self.filtered_data.to_csv(f"{outfile}.csv", columns=self.extracted_columns, index=False, mode='w')
+        # self.filtered_data.to_hdf(f"{outfile}.h5", key='df', mode='w')
 
 
     def _filter_data(self):
+        
+        # Specify the columns that are to be extracted
+        self.extracted_columns = ['Latitude', 'Longitude', 'Datetime', 'Cloud Fraction', 'Cloud-top Temperature', 'Cloud-top Pressure', 'Cloud Phase']
+
         data = []
         for _, row in self.df.iterrows():
+            
             if (self.lat_range[0] <= row['Latitude'] <= self.lat_range[1]) and (self.lon_range[0] <= row['Longitude'] <= self.lon_range[1]):
-                if (row['Cloud Phase'] == 2) and np.isfinite(row['Cloud-top Temperature']):
-                    data.append([row['Latitude'], row['Longitude'], row['Datetime'], row['Cloud Fraction'], row['Cloud-top Temperature'], row['Cloud-top Pressure'], row['Cloud Phase']])
-        self.filtered_data =  pd.DataFrame(data, columns=['Latitude', 'Longitude', 'Orbit', 'Datetime', 'Cloud Fraction', 'Cloud-top Temperature', 'Cloud-top Pressure', 'Cloud Phase'])
+                
+                if (row['Cloud Phase'] == self.cloud_phase) and np.isfinite(row['Cloud-top Temperature']):
+                    
+                    data.append([row[column] for column in self.extracted_columns])
+        
+        self.filtered_data =  pd.DataFrame(data, columns=self.extracted_columns)
 
     
     def extract_ice_clouds(self):

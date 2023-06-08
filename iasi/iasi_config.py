@@ -8,8 +8,9 @@ class Config:
         self.data_level: str = ""
         self.targets: List[str] = []
         self.channels: List[int] = []
-        self.latitude_range: Tuple[float, float] = []
-        self.longitude_range: Tuple[float, float] = []
+        self.latitude_range: Tuple[float, float] = ()
+        self.longitude_range: Tuple[float, float] = ()
+        self.cloud_phase: int = None
 
     def set_parameters(self):
         # Specify date range for zeroth-level extraction
@@ -31,3 +32,5 @@ class Config:
         ### Level 2
         self.latitude_range = (-90, 90)
         self.longitude_range = (-180, 180)
+
+        self.cloud_phase = 2
