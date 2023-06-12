@@ -2,13 +2,12 @@ from datetime import datetime
 import os
 import pandas as pd
 import subprocess
-from typing import List, Union
+from typing import List, Union, Optional, Tuple
 
 import snoop
 
 from iasi_config import Config
-from iasi_processor import L1CProcessor as L1C
-from iasi_processor import L2Processor as L2
+from iasi_processor import L1CProcessor, L2Processor, Correlator
 
 class IASIExtractor:
     def __init__(self, config: object):
@@ -30,6 +29,8 @@ class IASIExtractor:
         self.datapath_out: str = None
         self.datafile_in: str = None
         self.datafile_out: str = None
+        self.datafile_l1c: str = None
+        self.datafile_l2: str = None
         self.cloud_phase: int = self.config.cloud_phase
 
 
@@ -43,13 +44,7 @@ class IASIExtractor:
         Returns:
             str: Output data path.
         """
-        # Check if the data level is either 'l1C' or 'l2'
-        if (self.data_level == 'l1C') or (self.data_level == 'l2'):
-            # Format the output path string and return it
-            return f"/data/pdonnelly/iasi/metopc/{self.data_level}/{self.year}/{self.month}/{self.day}/"
-        else:
-            # If the data level is not 'l1C' or 'l2', raise an error
-            raise ValueError("Invalid data path type. Accepts 'l1C' or 'l2'.")
+        return f"{self.config.datapath_out}{self.year}/{self.month}/{self.day}/"
 
     def _get_datapath_in(self) -> str:
         """
@@ -64,11 +59,11 @@ class IASIExtractor:
         # Check if the data level is 'l1C'
         if self.data_level == 'l1C':
             # Format the input path string and return it
-            return f"/bdd/metopc/{self.data_level}/iasi/{self.year}/{self.month}/{self.day}/"
+            return f"{self.config.datapath_in}{self.year}/{self.month}/{self.day}/"
         # Check if the data level is 'l2'
         elif self.data_level == 'l2':
             # Format the input path string with an additional 'clp/' at the end and return it
-            return f"/bdd/metopc/{self.data_level}/iasi/{self.year}/{self.month}/{self.day}/clp/"
+            return f"{self.config.datapath_in}{self.year}/{self.month}/{self.day}/clp/"
         else:
             # If the data level is not 'l1C' or 'l2', raise an error
             raise ValueError("Invalid data path type. Accepts 'l1C' or 'l2'.")
@@ -189,7 +184,7 @@ class IASIExtractor:
 
         The result is a HDF5 file containing all locations of ice cloud from this intermediate file.
         """
-        with L2(intermediate_file, self.config.latitude_range, self.config.longitude_range) as file:
+        with L2Processor(intermediate_file, self.config.latitude_range, self.config.longitude_range) as file:
             file.extract_ice_clouds()
         return
 
@@ -203,7 +198,7 @@ class IASIExtractor:
         The result is a HDF5 file containing all good spectra from this intermediate file.
         """
         # Process extracted IASI data from intermediate binary files
-        with L1C(intermediate_file, self.config.targets) as file:
+        with L1CProcessor(intermediate_file, self.config.targets) as file:
             file.extract_spectra(self.datapath_out, self.year, self.month, self.day)
         return
 
@@ -250,67 +245,7 @@ class IASIExtractor:
                     os.rename(filename.path, os.path.join(self.datapath_out, new_filename))
 
 
-    def _get_cloud_phase(self):
-        if self.cloud_phase == 1:
-            return "aqueous"
-        elif self.cloud_phase == 2:
-            return "icy"
-        elif self.cloud_phase == 3:
-            return "mixed"
-        elif self.cloud_phase == 4:
-            return "clear"
-        else:
-            # If the cloud_phase is unknown or uncertain, do not save file
-            return None
-        
-    def _build_merged_datafile_out(self):
-        cloud_phase = self._get_cloud_phase()
-        if cloud_phase == None:
-            return None
-        else:
-            return f"/data/pdonnelly/iasi/metopc/l1c/{self.year}/{self.month}/{self.day}/{cloud_phase}/"
-    
-    def _save_merged_data(self, merged_df: object):
-        merged_datafile_out = self._build_merged_datafile_out()
-        
-        if merged_datafile_out == None:
-            print("Cloud_phase is unknown or uncertain, skipping data.")
-            return
-        else:
-            merged_df.to_csv(f"{merged_datafile_out}{self.datafile_out}.csv", index=False)
-            return
-
-    @staticmethod
-    def correlate_measurements(df_l1C: object, df_l2: object):
-        # Round latitudes, longitudes, and datetimes to two decimal places and truncate datetime to remove fractional second part
-        df_l2[['Latitude', 'Longitude']] = df_l2[['Latitude', 'Longitude']].round(2)
-        df_l1C[['Latitude', 'Longitude']] = df_l1C[['Latitude', 'Longitude']].round(2)
-        df_l2['Datetime'] = df_l2['Datetime'].apply(lambda x: x.split('.')[0])
-        df_l1C['Datetime'] = df_l1C['Datetime'].apply(lambda x: x.split('.')[0])
-
-        # Merge dataframes on latitude, longitude and datetime
-        return pd.merge(df_l2, df_l1C, on=['Latitude', 'Longitude', 'Datetime'])
-
-    def _get_datapath_l1c(self):
-        return
-
-    def _get_datapath_l2(self):
-        return
-
-    def _load_data(self):
-        return pd.read_csv(self._get_datapath_l1c()), pd.read_csv(self._get_datapath_l2())
-
-    def filter_spectra(self):
-
-        # Load the data
-        df_l1C, df_l2 = self._load_data()
-
-        # Compare locations and times between datasets
-        merged_df = self.correlate_measurements(df_l1C, df_l2)
-
-        # Save the merged data
-        self._save_merged_data(merged_df)
-        return
-    
-    def delete_intermediate_analysis_data(self):
+    def correlate_l1c_l2(self):
+        with Correlator(self.datapath_out, self.datafile_out, self.cloud_phase) as file:
+            file.filter_spectra()
         return

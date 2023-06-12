@@ -1,6 +1,5 @@
 from iasi_config import Config
 from iasi_extractor import IASIExtractor as extractor
-from iasi_correlator import IASICorrelator as correlator
 
 def main():
     """pyICECAPS: Python IASI Cloud Extraction and Processing for Spectrum Analysis.
@@ -26,14 +25,12 @@ def main():
                 ex.day = f"{day:02d}"
                 
                 ex.get_datapaths()
-                ex.process_files()
-                ex.rename_files()
+                # ex.process_files()
+                # ex.rename_files()
 
-                # Correlate of ice cloud locations and spectra
-                ex.filter_spectra()
+                # Correlate L1C spectra and L2 cloud products
+                ex.correlate_l1c_l2()
                 
-                # # Delete intermediate CSV/HDF files
-                # co.delete_intermediate()
 
 if __name__ == "__main__":
     main()

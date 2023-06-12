@@ -1,8 +1,9 @@
 from datetime import datetime
 import glob
+import os
 import numpy as np
 import pandas as pd
-from typing import Tuple, List, Union
+from typing import Tuple, List, Union, Optional
 
 import numpy as np
 
@@ -32,13 +33,13 @@ class L1CProcessor:
         self.f = open(self.filepath, 'rb')
         
         # Get structure of file header and data record
-        self.header_size, self.number_of_channels, self.channel_IDs = self.read_header()
-        self.record_size = self.read_record_size()
+        self.header_size, self.number_of_channels, self.channel_IDs = self._read_header()
+        self.record_size = self._read_record_size()
         self.number_of_measurements = 5#self.count_measurements()
-        self.print_metadata()
+        self._print_metadata()
 
         # Get fields information and prepare to store extracted data
-        self.fields = self.get_fields()
+        self.fields = self._get_fields()
         self.field_data = {}
         return self
 
@@ -55,7 +56,7 @@ class L1CProcessor:
         self.f.close()
 
 
-    def print_metadata(self):
+    def _print_metadata(self):
         print(f"Header  : {self.header_size} bytes")
         print(f"Record  : {self.record_size} bytes")
         print(f"Spectrum: {self.number_of_channels} channels")
@@ -63,7 +64,7 @@ class L1CProcessor:
         return
     
 
-    def read_header(self) -> Tuple[int, int]:
+    def _read_header(self) -> Tuple[int, int]:
         """
         Reads the header of the binary file to obtain the header size and number of channels.
 
@@ -97,7 +98,7 @@ class L1CProcessor:
         return header_size, number_of_channels, channel_IDs
 
 
-    def verify_header(self, header_size: int) -> None:
+    def _verify_header(self, header_size: int) -> None:
         """
         Verifies the header size by comparing it with the header size at the end of the header.
 
@@ -120,13 +121,13 @@ class L1CProcessor:
         assert header_size == header_size_check, "Header size mismatch"
 
 
-    def read_record_size(self) -> Union[int, None]:
+    def _read_record_size(self) -> Union[int, None]:
         self.f.seek(self.header_size + 8)
         record_size = np.fromfile(self.f, dtype='uint32', count=1)[0]
         return None if record_size == 0 else record_size
 
 
-    def get_fields(self) -> List[tuple]:
+    def _get_fields(self) -> List[tuple]:
         # Format of fields in binary file (field_name, data_type, data_size, cumulative_data_size)
         fields = [
             ('year', 'uint16', 2, 2),
@@ -160,7 +161,7 @@ class L1CProcessor:
         return fields
         
 
-    def count_measurements(self) -> int:
+    def _count_measurements(self) -> int:
         """
         Calculate the number of measurements in the binary file based on its size, 
         header size and record size.
@@ -175,7 +176,7 @@ class L1CProcessor:
         return (file_size - self.header_size - 8) // (self.record_size + 8)
 
 
-    def read_field_data(self) -> None:
+    def _read_field_data(self) -> None:
         """
         Reads the data of each field from the binary file and store it in the field_data dictionary.
 
@@ -212,7 +213,7 @@ class L1CProcessor:
                                         int(self.field_data['millisecond']/10000)]
         
 
-    def calculate_local_time(self) -> np.ndarray:
+    def _calculate_local_time(self) -> np.ndarray:
         """
         Calculate the local time (in hours, UTC) that determines whether it is day or night at a specific longitude.
 
@@ -250,7 +251,7 @@ class L1CProcessor:
         return np.mod(time_shifted, 24)
     
 
-    def store_space_time_coordinates(self) -> List:
+    def _store_space_time_coordinates(self) -> List:
         """
         Stores the space-time coordinates and a Boolean indicating whether the current time is day or night.
 
@@ -258,13 +259,13 @@ class L1CProcessor:
             List: A list containing longitude, latitude and a Boolean indicating day or night. 
         """
         # Calculate the local time
-        local_time = self.calculate_local_time()
+        local_time = self._calculate_local_time()
 
         # Return the longitude, latitude, and a Boolean indicating day (True) or night (False)
         return self.field_data['latitude'], self.field_data['longitude'], (6 < local_time < 18)
 
 
-    def store_spectral_radiance(self) -> np.ndarray:
+    def _store_spectral_radiance(self) -> np.ndarray:
         """
         Extracts and stores the spectral radiance measurements from the binary file.
 
@@ -295,7 +296,7 @@ class L1CProcessor:
         return data
 
 
-    def store_target_parameters(self) -> List:
+    def _store_target_parameters(self) -> List:
         """
         Stores the target parameters from the field data.
 
@@ -306,7 +307,8 @@ class L1CProcessor:
         target_parameters =  [data for field, data in self.field_data.items() if (field in self.targets)]
         return target_parameter_names, target_parameters
 
-    def store_datetime_components(self) -> List:
+
+    def _store_datetime_components(self) -> List:
         """
         Stores the datetime components from the datetime field data.
 
@@ -316,7 +318,7 @@ class L1CProcessor:
         return [f"{d[0]}{d[1]}{d[2]}.{d[3]}{d[4]}{d[5]}" for d in self.field_data['datetime']]
 
 
-    def build_header(self, target_parameter_names: List[str]):
+    def _build_header(self, target_parameter_names: List[str]):
         # Add the main data columns to the header
         header = ["Latitude", "Longitude", "Datetime", "Local Time"]
         # Add the IASI channel IDs: List[str]
@@ -336,17 +338,17 @@ class L1CProcessor:
 
         """
         # Extract and process binary data
-        self.read_field_data()
-        latitude, longitude, local_time = self.store_space_time_coordinates()
-        radiances = self.store_spectral_radiance()
-        target_parameter_names, target_parameters = self.store_target_parameters()
-        datetimes = self.store_datetime_components()
+        self._read_field_data()
+        latitude, longitude, local_time = self._store_space_time_coordinates()
+        radiances = self._store_spectral_radiance()
+        target_parameter_names, target_parameters = self._store_target_parameters()
+        datetimes = self._store_datetime_components()
 
         # Concatenate processed observations into a single 2D array (number of parameters x number of measurements).
         data = np.concatenate((latitude, longitude, datetimes, local_time, radiances, target_parameters), axis=0)
 
         # Construct a header that contains the name of each data column
-        header = self.build_header(target_parameter_names)
+        header = self._build_header(target_parameter_names)
         return header, data
 
 
@@ -378,29 +380,19 @@ class L1CProcessor:
         return good_data
 
     @staticmethod
-    def save_observations(outpath: str, outfile: str, header: list, data: np.array) -> None:
+    def save_observations(datapath_out: str, datafile_out: str, header: list, data: np.array) -> None:
         """
         Saves the observation data to a file.
         
         Args:
-            outpath (str): The path to save the file.
-            outfile (str): The name of the output file.
+            datapath_out (str): The path to save the file.
+            datafile_out (str): The name of the output file.
             header (list): A list of integers to be written as the first line.
             data (np.ndarray): A numpy array containing the observation data.
             
         Returns:
             None
         """
-        # # Open your file in write mode
-        # with open(f"{outpath}{outfile}.txt", 'w') as f:
-        
-        #     # Write the integers to the first line, separated by spaces
-        #     f.write(' '.join(map(str, header)) + '\n')
-
-        #     # Write the 2D numpy array to the file, line by line
-        #     for row in np.transpose(data):
-        #         f.write(' '.join(map(str, row)) + '\n')
-
         # # Transpose the data to match the previous structure
         # data = np.transpose(data)
         
@@ -408,8 +400,8 @@ class L1CProcessor:
         df = pd.DataFrame(data, columns=header)
         
         # Save the DataFrame to a file in HDF5 format
-        # df.to_hdf(f"{outpath}{outfile}.h5", key='df', mode='w')
-        df.to_csv(f"{outpath}{outfile}.csv", columns=header, index=False, mode='w')
+        # df.to_hdf(f"{datapath_out}{datafile_out}.h5", key='df', mode='w')
+        df.to_csv(f"{datapath_out}{datafile_out}.csv", columns=header, index=False, mode='w')
         return
 
     
@@ -422,7 +414,8 @@ class L1CProcessor:
 
         # Define the output filename and save outputs
         outfile = f"IASI_L1C_{year}_{month}_{day}"
-        self.save_observations(datapath_out, header, good_data, outfile)
+        self.save_observations(datapath_out, header, good_data, datafile_out)
+
 
 class L2Processor:
     """
@@ -476,22 +469,125 @@ class L2Processor:
 
 
     def _filter_data(self):
-        
         # Specify the columns that are to be extracted
         self.extracted_columns = ['Latitude', 'Longitude', 'Datetime', 'Cloud Fraction', 'Cloud-top Temperature', 'Cloud-top Pressure', 'Cloud Phase']
-
         data = []
         for _, row in self.df.iterrows():
-            
             if (self.lat_range[0] <= row['Latitude'] <= self.lat_range[1]) and (self.lon_range[0] <= row['Longitude'] <= self.lon_range[1]):
-                
-                if (row['Cloud Phase'] == self.cloud_phase) and np.isfinite(row['Cloud-top Temperature']):
-                    
+                if (row['Cloud Phase'] == self.cloud_phase) and np.isfinite(row['Cloud-top Temperature']): 
                     data.append([row[column] for column in self.extracted_columns])
-        
         self.filtered_data =  pd.DataFrame(data, columns=self.extracted_columns)
 
     
     def extract_ice_clouds(self):
         self._filter_data()
         self._save_data()
+
+
+class Correlator:
+    def __init__(self, datapath_out: str, datafile_out: str, cloud_phase: int):
+        self.datapath_out: str = datapath_out
+        self.datafile_out: str = datafile_out
+        self.cloud_phase: int = cloud_phase
+        self.df_l1c: object = None
+        self.df_l2: object = None
+
+
+    def __enter__(self) -> 'Correlator':
+        """
+        Opens two DataFrames loaded from the intermediate analysis data files.
+        
+        Returns:
+        self: The Correlator object itself.
+        """
+        # Open csv file
+        print("Loading L1C spectra and L2 cloud products:")
+        self._get_intermediate_analysis_data_paths()
+        self.df_l1c, self.df_l2 = pd.read_csv(self.datafile_l1c), pd.read_csv(self.datafile_l2)
+        return self
+
+
+    def __exit__(self, type, value, traceback) -> None:
+        """
+        Ensure the file is closed when exiting the context.
+
+        Args:
+            type (Any): The exception type.
+            value (Any): The exception value.
+            traceback (Any): The traceback object.
+        """
+        # self.df_l1c.close()
+        # self.df_l2.close()
+        pass
+
+
+    def _get_intermediate_analysis_data_paths(self) -> None:
+        """
+        Defines the paths to the intermediate analysis data files.
+        """
+        self.datafile_l1c = f"{self.datapath_out}L1C_test.csv"
+        self.datafile_l2 = f"{self.datapath_out}L2_test.csv"
+
+
+    def _delete_intermediate_analysis_data(self) -> None:
+        """
+        Delete the intermediate analysis data files used for correlating spectra and clouds.
+        """
+        os.remove(self.datafile_l1c)
+        os.remove(self.datafile_l2)
+
+
+    def _get_cloud_phase(self) -> Optional[str]:
+        """
+        Returns the cloud phase as a string based on the cloud phase value.
+        If the retrieved cloud phase is unknown or uncertain, returns None.
+        """
+        cloud_phase_dictionary = {1: "aqueous", 2: "icy", 3: "mixed", 4: "clear"}
+        return cloud_phase_dictionary.get(self.cloud_phase)
+
+
+    def _build_output_directory_path(self) -> Optional[str]:
+        """
+        Returns the output directory path based on the cloud phase.
+        If the cloud phase is unknown, returns None.
+        """
+        cloud_phase = self._get_cloud_phase()
+        return None if cloud_phase is None else f"{self.datapath_out}{cloud_phase}/"
+
+
+    def _save_merged_data(self, merged_df: pd.DataFrame) -> None:
+        """
+        Save the merged DataFrame to a CSV file in the output directory.
+        If the output directory is unknown (because the cloud phase is unknown), print a message and return.
+        """
+        datapath_out = self._build_output_directory_path()
+        if datapath_out is None:
+            print("Cloud_phase is unknown or uncertain, skipping data.")
+        else:
+            final_file = f"{datapath_out}{self.datafile_out}.csv"
+            print(f"Saving: {final_file}")
+            merged_df.to_csv(final_file, index=False)
+        return
+
+
+    def _correlate_measurements(self) -> pd.DataFrame:
+        """
+        Merge two DataFrames based on latitude, longitude and datetime. 
+        The latitude and longitude values are rounded to 2 decimal places.
+        Rows from df_l1c that do not have a corresponding row in df_l2 are dropped.
+        """
+        decimal_places = 2
+        self.df_l1c[['Latitude', 'Longitude']] = self.df_l1c[['Latitude', 'Longitude']].round(decimal_places)
+        self.df_l2[['Latitude', 'Longitude']] = self.df_l2[['Latitude', 'Longitude']].round(decimal_places)
+
+        merged_df = pd.merge(self.df_l1c, self.df_l2, on=['Latitude', 'Longitude', 'Datetime'], how='inner')
+        return merged_df.dropna()
+
+
+    def filter_spectra(self) -> None:
+        """
+        Loads the data, correlates measurements, saves the merged data, and deletes the original data.
+        """
+        merged_df = self._correlate_measurements()
+        self._save_merged_data(merged_df)
+        # self._delete_intermediate_analysis_data()
