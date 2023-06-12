@@ -18,10 +18,10 @@ class IASIExtractor:
             year (int): The year for which data is to be processed.
             months (List[int]): List of months for which data is to be processed.
             days (List[int]): List of days for which data is to be processed.
-            data_level (str): Type of data path. Accepts 'l1C' or 'l2'.
+            data_level (str): Type of data path. Accepts 'l1c' or 'l2'.
         """
         self.config = config
-        self.data_level: str = self.config.data_level
+        self.data_level: str = None
         self.year: str = None
         self.month: str = None
         self.day: str = None
@@ -39,34 +39,39 @@ class IASIExtractor:
         Gets the data path for the output based on the data level, year, month, and day.
 
         Raises:
-            ValueError: If the data level is neither 'l1C' nor 'l2'.
+            ValueError: If the data level is neither 'l1c' nor 'l2'.
             
         Returns:
             str: Output data path.
         """
-        return f"{self.config.datapath_out}{self.year}/{self.month}/{self.day}/"
+        if (self.data_level == 'l1c') or (self.data_level == 'l2'):
+            return f"{self.config.datapath_out}{self.data_level}/{self.year}/{self.month}/{self.day}/"
+        else:
+            # If the data level is not 'l1c' or 'l2', raise an error
+            raise ValueError("Invalid data path type. Accepts 'l1c' or 'l2'.")
 
     def _get_datapath_in(self) -> str:
         """
         Gets the data path for the input based on the data level, year, month, and day.
         
         Raises:
-            ValueError: If the data level is neither 'l1C' nor 'l2'.
+            ValueError: If the data level is neither 'l1c' nor 'l2'.
             
         Returns:
             str: Input data path.
         """
-        # Check if the data level is 'l1C'
-        if self.data_level == 'l1C':
+        # Check if the data level is 'l1c'
+        print(self.data_level)
+        if self.data_level == 'l1c':
             # Format the input path string and return it
-            return f"{self.config.datapath_in}{self.year}/{self.month}/{self.day}/"
+            return f"/bdd/metopc/{self.data_level}/iasi/{self.year}/{self.month}/{self.day}/"
         # Check if the data level is 'l2'
         elif self.data_level == 'l2':
             # Format the input path string with an additional 'clp/' at the end and return it
-            return f"{self.config.datapath_in}{self.year}/{self.month}/{self.day}/clp/"
+            return f"/bdd/metopc/{self.data_level}/iasi/{self.year}/{self.month}/{self.day}/clp/"
         else:
-            # If the data level is not 'l1C' or 'l2', raise an error
-            raise ValueError("Invalid data path type. Accepts 'l1C' or 'l2'.")
+            # If the data level is not 'l1c' or 'l2', raise an error
+            raise ValueError("Invalid data path type. Accepts 'l1c' or 'l2'.")
 
     def get_datapaths(self) -> None:
         """
@@ -99,12 +104,12 @@ class IASIExtractor:
         Builds the command to extract IASI data based on the data level.
 
         Raises:
-            ValueError: If the data level is neither 'l1C' nor 'l2'.
+            ValueError: If the data level is neither 'l1c' nor 'l2'.
 
         Returns:
             str: Command to run for data extraction.
         """
-        if self.data_level == 'l1C':
+        if self.data_level == 'l1c':
             # Define the path to the run executable
             runpath = f"./bin/obr_v4"
             # Get the command parameters
@@ -117,8 +122,8 @@ class IASIExtractor:
             # Return the complete command
             return f"{runpath} {self.datapath_in}{self.datafile_in} {self.datapath_out}{self.datafile_out}"
         else:
-            # If the data level is not 'l1C' or 'l2', raise an error
-            raise ValueError("Invalid data path type. Accepts 'l1C' or 'l2'.")
+            # If the data level is not 'l1c' or 'l2', raise an error
+            raise ValueError("Invalid data path type. Accepts 'l1c' or 'l2'.")
 
     def _run_command(self) -> None:
         """
@@ -208,19 +213,19 @@ class IASIExtractor:
         each intermediate file is different. 
 
         Raises:
-            ValueError: If the data level is neither 'l1C' nor 'l2'.
+            ValueError: If the data level is neither 'l1c' nor 'l2'.
         """
         # Point to intermediate binary file of IASI products (L1C: OBR, L2: BUFR)
         intermediate_file = f"{self.datapath_out}{self.datafile_out}"
         
         # Choose the processing function based on the data level
-        if self.data_level == 'l1C':
+        if self.data_level == 'l1c':
             self._process_l1c(intermediate_file)
         elif self.data_level == 'l2':
             self._process_l2(intermediate_file)
         else:
-            # If the data level is not 'l1C' or 'l2', raise an error
-            raise ValueError("Invalid data path type. Accepts 'l1C' or 'l2'.")
+            # If the data level is not 'l1c' or 'l2', raise an error
+            raise ValueError("Invalid data path type. Accepts 'l1c' or 'l2'.")
         
         # Delete the intermediate file
         self._delete_intermediate_reduction_data(intermediate_file)
@@ -228,12 +233,12 @@ class IASIExtractor:
 
     def _get_suffix(self):
         old_suffix=".bin"
-        if self.data_level == 'l1C':
+        if self.data_level == 'l1c':
             new_suffix=".bin"
         elif self.data_level == 'l2':
             new_suffix=".out"
         else:
-            raise ValueError("Invalid data path type. Accepts 'l1C' or 'l2'.")
+            raise ValueError("Invalid data path type. Accepts 'l1c' or 'l2'.")
         return old_suffix, new_suffix
 
     def rename_files(self):

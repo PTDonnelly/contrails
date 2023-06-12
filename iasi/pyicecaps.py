@@ -24,12 +24,27 @@ def main():
             for day in range(1, ex.config.days_in_months[im-1] + 1):
                 ex.day = f"{day:02d}"
                 
-                ex.get_datapaths()
-                # ex.process_files()
-                # ex.rename_files()
+                if config.mode == "Process":
+                    # Process only one IASI data level at a time (spectra or cloud products)
+                        ex.get_datapaths()
+                        ex.process_files()
+                        ex.rename_files()
+                elif config.mode == "Correlate":
+                    # Process both IASI data levels (spectra or cloud products) and save correlated observations
+                    config.data_level = ["l2", "l1c"]
+                    for level in config.data_level:
+                        ex.data_level = level
+                        ex.get_datapaths()
+                        print(ex.datapath_in)
+                        print(ex.datapath_out)
+                        print(ex.datafile_l1c)
+                        print(ex.datafile_l2)
+                        input()
+                        # ex.process_files()
+                        # ex.rename_files()
 
-                # Correlate L1C spectra and L2 cloud products
-                ex.correlate_l1c_l2()
+                        # Correlate L1C spectra and L2 cloud products
+                        # ex.correlate_l1c_l2()
                 
 
 if __name__ == "__main__":

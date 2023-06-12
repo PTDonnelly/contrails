@@ -91,7 +91,6 @@ class L1CProcessor:
         
         # Check this is a list of strings !!!
         print(f"CHANNEL IDs: {channel_IDs}")
-        exit()
 
         # Verify the header size
         self.verify_header(header_size)
@@ -413,8 +412,8 @@ class L1CProcessor:
         good_data = self.filter_bad_observations(all_data, date=datetime(self.year, self.month, self.day))
 
         # Define the output filename and save outputs
-        outfile = f"IASI_L1C_{year}_{month}_{day}"
-        self.save_observations(datapath_out, header, good_data, datafile_out)
+        # datafile_out = f"IASI_L1C_{year}_{month}_{day}"
+        self.save_observations(datapath_out, datafile_out, header, good_data)
 
 
 class L2Processor:
