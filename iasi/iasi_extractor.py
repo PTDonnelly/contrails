@@ -130,13 +130,21 @@ class IASIExtractor:
         """
         Executes the command to extract IASI data.
         """
-        # Get the command to run
+        # Build the command string to execute the binary script
         command = self._get_command()
-        # Run the command in a bash shell
-        # subprocess.run(['bash', '-c', command], check=True)
-        subprocess.run(command, shell=True)
-        # Print the type of the command string
-        print(command)
+
+        # Run the command on the command line
+        try:
+            # Capture the standard error of the command
+            result = subprocess.run(command, shell=True, check=True, stderr=subprocess.PIPE)
+        except subprocess.CalledProcessError as e:
+            # The subprocess module will raise a CalledProcessError if the process returns a non-zero exit status
+            # The standard error of the command is available in e.stderr
+            raise RuntimeError(f"The command '{command}' failed with error: {str(e)}, stderr: {e.stderr.decode('utf-8')}")
+        except Exception as e:
+            # Catch any other exceptions
+            raise RuntimeError(f"An unexpected error occurred while running the command '{command}': {str(e)}")
+
 
     def _create_run_directory(self) -> None:
         """
