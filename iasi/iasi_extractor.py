@@ -84,8 +84,10 @@ class IASIExtractor:
 
     def _check_preprocessed_files(self, result: object) -> bool:
         if "No L1C data files found" in result.stdout:
+            print(result.stdout)
             return False
         elif "No L2 data files found" in result.stdout:
+            print(result.stdout)
             return False
         else:
             return True
@@ -159,11 +161,17 @@ class IASIExtractor:
         """
         # Get the output file name from the input file name
         self.datafile_out = self.datafile_in.split(",")[2]
+        
         # Determine if the time is during the day or night
         hour = int(self.datafile_out[27:29])
         time = "day" if (6 <= hour <= 18) else "night"
+        
+        # Trim day/night subdirectory from any previous iterations
+        if "day" in self.datapath_out or "night" in self.datapath_out:
+            self.datapath_out = os.path.dirname(os.path.dirname(self.datapath_out))
         # Update the output data path
         self.datapath_out = f"{self.datapath_out}{time}/"
+        
         # Create the output directory if it doesn't exist
         os.makedirs(self.datapath_out, exist_ok=True)
 
