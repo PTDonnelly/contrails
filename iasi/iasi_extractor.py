@@ -140,7 +140,9 @@ class IASIExtractor:
         except subprocess.CalledProcessError as e:
             # The subprocess module will raise a CalledProcessError if the process returns a non-zero exit status
             # The standard error of the command is available in e.stderr
-            raise RuntimeError(f"The command '{command}' failed with error: {str(e)}, stderr: {e.stderr.decode('utf-8')}")
+            raise RuntimeError(f"The command '{command}' failed with",
+                               f"error: {str(e)}",
+                               f"stderr: {e.stderr.decode('utf-8')}")
         except Exception as e:
             # Catch any other exceptions
             raise RuntimeError(f"An unexpected error occurred while running the command '{command}': {str(e)}")
