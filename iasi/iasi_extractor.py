@@ -68,7 +68,8 @@ class IASIExtractor:
         # Check if the data level is 'l2'
         elif self.data_level == 'l2':
             # Format the input path string with an additional 'clp/' at the end and return it
-            return f"/bdd/metopc/{self.data_level}/iasi/{self.year}/{self.month}/{self.day}/clp/"
+            # return f"/bdd/metopc/{self.data_level}/iasi/{self.year}/{self.month}/{self.day}/clp/"
+            return f"/data/pdonnelly/iasi/metopc/l2/"
         else:
             # If the data level is not 'l1c' or 'l2', raise an error
             raise ValueError("Invalid data path type. Accepts 'l1c' or 'l2'.")

@@ -17,9 +17,9 @@ class Config:
     def set_parameters(self):
         
         # Specify date range for zeroth-level extraction
-        self.year_list = [2020]
-        self.month_list = [1]
-        self.days_in_months = [1]#[31, 28, 31, 30, 31, 30, 31, 31, 30, 31, 30, 31]
+        self.year_list = [2022]
+        self.month_list = [3]
+        self.days_in_months = [24]#[31, 28, 31, 30, 31, 30, 31, 31, 30, 31, 30, 31]
   
         # Sets the data path for the processed output files (defined by user)
         self.datapath_out = f"/data/pdonnelly/iasi/metopc/"
