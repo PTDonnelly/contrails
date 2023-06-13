@@ -64,7 +64,8 @@ class IASIExtractor:
         # Check the data level
         if self.data_level == 'l1c':
             # Format the input path string and return it
-            return f"/bdd/metopc/{self.data_level}/iasi/{self.year}/{self.month}/{self.day}/"
+            # return f"/bdd/metopc/{self.data_level}/iasi/{self.year}/{self.month}/{self.day}/"
+            return f"/bdd/IASI/L1C/{self.year}/{self.month}/{self.day}/"
         elif self.data_level == 'l2':
             # Format the input path string with an additional 'clp/' at the end and return it
             return f"/bdd/metopc/{self.data_level}/iasi/{self.year}/{self.month}/{self.day}/clp/"
