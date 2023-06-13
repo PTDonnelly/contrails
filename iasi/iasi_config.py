@@ -6,7 +6,7 @@ class Config:
         self.month_list: List[int] = []
         self.day_list: Optional[List[int]] = []
         self.days_in_months: List[int] = []
-        self.data_level: str = ""
+        self.data_level: List[str] = []
         self.mode: str = None
         self.datapath_out: str = None
         self.targets: List[str] = []
@@ -16,45 +16,33 @@ class Config:
         self.cloud_phase: int = None
 
     def set_parameters(self):
-        
-        # Specify date range for zeroth-level extraction
+        self.set_filepath_parameters()
+        self.set_spatial_parameters()
+        self.set_temporal_parameters()
+        self.set_level_1C_parameters()
+        self.set_level_2_parameters()
+        self.set_processing_mode_and_data_level()
+
+    def set_filepath_parameters(self):
+        # Sets the data path for the processed output files (defined by user)
+        self.datapath_out = f"/data/pdonnelly/iasi/metopc/"
+    
+
+    def set_spatial_parameters(self):
+        # Set spatial range of binning
+        self.latitude_range = (-90, 90)
+        self.longitude_range = (-180, 180)
+
+
+    def set_temporal_parameters(self):
+         # Specify date range for zeroth-level extraction
         self.year_list = [2022]
         self.month_list = [3]
         self.day_list = [24] # List[int] (for specific days) or None (to scan days in month)
         self.days_in_months = [31, 28, 31, 30, 31, 30, 31, 31, 30, 31, 30, 31]
-  
-        # Sets the data path for the processed output files (defined by user)
-        self.datapath_out = f"/data/pdonnelly/iasi/metopc/"
-
-        # Specify the processing mode ("Process" | "Correlate")
-        self.mode = "Process"
-        
-        # Set data level to analyse (if self.mode == "Correlate", will default to ["l2", "l1c"])
-        self.data_level = ["l1c"]
-
-        # Verify data level and mode (based on self.mode)
-        self.set_data_level()
-        
-        # Set Level 1C parameters
-        self.set_l1c()
-
-        # Set Level 2 parameters
-        self.set_l2()
 
 
-    def set_data_level(self):
-        # Specify level of IASI data for zeroth-level extraction ("L1C" | "L2")
-        if self.mode == "Process":
-            self.data_level = self.data_level
-        elif self.mode == "Correlate":
-            self.data_level = ["l2", "l1c"]
-        else:
-            raise ValueError("Invalid analysis mode. Accepts 'Process' or 'Correlate'.")
-        # Check mode data level input agrees before execution
-        self.check_mode()
-
-
-    def set_l1c(self):
+    def set_level_1C_parameters(self):
         # Specify target IASI L1C products
         self.targets = ['satellite_zenith_angle', 'quality_flag_1', 'quality_flag_2',
                         'quality_flag_3', 'cloud_fraction', 'surface_type']
@@ -63,19 +51,30 @@ class Config:
         self.channels = [(i + 1) for i in range(8461)]
 
 
-    def set_l2(self):
-        # Set spatial range of binning
-        self.latitude_range = (-90, 90)
-        self.longitude_range = (-180, 180)
-        
+    def set_level_2_parameters(self):
         # Set the cloud phase desired from the L2 products
         self.cloud_phase = 2
 
 
-    def check_mode(self):
-        if (self.mode == "Process") & (len(self.data_level) > 1):
-            # If the data level is not 'l1C' or 'l2', raise an error
-            raise ValueError("Invalid data path type. Accepts 'l1C' or 'l2'.")
-        elif (self.mode == "Correlate") & (self.data_level != ["l2", "l1c"]):
-            # If the data level does not contain 'l1C' and 'l2', raise an error
-            raise ValueError("Invalid data path type. Must be ['l2', 'l1c'].")
+    def set_processing_mode_and_data_level(self):
+        # Specify the processing mode ("Process" | "Correlate")
+        self.mode = "Process"
+        # Specify the IASI product for extraction
+        L1C, L2 = True, True
+        
+        # Specify level of IASI data for zeroth-level extraction ("L1C" | "L2")
+        if self.mode == "Process":
+            if L1C:
+                self.data_level = ["l1c"]
+            elif L2:
+                self.data_level = ["l2"]
+        elif self.mode == "Correlate":
+            self.data_level = ["l2", "l1c"]
+        else:
+            raise ValueError("Invalid analysis mode. Accepts 'Process' or 'Correlate'.")
+
+        # Check mode data level input agrees before execution
+        if self.mode == "Process" and (L1C and L2) or (not L1C and not L2):
+            raise ValueError("Invalid data path type. Process mode requires either 'l1C' or 'l2'.")
+        elif self.mode == "Correlate" and self.data_level != ["l2", "l1c"]:
+            raise ValueError("Invalid data path type. Correlate mode requires ['l2', 'l1c'].")

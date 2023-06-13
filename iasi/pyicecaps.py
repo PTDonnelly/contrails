@@ -8,13 +8,9 @@ def main():
     developed by IASI team, then produce conveniently-formatted spatio-temporal data
     of IASI products: L1C calibrated spectra or L2 cloud products.
     """
-    # # Instantiate the IASIConfig for the data reduction run
-    # config = Config()
-    # config.set_parameters()
-
     # Instantiate an IASIExtractor to get data from raw binary files
     ex = extractor()
-    
+
     # Scan years
     for year in ex.config.year_list:
         ex.year = f"{year:04d}"
@@ -29,27 +25,19 @@ def main():
                 ex.day = f"{day:02d}"
                 
                 # Process desired IASI data level
+                # ex.config.mode == "Process": process only one IASI data level at a time (spectra or cloud products)
+                # ex.config.mode == "Correlate": process both IASI data levels (spectra or cloud products) and save correlated observations
                 for level in ex.config.data_level:
                     ex.data_level = level
                     
-                    if ex.config.mode == "Process":
-                        # Process only one IASI data level at a time (spectra or cloud products)
-                        ex.get_datapaths()
-                        ex.process_files()
-                        ex.rename_files()
-                    elif ex.config.mode == "Correlate":
-                        # Process both IASI data levels (spectra or cloud products) and save correlated observations
-                        ex.get_datapaths()
-                        print(ex.datapath_in)
-                        print(ex.datapath_out)
-                        print(ex.datafile_l1c)
-                        print(ex.datafile_l2)
-                        input()
-                        # ex.process_files()
-                        # ex.rename_files()
-
+                    # ex.config.mode == "Process": process only one IASI data level at a time (spectra or cloud products)
+                    # ex.config.mode == "Correlate": process both IASI data levels (spectra or cloud products) and save correlated observations
+                    ex.get_datapaths()
+                    ex.process_files()
+                    ex.rename_files()
+                    if ex.config.mode == "Correlate":
                         # Correlate L1C spectra and L2 cloud products
-                        # ex.correlate_l1c_l2()
+                        ex.correlate_l1c_l2()
                 
 
 if __name__ == "__main__":
