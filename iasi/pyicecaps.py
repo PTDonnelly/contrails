@@ -23,9 +23,8 @@ def main():
         for im, month in enumerate(config.month_list):
             ex.month = f"{month:02d}"
             
-            # Scan specific days or all calendar days (dependent on Config attributes)
+            # Scan days (specific days or all calendar days, dependent on Config attributes)
             day_range = config.day_list if (not config.day_list == None) else range(1, config.days_in_months[im-1] + 1)
-            # Scan days
             for day in day_range:
                 ex.day = f"{day:02d}"
                 

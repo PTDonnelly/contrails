@@ -130,7 +130,8 @@ class IASIExtractor:
         # Get the command to run
         command = self._get_command()
         # Run the command in a bash shell
-        subprocess.run(['bash', '-c', command], check=True)
+        # subprocess.run(['bash', '-c', command], check=True)
+        subprocess.run(command, shell=True)
         # Print the type of the command string
         print(type(command))
 
