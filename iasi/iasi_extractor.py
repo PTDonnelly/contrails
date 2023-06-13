@@ -84,6 +84,9 @@ class IASIExtractor:
         self.datapath_out = self._get_datapath_out()
 
 
+    def _check_preprocessed_files(self) -> bool:
+        return os.path.isfile(f"{self.datapath_out}{self.datafile_out}")
+    
     def _build_parameters(self) -> str:
         """
         Builds the parameter string for the IASI data extraction command.
@@ -144,8 +147,7 @@ class IASIExtractor:
         except Exception as e:
             # Catch any other exceptions
             raise RuntimeError(f"An unexpected error occurred while running the command '{command}': {str(e)}")
-
-
+    
     def _create_run_directory(self) -> None:
         """
         Creates the directory to save the output files, based on the input file name and time.
@@ -175,15 +177,20 @@ class IASIExtractor:
         """
         # Check if the input data path exists
         if os.path.isdir(self.datapath_in):
+            
             # Process each file in the directory
             for datafile_in in os.scandir(self.datapath_in):
+                
                 # Set the current input file
                 self.datafile_in = datafile_in.name
+                
                 # Preprocess the current file
                 self.preprocess()
-                # Process the current file
-                self.process()
-
+                
+                # Check if files are produced. If not, skip processing
+                if self._check_preprocessed_files():
+                    # Process the current file
+                    self.process()
 
     def _delete_intermediate_reduction_data(self, intermediate_file: str):
         # Delete intermediate binary file (after extracting spectra and metadata)
