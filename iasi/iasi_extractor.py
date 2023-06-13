@@ -2,7 +2,7 @@ from datetime import datetime
 import os
 import pandas as pd
 import subprocess
-from typing import Optional
+from typing import Optional, Tuple
 
 from iasi_config import Config
 from iasi_processor import L1CProcessor, L2Processor, Correlator
@@ -140,10 +140,7 @@ class IASIExtractor:
         """
         # Build the command string to execute the binary script
         command = self._get_command()
-        print(command)
-        exit()
 
-        # Run the command on the command line
         try:
             # Run the command in a bash shell and capture the output
             result = subprocess.run(command, shell=True, capture_output=True, text=True, check=True)
@@ -177,7 +174,7 @@ class IASIExtractor:
         # Create the output directory if it doesn't exist
         os.makedirs(self.datapath_out, exist_ok=True)
 
-    def preprocess(self) -> None:
+    def preprocess(self) -> Tuple[bool, str]:
         """
         Preprocesses the IASI data.
         """
@@ -186,7 +183,10 @@ class IASIExtractor:
         # Run the command to extract the data
         result = self._run_command()
         # Check if files are produced. If not, skip processing
-        return self._check_preprocessed_files(result)
+        check = self._check_preprocessed_files(result)
+        # Point to intermediate binary file of IASI products (L1C: OBR, L2: BUFR)
+        intermediate_file = f"{self.datapath_out}{self.datafile_out}"
+        return check, intermediate_file
 
     def process_files(self) -> None:
         """
@@ -204,10 +204,15 @@ class IASIExtractor:
                     if datafile_in.is_file():
                         # Set the current input file
                         self.datafile_in = datafile_in.name
-                        # Preprocess the current input file. If no files are produced, skip processing
-                        if self.preprocess():
+                        # Preprocess the current input file. If no IASI data files are found, skip processing (empty file still created, delete after)
+                        check, intermediate_file = self.preprocess()
+                        if check:
                             # Process the current file
-                            self.process()
+                            self.process(intermediate_file)
+                        else:
+                            # Delete the intermediate file (intermediate file will only be a few bytes, so there is not much I/O overhead)
+                            self._delete_intermediate_reduction_data(intermediate_file)
+
 
     def _delete_intermediate_reduction_data(self, intermediate_file: str):
         # Delete intermediate binary file (after extracting spectra and metadata)
@@ -241,7 +246,7 @@ class IASIExtractor:
             file.extract_spectra(self.datapath_out, self.datafile_out, self.year, self.month, self.day)
         return
 
-    def process(self) -> None:
+    def process(self, intermediate_file: str) -> None:
         """
         Runs separate processors for the IASI data based on its level, because
         each intermediate file is different. 
@@ -249,9 +254,6 @@ class IASIExtractor:
         Raises:
             ValueError: If the data level is neither 'l1c' nor 'l2'.
         """
-        # Point to intermediate binary file of IASI products (L1C: OBR, L2: BUFR)
-        intermediate_file = f"{self.datapath_out}{self.datafile_out}"
-        
         # Choose the processing function based on the data level
         if self.data_level == 'l1c':
             self._process_l1c(intermediate_file)
@@ -260,9 +262,6 @@ class IASIExtractor:
         else:
             # If the data level is not 'l1c' or 'l2', raise an error
             raise ValueError("Invalid data path type. Accepts 'l1c' or 'l2'.")
-        
-        # Delete the intermediate file
-        self._delete_intermediate_reduction_data(intermediate_file)
 
 
     def _get_suffix(self):
