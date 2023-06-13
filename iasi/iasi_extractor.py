@@ -2,6 +2,7 @@ from datetime import datetime
 import os
 import pandas as pd
 import subprocess
+from typing import Optional
 
 from iasi_config import Config
 from iasi_processor import L1CProcessor, L2Processor, Correlator
@@ -60,16 +61,13 @@ class IASIExtractor:
         Returns:
             str: Input data path.
         """
-        # Check if the data level is 'l1c'
-        print(self.data_level)
+        # Check the data level
         if self.data_level == 'l1c':
             # Format the input path string and return it
             return f"/bdd/metopc/{self.data_level}/iasi/{self.year}/{self.month}/{self.day}/"
-        # Check if the data level is 'l2'
         elif self.data_level == 'l2':
             # Format the input path string with an additional 'clp/' at the end and return it
-            # return f"/bdd/metopc/{self.data_level}/iasi/{self.year}/{self.month}/{self.day}/clp/"
-            return f"/data/pdonnelly/iasi/metopc/l2/"
+            return f"/bdd/metopc/{self.data_level}/iasi/{self.year}/{self.month}/{self.day}/clp/"
         else:
             # If the data level is not 'l1c' or 'l2', raise an error
             raise ValueError("Invalid data path type. Accepts 'l1c' or 'l2'.")
@@ -84,8 +82,13 @@ class IASIExtractor:
         self.datapath_out = self._get_datapath_out()
 
 
-    def _check_preprocessed_files(self) -> bool:
-        return os.path.isfile(f"{self.datapath_out}{self.datafile_out}")
+    def _check_preprocessed_files(self, result: object) -> bool:
+        if "No L1C data files found" in result.stdout:
+            return False
+        elif "No L2 data files found" in result.stdout:
+            return False
+        else:
+            return True
     
     def _build_parameters(self) -> str:
         """
@@ -129,17 +132,17 @@ class IASIExtractor:
             # If the data level is not 'l1c' or 'l2', raise an error
             raise ValueError("Invalid data path type. Accepts 'l1c' or 'l2'.")
 
-    def _run_command(self) -> None:
+    def _run_command(self) -> Optional[bool]:
         """
-        Executes the command to extract IASI data.
+        Executes and monitors the command to extract IASI data.
         """
         # Build the command string to execute the binary script
         command = self._get_command()
 
         # Run the command on the command line
         try:
-            # Capture the standard error of the command
-            result = subprocess.run(command, shell=True, check=True, stderr=subprocess.PIPE)
+            # Run the command in a bash shell and capture the output
+            result = subprocess.run(command, shell=True, capture_output=True, text=True, check=True, stderr=subprocess.PIPE)
         except subprocess.CalledProcessError as e:
             # The subprocess module will raise a CalledProcessError if the process returns a non-zero exit status
             # The standard error of the command is available in e.stderr
@@ -147,6 +150,7 @@ class IASIExtractor:
         except Exception as e:
             # Catch any other exceptions
             raise RuntimeError(f"An unexpected error occurred while running the command '{command}': {str(e)}")
+        return result
     
     def _create_run_directory(self) -> None:
         """
@@ -169,7 +173,9 @@ class IASIExtractor:
         # Create the output directory
         self._create_run_directory()
         # Run the command to extract the data
-        self._run_command()
+        result = self._run_command()
+        # Check if files are produced. If not, skip processing
+        return self._check_preprocessed_files(result)
 
     def process_files(self) -> None:
         """
@@ -179,23 +185,17 @@ class IASIExtractor:
         if os.path.isdir(self.datapath_in):
             
             # Process each file in the directory
-            files = os.scandir(self.datapath_in)
-            print(files, len(files))
-            file = files[0]
-            print(file, len(file))
-            exit()
-            for datafile_in in files:
+            for datafile_in in os.scandir(self.datapath_in):
                 
-                # Set the current input file
-                self.datafile_in = datafile_in.name
-                
-                # Preprocess the current file
-                self.preprocess()
-                
-                # Check if files are produced. If not, skip processing
-                if self._check_preprocessed_files():
-                    # Process the current file
-                    self.process()
+                # Check that entry is a file
+                if datafile_in.is_file():
+                    
+                    # Set the current input file
+                    self.datafile_in = datafile_in.name
+                    # Preprocess the current input file. If no files are produced, skip processing
+                    if self.preprocess():
+                        # Process the current file
+                        self.process()
 
     def _delete_intermediate_reduction_data(self, intermediate_file: str):
         # Delete intermediate binary file (after extracting spectra and metadata)
