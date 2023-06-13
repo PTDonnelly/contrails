@@ -28,7 +28,7 @@ class Config:
         self.mode = "Process"
         
         # Set data level to analyse (if self.mode == "Correlate", will default to ["l2", "l1c"])
-        self.data_level = ["l1"]
+        self.data_level = ["l1c"]
 
         # Verify data level and mode (based on self.mode)
         self.set_data_level()
