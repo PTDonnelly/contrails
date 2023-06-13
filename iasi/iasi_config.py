@@ -60,7 +60,7 @@ class Config:
         # Specify the processing mode ("Process" | "Correlate")
         self.mode = "Process"
         # Specify the IASI product for extraction
-        L1C, L2 = True, True
+        L1C, L2 = True, False
         
         # Specify level of IASI data for zeroth-level extraction ("L1C" | "L2")
         if self.mode == "Process":
