@@ -123,6 +123,8 @@ class IASIExtractor:
             runpath = f"./bin/obr_v4"
             # Get the command parameters
             parameters = self._build_parameters()
+            print(parameters, len(parameters))
+            exit()
             # Return the complete command
             return f"{runpath} -d {self.datapath_in}{self.datafile_in} {parameters} -out {self.datapath_out}{self.datafile_out}"
         elif self.data_level == 'l2':

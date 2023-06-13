@@ -407,9 +407,9 @@ def main():
     """
     # Define inputs for OBR tool
     filepath_raw = '/bdd/IASI/L1C/'
-    years = [2020]
-    months = [1] #, 2, 3]
-    days = [1] #[day for day in range(28)] 
+    years = [2022]
+    months = [3] #, 2, 3]
+    days = [24] #[day for day in range(28)] 
     iasi_channels = [(i + 1) for i in range(8461)] # [1, 2, 3]
     filter = 'W_XX-EUMETSAT-Darmstadt,SOUNDING+SATELLITE,METOPA+IASI_C_EUMC_20200101000253_68496_eps_o_l1.bin'
     filename_tmp = "L1C_outfile_3.bin"
@@ -427,26 +427,27 @@ def main():
 
                 # Construct command-line executable
                 command = build_command(filepath_raw, year, month, day, iasi_channels, filter, filename_tmp)
+                print(command)
+                
+                # # # Extract IASI data from raw binary files (create intermediate binary files)
+                # # subprocess.run(command, shell=True)
 
-                # # Extract IASI data from raw binary files (create intermediate binary files)
-                # subprocess.run(command, shell=True)
-
-                # Process extracted IASI data from intermediate binary files
-                intermediate_file = f"{filepath_data}{filename_tmp}"
-                with IASI_L1C(intermediate_file, targets) as file:
+                # # Process extracted IASI data from intermediate binary files
+                # intermediate_file = f"{filepath_data}{filename_tmp}"
+                # with IASI_L1C(intermediate_file, targets) as file:
                     
-                    # Extract and process binary data
-                    header, all_data = file.extract_data()
+                #     # Extract and process binary data
+                #     header, all_data = file.extract_data()
                     
-                    # Check observation quality and filter out bad observations
-                    good_data = file.filter_bad_observations(all_data, date=datetime(year, month, day))
+                #     # Check observation quality and filter out bad observations
+                #     good_data = file.filter_bad_observations(all_data, date=datetime(year, month, day))
 
-                # # Delete intermediate binary file (after extracting spectra and metadata)
-                # os.remove(intermediate_file)
+                # # # Delete intermediate binary file (after extracting spectra and metadata)
+                # # os.remove(intermediate_file)
 
-                # Save outputs to file
-                outfile = f"iasi_L1C_{year}_{month}_{day}.txt"
-                IASI_L1C.save_observations(filepath_data, outfile, header, good_data)
+                # # Save outputs to file
+                # outfile = f"iasi_L1C_{year}_{month}_{day}.txt"
+                # IASI_L1C.save_observations(filepath_data, outfile, header, good_data)
 
 if __name__ == "__main__":
     main()
