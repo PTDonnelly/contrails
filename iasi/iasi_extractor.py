@@ -194,17 +194,18 @@ class IASIExtractor:
         if os.path.isdir(self.datapath_in):
             
             # Process each file in the directory
-            for datafile_in in os.scandir(self.datapath_in):
-                
-                # Check that entry is a file
-                if datafile_in.is_file():
-                    
-                    # Set the current input file
-                    self.datafile_in = datafile_in.name
-                    # Preprocess the current input file. If no files are produced, skip processing
-                    if self.preprocess():
-                        # Process the current file
-                        self.process()
+            for i, datafile_in in enumerate(os.scandir(self.datapath_in)):
+                if i > 0:
+                    pass
+                else:
+                    # Check that entry is a file
+                    if datafile_in.is_file():
+                        # Set the current input file
+                        self.datafile_in = datafile_in.name
+                        # Preprocess the current input file. If no files are produced, skip processing
+                        if self.preprocess():
+                            # Process the current file
+                            self.process()
 
     def _delete_intermediate_reduction_data(self, intermediate_file: str):
         # Delete intermediate binary file (after extracting spectra and metadata)
