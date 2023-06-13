@@ -64,8 +64,7 @@ class IASIExtractor:
         # Check the data level
         if self.data_level == 'l1c':
             # Format the input path string and return it
-            # return f"/bdd/metopc/{self.data_level}/iasi/{self.year}/{self.month}/{self.day}/"
-            return f"/bdd/IASI/L1C/{self.year}/{self.month}/{self.day}/"
+            return f"/bdd/metopc/{self.data_level}/iasi/{self.year}/{self.month}/{self.day}/"
         elif self.data_level == 'l2':
             # Format the input path string with an additional 'clp/' at the end and return it
             return f"/bdd/metopc/{self.data_level}/iasi/{self.year}/{self.month}/{self.day}/clp/"
@@ -171,7 +170,7 @@ class IASIExtractor:
         if ("day" in self.datapath_out) or ("night" in self.datapath_out):
             self.datapath_out = os.path.dirname(os.path.dirname(self.datapath_out))
         # Update the output data path
-        self.datapath_out = f"{self.datapath_out}/{time}/"
+        self.datapath_out = f"{self.datapath_out}{time}/"
         
         # Create the output directory if it doesn't exist
         os.makedirs(self.datapath_out, exist_ok=True)
@@ -196,7 +195,7 @@ class IASIExtractor:
             
             # Process each file in the directory
             for i, datafile_in in enumerate(os.scandir(self.datapath_in)):
-                if i > 0:
+                if i > 1:
                     pass
                 else:
                     # Check that entry is a file
