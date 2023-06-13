@@ -168,7 +168,7 @@ class IASIExtractor:
         
         # Trim day/night subdirectory from any previous iterations
         if ("day" in self.datapath_out) or ("night" in self.datapath_out):
-            self.datapath_out = os.path.dirname(os.path.dirname(self.datapath_out))
+            self.datapath_out = f"{os.path.dirname(os.path.dirname(self.datapath_out))}/"
         # Update the output data path
         self.datapath_out = f"{self.datapath_out}{time}/"
         
