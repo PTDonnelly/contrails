@@ -1,9 +1,10 @@
-from typing import List, Tuple
+from typing import List, Tuple, Optional
 
 class Config:
     def __init__(self):
         self.year_list: List[int] = []
         self.month_list: List[int] = []
+        self.day_list: Optional[List[int]] = []
         self.days_in_months: List[int] = []
         self.data_level: str = ""
         self.mode: str = None
@@ -19,7 +20,8 @@ class Config:
         # Specify date range for zeroth-level extraction
         self.year_list = [2022]
         self.month_list = [3]
-        self.days_in_months = [24]#[31, 28, 31, 30, 31, 30, 31, 31, 30, 31, 30, 31]
+        self.day_list = [24] # List[int] (for specific days) or None (to scan days in month)
+        self.days_in_months = [31, 28, 31, 30, 31, 30, 31, 31, 30, 31, 30, 31]
   
         # Sets the data path for the processed output files (defined by user)
         self.datapath_out = f"/data/pdonnelly/iasi/metopc/"

@@ -15,15 +15,21 @@ def main():
     # Instantiate an IASIExtractor to get data from raw binary files
     ex = extractor(config)
     
-    for year in ex.config.year_list:
+    # Scan years
+    for year in config.year_list:
         ex.year = f"{year:04d}"
         
-        for im, month in enumerate(ex.config.month_list):
+        # Scan months
+        for im, month in enumerate(config.month_list):
             ex.month = f"{month:02d}"
             
-            for day in range(1, ex.config.days_in_months[im-1] + 1):
+            # Scan specific days or all calendar days (dependent on Config attributes)
+            day_range = config.day_list if (not config.day_list == None) else range(1, config.days_in_months[im-1] + 1)
+            # Scan days
+            for day in day_range:
                 ex.day = f"{day:02d}"
                 
+                # Process desired IASI data level
                 for level in config.data_level:
                     ex.data_level = level
                     
