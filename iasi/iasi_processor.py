@@ -15,9 +15,9 @@ class L1CProcessor:
     filepath (str): Path to the binary file.
     targets (List[str]): List of target variables to extract.
     """
-    def __init__(self, filepath: str, config: object):
+    def __init__(self, filepath: str, targets: List[str]):
         self.filepath = filepath
-        self.targets = config.targets
+        self.targets = targets
 
 
     def __enter__(self) -> 'L1CProcessor':
@@ -403,12 +403,12 @@ class L1CProcessor:
         return
 
     
-    def extract_spectra(self, datapath_out: str, year: str, month: str, day: str):
+    def extract_spectra(self, datapath_out: str, datafile_out: str, year: str, month: str, day: str):
         # Extract and process binary data
         header, all_data = self.extract_data()
         
         # Check observation quality and filter out bad observations
-        good_data = self.filter_bad_observations(all_data, date=datetime(self.year, self.month, self.day))
+        good_data = self.filter_bad_observations(all_data, date=datetime(year, month, day))
 
         # Define the output filename and save outputs
         # datafile_out = f"IASI_L1C_{year}_{month}_{day}"
@@ -422,13 +422,13 @@ class L2Processor:
     Attributes:
     filepath (str): Path to the binary file.
     """
-    def __init__(self, filepath: str, config: object):
+    def __init__(self, filepath: str, latitude_range: Tuple[float, float],  longitude_range: Tuple[float, float],  cloud_phase: int):
         self.filepath = filepath
-        self.lat_range = config.latitude_range
-        self.lon_range = config.longitude_range
+        self.lat_range = latitude_range
+        self.lon_range = longitude_range
         self.extracted_columns = None
         self.filtered_data = None
-        self.cloud_phase = config.cloud_phase
+        self.cloud_phase = cloud_phase
 
 
     def __enter__(self) -> 'L2Processor':

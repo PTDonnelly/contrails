@@ -7,7 +7,7 @@ from iasi_config import Config
 from iasi_processor import L1CProcessor, L2Processor, Correlator
 
 class IASIExtractor:
-    def __init__(self, config: object):
+    def __init__(self):
         """
         Initialize the IASI extractor class with given parameters.
 
@@ -17,7 +17,10 @@ class IASIExtractor:
             days (List[int]): List of days for which data is to be processed.
             data_level (str): Type of data path. Accepts 'l1c' or 'l2'.
         """
-        self.config = config
+        # Instantiate the Config class and set_parameters() for analysis
+        self.config = Config()
+        self.config.set_parameters()
+        
         self.data_level: str = None
         self.year: str = None
         self.month: str = None
@@ -26,10 +29,10 @@ class IASIExtractor:
         self.datapath_out: str = None
         self.datafile_in: str = None
         self.datafile_out: str = None
-        self.datafile_l1c: str = None
-        self.datafile_l2: str = None
-        self.cloud_phase: int = self.config.cloud_phase
+        # self.datafile_l1c: str = None
+        # self.datafile_l2: str = None
 
+        
 
     def _get_datapath_out(self) -> str:
         """
@@ -188,7 +191,7 @@ class IASIExtractor:
 
         The result is a HDF5 file containing all locations of ice cloud from this intermediate file.
         """
-        with L2Processor(intermediate_file, self.config.latitude_range, self.config.longitude_range) as file:
+        with L2Processor(intermediate_file, self.config.latitude_range, self.config.longitude_range, self.config.cloud_phase) as file:
             file.extract_ice_clouds()
         return
 
@@ -203,7 +206,7 @@ class IASIExtractor:
         """
         # Process extracted IASI data from intermediate binary files
         with L1CProcessor(intermediate_file, self.config.targets) as file:
-            file.extract_spectra(self.datapath_out, self.year, self.month, self.day)
+            file.extract_spectra(self.datapath_out, self.datafile_out, self.year, self.month, self.day)
         return
 
     def process(self) -> None:
@@ -250,6 +253,6 @@ class IASIExtractor:
 
 
     def correlate_l1c_l2(self):
-        with Correlator(self.datapath_out, self.datafile_out, self.cloud_phase) as file:
+        with Correlator(self.datapath_out, self.datafile_out, self.config.cloud_phase) as file:
             file.filter_spectra()
         return

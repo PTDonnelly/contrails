@@ -8,36 +8,36 @@ def main():
     developed by IASI team, then produce conveniently-formatted spatio-temporal data
     of IASI products: L1C calibrated spectra or L2 cloud products.
     """
-    # Instantiate the IASIConfig for the data reduction run
-    config = Config()
-    config.set_parameters()
+    # # Instantiate the IASIConfig for the data reduction run
+    # config = Config()
+    # config.set_parameters()
 
     # Instantiate an IASIExtractor to get data from raw binary files
-    ex = extractor(config)
+    ex = extractor()
     
     # Scan years
-    for year in config.year_list:
+    for year in ex.config.year_list:
         ex.year = f"{year:04d}"
         
         # Scan months
-        for im, month in enumerate(config.month_list):
+        for im, month in enumerate(ex.config.month_list):
             ex.month = f"{month:02d}"
             
             # Scan days (specific days or all calendar days, dependent on Config attributes)
-            day_range = config.day_list if (not config.day_list == None) else range(1, config.days_in_months[im-1] + 1)
+            day_range = ex.config.day_list if (not ex.config.day_list == None) else range(1, ex.config.days_in_months[im-1] + 1)
             for day in day_range:
                 ex.day = f"{day:02d}"
                 
                 # Process desired IASI data level
-                for level in config.data_level:
+                for level in ex.config.data_level:
                     ex.data_level = level
                     
-                    if config.mode == "Process":
+                    if ex.config.mode == "Process":
                         # Process only one IASI data level at a time (spectra or cloud products)
                         ex.get_datapaths()
                         ex.process_files()
                         ex.rename_files()
-                    elif config.mode == "Correlate":
+                    elif ex.config.mode == "Correlate":
                         # Process both IASI data levels (spectra or cloud products) and save correlated observations
                         ex.get_datapaths()
                         print(ex.datapath_in)
