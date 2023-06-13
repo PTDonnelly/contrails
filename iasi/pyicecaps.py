@@ -20,7 +20,7 @@ def main():
             ex.month = f"{month:02d}"
             
             # Scan days (specific days or all calendar days, dependent on Config attributes)
-            day_range = ex.config.day_list if (not ex.config.day_list == None) else range(1, ex.config.days_in_months[im-1] + 1)
+            day_range = ex.config.day_list if (not ex.config.day_list == "all") else range(1, ex.config.days_in_months[im-1] + 1)
             for day in day_range:
                 ex.day = f"{day:02d}"
                 
