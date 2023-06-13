@@ -4,8 +4,6 @@ import pandas as pd
 import subprocess
 from typing import List, Union, Optional, Tuple
 
-import snoop
-
 from iasi_config import Config
 from iasi_processor import L1CProcessor, L2Processor, Correlator
 
