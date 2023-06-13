@@ -136,7 +136,7 @@ class IASIExtractor:
         # subprocess.run(['bash', '-c', command], check=True)
         subprocess.run(command, shell=True)
         # Print the type of the command string
-        print(type(command))
+        print(command)
 
     def _create_run_directory(self) -> None:
         """
