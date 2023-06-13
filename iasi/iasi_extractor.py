@@ -179,7 +179,12 @@ class IASIExtractor:
         if os.path.isdir(self.datapath_in):
             
             # Process each file in the directory
-            for datafile_in in os.scandir(self.datapath_in):
+            files = os.scandir(self.datapath_in)
+            print(files, len(files))
+            file = files[0]
+            print(file, len(file))
+            exit()
+            for datafile_in in files:
                 
                 # Set the current input file
                 self.datafile_in = datafile_in.name
