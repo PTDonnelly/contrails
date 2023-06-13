@@ -25,10 +25,10 @@ class Config:
         self.datapath_out = f"/data/pdonnelly/iasi/metopc/"
 
         # Specify the processing mode ("Process" | "Correlate")
-        self.mode = "Correlate"
+        self.mode = "Process"
         
         # Set data level to analyse (if self.mode == "Correlate", will default to ["l2", "l1c"])
-        self.data_level = ["l2"]
+        self.data_level = ["l1"]
 
         # Verify data level and mode (based on self.mode)
         self.set_data_level()
