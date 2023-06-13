@@ -58,6 +58,8 @@ class Config:
 
     def set_processing_mode_and_data_level(self):
         # Specify the processing mode ("Process" | "Correlate")
+        # if self.mode == "Process": process only one IASI data level at a time (spectra or cloud products)
+        # if self.mode == "Correlate": process both IASI data levels (spectra or cloud products) and save correlated observations
         self.mode = "Process"
         # Specify the IASI product for extraction
         L1C, L2 = True, False
