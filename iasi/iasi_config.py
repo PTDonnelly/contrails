@@ -18,9 +18,9 @@ class Config:
     def set_parameters(self):
         
         # Specify date range for zeroth-level extraction
-        self.year_list = [2020]
+        self.year_list = [2022]
         self.month_list = [3]
-        self.day_list = [3] # List[int] (for specific days) or None (to scan days in month)
+        self.day_list = [24] # List[int] (for specific days) or None (to scan days in month)
         self.days_in_months = [31, 28, 31, 30, 31, 30, 31, 31, 30, 31, 30, 31]
   
         # Sets the data path for the processed output files (defined by user)
