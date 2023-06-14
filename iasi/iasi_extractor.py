@@ -157,61 +157,69 @@ class IASIExtractor:
     def _create_run_directory(self) -> None:
         """
         Creates the directory to save the output files, based on the input file name and time.
+        
+        Returns:
+            intermediate_file (str): the full path to the intermediate file produced by IASI extraction script.Z
         """
-        # Get the output file name from the input file name
-        self.datafile_out = self.datafile_in.split(",")[2]
-        
-        # Determine if the time is during the day or night
-        hour = int(self.datafile_out[27:29])
-        time = "day" if (6 <= hour <= 18) else "night"
-        
-        # Trim day/night subdirectory from any previous iterations
-        if ("day" in self.datapath_out) or ("night" in self.datapath_out):
-            self.datapath_out = f"{os.path.dirname(os.path.dirname(self.datapath_out))}/"
-        # Update the output data path
-        self.datapath_out = f"{self.datapath_out}{time}/"
+        if self.data_level == 'l1c':
+            # Get the output file name from the input file name
+            self.datafile_out = "intermediate.bin"
+        elif self.data_level == 'l2':
+            self.datafile_out = self.datafile_in.split(",")[2]
+            # Determine if the time is during the day or night
+            hour = int(self.datafile_out[27:29])
+            time = "day" if (6 <= hour <= 18) else "night"
+            
+            # Trim day/night subdirectory from any previous iterations
+            if ("day" in self.datapath_out) or ("night" in self.datapath_out):
+                self.datapath_out = f"{os.path.dirname(os.path.dirname(self.datapath_out))}/"
+            # Update the output data path
+            self.datapath_out = f"{self.datapath_out}{time}/"
+        else:
+            # If the data level is not 'l1c' or 'l2', raise an error
+            raise ValueError("Invalid data path type. Accepts 'l1c' or 'l2'.")
         
         # Create the output directory if it doesn't exist
         os.makedirs(self.datapath_out, exist_ok=True)
+        return f"{self.datapath_out}{self.datafile_out}"
 
     def preprocess(self) -> Tuple[bool, str]:
         """
         Preprocesses the IASI data.
         """
-        # Create the output directory
-        self._create_run_directory()
+        # Create the output directory and point to intermediate file (L1C: OBR, L2: BUFR)
+        intermediate_file = self._create_run_directory()
         # Run the command to extract the data
         result = self._run_command()
         # Check if files are produced. If not, skip processing
         check = self._check_preprocessed_files(result)
-        # Point to intermediate binary file of IASI products (L1C: OBR, L2: BUFR)
-        intermediate_file = f"{self.datapath_out}{self.datafile_out}"
-        return check, intermediate_file
+        return intermediate_file, check
 
     def process_files(self) -> None:
         """
         Processes all IASI files in the input directory.
         """
-        # # Check if the input data path exists
-        # if os.path.isdir(self.datapath_in):
+        if self.data_level == 'l1c':
             
-        #     # Process each file in the directory
-        #     for i, datafile_in in enumerate(os.scandir(self.datapath_in)):
-        #         if i > 1:
-        #             pass
-        #         else:
-        #     # Check that entry is a file
-        #     if datafile_in.is_file():
-        # Set the current input file
-        # self.datafile_in = datafile_in.name
-        # Preprocess the current input file. If no IASI data files are found, skip processing (empty file still created, delete after)
-        check, intermediate_file = self.preprocess()
-        if check:
-            # Process the current file
-            self.process(intermediate_file)
-        else:
-            # Delete the intermediate file (intermediate file will only be a few bytes, so there is not much I/O overhead)
-            self._delete_intermediate_reduction_data(intermediate_file)
+        elif self.data_level == 'l2':
+        
+            # Check if the input data path exists
+            if os.path.isdir(self.datapath_in):
+                
+                # Process each file in the directory
+                for datafile_in in os.scandir(self.datapath_in):
+                    # Check that entry is a file
+                    if datafile_in.is_file():
+                        # Set the current input file
+                        self.datafile_in = datafile_in.name
+                        # Preprocess the current input file. If no IASI data files are found, skip processing (empty file still created, delete after)
+                        check, intermediate_file = self.preprocess()
+                        if check:
+                            # Process the current file
+                            self.process(intermediate_file)
+                        else:
+                            # Delete the intermediate file (intermediate file will only be a few bytes, so there is not much I/O overhead)
+                            self._delete_intermediate_reduction_data(intermediate_file)
 
 
     def _delete_intermediate_reduction_data(self, intermediate_file: str):
