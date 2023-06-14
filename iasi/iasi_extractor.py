@@ -64,7 +64,7 @@ class IASIExtractor:
         # Check the data level
         if self.data_level == 'l1c':
             # Format the input path string and return it
-            return f"/bdd/metopc/{self.data_level}/iasi/{self.year}/{self.month}/{self.day}/"
+            return f"/bdd/metopc/{self.data_level}/iasi/"
         elif self.data_level == 'l2':
             # Format the input path string with an additional 'clp/' at the end and return it
             return f"/bdd/metopc/{self.data_level}/iasi/{self.year}/{self.month}/{self.day}/clp/"
@@ -124,7 +124,7 @@ class IASIExtractor:
             # Get the command parameters
             parameters = self._build_parameters()
             # Return the complete command
-            return f"{runpath} -d {self.datapath_in}{self.datafile_in} {parameters} -out {self.datapath_out}{self.datafile_out}"
+            return f"{runpath} -d {self.datapath_in} {parameters} -out {self.datapath_out}{self.datafile_out}"
         elif self.data_level == 'l2':
             # Define the path to the run executable
             runpath = "./bin/BUFR_iasi_clp_reader_from20190514"
