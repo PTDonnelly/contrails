@@ -1,4 +1,4 @@
-from pisco import Pisco
+from pisco.pisco import Pisco
 
 def main():
     """PISCO: Package for IASI Spectra and Cloud Observations

@@ -2,9 +2,9 @@ import os
 import subprocess
 from typing import Optional, Tuple
 
-from configure import Config
-from process import L1CProcessor, L2Processor
-from correlate import Correlator
+from pisco.configure import Config
+from pisco.process import L1CProcessor, L2Processor
+from pisco.correlate import Correlator
 
 class Pisco:
     def __init__(self):

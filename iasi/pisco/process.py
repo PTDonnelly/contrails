@@ -86,10 +86,6 @@ class L1CProcessor:
         
         # Read channel ID numbers
         channel_IDs = np.fromfile(self.f, dtype='uint32', count=number_of_channels)
-        
-        # Check this is a list of strings !!!
-        print(f"CHANNEL IDs: {channel_IDs}")
-        exit()
 
         # Verify the header size
         self.verify_header(header_size)
