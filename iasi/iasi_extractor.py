@@ -255,6 +255,8 @@ class IASIExtractor:
         The result is a HDF5 file containing all good spectra from this intermediate file.
         """
         # Process extracted IASI data from intermediate binary files
+        print(intermediate_file)
+        exit()
         with L1CProcessor(intermediate_file, self.config.targets) as file:
             file.extract_spectra(self.datapath_out, self.datafile_out, self.year, self.month, self.day)
         return

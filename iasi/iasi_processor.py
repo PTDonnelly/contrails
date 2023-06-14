@@ -362,6 +362,7 @@ class L1CProcessor:
         Returns:
             np.ndarray: A filtered numpy array containing the good observations.
         """
+        print("Filtering spectra:")
         if date <= datetime(2012, 2, 8):
             check_quality_flag = data[-3, :] == 0
             check_data = np.sum(data[2:-4, :], axis=1) > 0
