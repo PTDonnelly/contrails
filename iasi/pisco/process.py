@@ -90,7 +90,7 @@ class L1CProcessor:
         channel_IDs = np.fromfile(self.f, dtype='uint32', count=number_of_channels)
 
         # Verify the header size
-        self.verify_header(header_size)
+        self._verify_header(header_size)
         return header_size, number_of_channels, channel_IDs
 
 
