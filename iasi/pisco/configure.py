@@ -2,12 +2,14 @@ from typing import List, Tuple, Union
 
 class Config:
     def __init__(self):
+        self.mode: str = None
+        self.L1C: bool = None
+        self.L2: bool = None
         self.year_list: List[int] = []
         self.month_list: List[int] = []
         self.day_list: Union[int, str] = []
         self.days_in_months: List[int] = []
         self.data_level: List[str] = []
-        self.mode: str = None
         self.datapath_out: str = None
         self.targets: List[str] = []
         self.channels: List[int] = []
@@ -62,13 +64,13 @@ class Config:
         # if self.mode == "Correlate": process both IASI data levels (spectra or cloud products) and save correlated observations
         self.mode = "Process"
         # Specify the IASI product for extraction
-        L1C, L2 = True, False
+        self.L1C, L2 = True, False
 
         # Specify level of IASI data for zeroth-level extraction ("L1C" | "L2")
         if self.mode == "Process":
-            if L1C:
+            if self.L1C:
                 self.data_level = ["l1c"]
-            elif L2:
+            elif self.L2:
                 self.data_level = ["l2"]
         elif self.mode == "Correlate":
             self.data_level = ["l2", "l1c"]
@@ -76,7 +78,7 @@ class Config:
             raise ValueError("Invalid analysis mode. Accepts 'Process' or 'Correlate'.")
 
         # Check mode data level input agrees before execution
-        if self.mode == "Process" and (L1C and L2) or (not L1C and not L2):
+        if self.mode == "Process" and (self.L1C and self.L2) or (not self.L1C and not self.L2):
             raise ValueError("Invalid data path type. Process mode requires either 'l1C' or 'l2'.")
         elif self.mode == "Correlate" and self.data_level != ["l2", "l1c"]:
             raise ValueError("Invalid data path type. Correlate mode requires ['l2', 'l1c'].")

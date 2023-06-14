@@ -2,7 +2,7 @@ import os
 import pandas as pd
 from typing import Optional
 
-class Correlator:
+class L1C_L2_Correlator:
     def __init__(self, datapath_out: str, datafile_out: str, cloud_phase: int):
         self.datapath_out: str = datapath_out
         self.datafile_out: str = datafile_out
@@ -11,12 +11,12 @@ class Correlator:
         self.df_l2: object = None
 
 
-    def __enter__(self) -> 'Correlator':
+    def __enter__(self) -> 'L1C_L2_Correlator':
         """
         Opens two DataFrames loaded from the intermediate analysis data files.
         
         Returns:
-        self: The Correlator object itself.
+        self: The L1C_L2_Correlator object itself.
         """
         # Open csv file
         print("Loading L1C spectra and L2 cloud products:")

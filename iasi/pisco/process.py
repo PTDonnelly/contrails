@@ -6,6 +6,8 @@ from typing import Tuple, List, Union
 
 import numpy as np
 
+from .extract import Extractor as ex
+
 class L1CProcessor:
     """
     Processor for the intermediate binary file of IASI L1C products output by OBR script.
@@ -410,6 +412,9 @@ class L1CProcessor:
         # Define the output filename and save outputs
         # datafile_out = f"IASI_L1C_{year}_{month}_{day}"
         self.save_observations(datapath_out, datafile_out, header, good_data)
+
+        # Delete intermediate binary file
+        ex._delete_intermediate_reduction_data(self.filepath)
 
 
 class L2Processor:

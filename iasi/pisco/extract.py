@@ -3,24 +3,22 @@ import subprocess
 from typing import Optional, Tuple
 
 from .configure import Config
-from .process import L1CProcessor, L2Processor
-from .correlate import Correlator
+# from .process import L1CProcessor, L2Processor
+# from .correlate import L1C_L2_Correlator
 
-class Pisco:
+class Extractor:
     def __init__(self):
         """
-        Initialize the Pisco class with given parameters.
+        Initialize the Extractor class with given parameters.
 
         Args:
-            year (int): The year for which data is to be processed.
-            months (List[int]): List of months for which data is to be processed.
-            days (List[int]): List of days for which data is to be processed.
-            data_level (str): Type of data path. Accepts 'l1c' or 'l2'.
+            mode (str): --
+            L1C (List[int]): --
+            L2 (List[int]): --
         """
         # Instantiate the Config class and set_parameters() for analysis
         self.config = Config()
         self.config.set_parameters()
-        
         self.data_level: str = None
         self.year: str = None
         self.month: str = None
@@ -29,8 +27,8 @@ class Pisco:
         self.datapath_out: str = None
         self.datafile_in: str = None
         self.datafile_out: str = None
-        # self.datafile_l1c: str = None
-        # self.datafile_l2: str = None
+        self.intermediate_file: str = None
+        self.intermediate_file_check: bool = None
 
         
     def _get_datapath_out(self) -> str:
@@ -79,6 +77,11 @@ class Pisco:
         # Get the output data path
         self.datapath_out = self._get_datapath_out()
 
+    @staticmethod
+    def _delete_intermediate_reduction_data(intermediate_file: str):
+        # Delete intermediate binary file (after extracting spectra and metadata)
+        os.remove(intermediate_file)
+        pass
 
     def _check_preprocessed_files(self, result: object) -> bool:
         if "No L1C data files found" in result.stdout:
@@ -185,94 +188,18 @@ class Pisco:
         Preprocesses the IASI data.
         """
         # Create the output directory and point to intermediate file (L1C: OBR, L2: BUFR)
-        intermediate_file = self._create_run_directory()
+        self.intermediate_file = self._create_run_directory()
         # Run the command to extract the data
         result = self._run_command()
         # Check if files are produced. If not, skip processing
-        check = self._check_preprocessed_files(result)
-        return intermediate_file, check
+        self.intermediate_file_check = self._check_preprocessed_files(result)
 
-    def process_files(self) -> None:
-        """
-        Processes all IASI files in the input directory.
-        """
-        if self.data_level == 'l1c':
-            # Preprocess the current input file. If no IASI data files are found, skip processing (empty file still created, delete after)
-            intermediate_file, check = self.preprocess()
-            if check:
-                # Process the current file
-                self.process(intermediate_file)
-            else:
-                # Delete the intermediate file (intermediate file will only be a few bytes, so there is not much I/O overhead)
-                self._delete_intermediate_reduction_data(intermediate_file)
-        elif self.data_level == 'l2':
-            # Check if the input data path exists
-            if os.path.isdir(self.datapath_in):
-                # Process each file in the directory
-                for datafile_in in os.scandir(self.datapath_in):
-                    # Check that entry is a file
-                    if datafile_in.is_file():
-                        # Set the current input file
-                        self.datafile_in = datafile_in.name
-                        # Preprocess the current input file. If no IASI data files are found, skip processing (empty file still created, delete after)
-                        intermediate_file, check = self.preprocess()
-                        if check:
-                            # Process the current file
-                            self.process(intermediate_file)
-                        else:
-                            # Delete the intermediate file (intermediate file will only be a few bytes, so there is not much I/O overhead)
-                            self._delete_intermediate_reduction_data(intermediate_file)
-
-
-    def _delete_intermediate_reduction_data(self, intermediate_file: str):
-        # Delete intermediate binary file (after extracting spectra and metadata)
-        os.remove(intermediate_file)
-        pass
-    
-    def _process_l2(self, intermediate_file: str):
-        """
-        Process level 2 IASI data.
-
-        Extracts and processes IASI cloud products from intermediate csv files and
-        stores all data points with Cloud Phase == 2 (ice).
-
-        The result is a HDF5 file containing all locations of ice cloud from this intermediate file.
-        """
-        with L2Processor(intermediate_file, self.config.latitude_range, self.config.longitude_range, self.config.cloud_phase) as file:
-            file.extract_ice_clouds()
+        if not self.intermediate_file_check:
+            # If binary script runs but detects no data, delete the intermediate file.
+            # It will only be a few bytes, so there is not much I/O overhead.
+            self._delete_intermediate_reduction_data(self.intermediate_file)
         return
-
-    def _process_l1c(self, intermediate_file: str) -> None:
-        """
-        Process level 1C IASI data.
-
-        Extracts and processes IASI data from intermediate binary files,
-        applies quality control and saves the output.
-
-        The result is a HDF5 file containing all good spectra from this intermediate file.
-        """
-        # Process extracted IASI data from intermediate binary files
-        with L1CProcessor(intermediate_file, self.config.targets) as file:
-            file.extract_spectra(self.datapath_out, self.datafile_out, self.year, self.month, self.day)
-        return
-
-    def process(self, intermediate_file: str) -> None:
-        """
-        Runs separate processors for the IASI data based on its level, because
-        each intermediate file is different. 
-
-        Raises:
-            ValueError: If the data level is neither 'l1c' nor 'l2'.
-        """
-        # Choose the processing function based on the data level
-        if self.data_level == 'l1c':
-            self._process_l1c(intermediate_file)
-        elif self.data_level == 'l2':
-            self._process_l2(intermediate_file)
-        else:
-            # If the data level is not 'l1c' or 'l2', raise an error
-            raise ValueError("Invalid data path type. Accepts 'l1c' or 'l2'.")
-
+                        
 
     def _get_suffix(self):
         old_suffix=".bin"
@@ -291,9 +218,3 @@ class Pisco:
                 if filename.name.endswith(old_suffix):
                     new_filename = f"{filename.name[:-len(old_suffix)]}{new_suffix}"
                     os.rename(filename.path, os.path.join(self.datapath_out, new_filename))
-
-
-    def correlate_l1c_l2(self):
-        with Correlator(self.datapath_out, self.datafile_out, self.config.cloud_phase) as file:
-            file.filter_spectra()
-        return
