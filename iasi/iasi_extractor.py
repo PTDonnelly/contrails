@@ -200,12 +200,17 @@ class IASIExtractor:
         Processes all IASI files in the input directory.
         """
         if self.data_level == 'l1c':
-            
+            # Preprocess the current input file. If no IASI data files are found, skip processing (empty file still created, delete after)
+            check, intermediate_file = self.preprocess()
+            if check:
+                # Process the current file
+                self.process(intermediate_file)
+            else:
+                # Delete the intermediate file (intermediate file will only be a few bytes, so there is not much I/O overhead)
+                self._delete_intermediate_reduction_data(intermediate_file)
         elif self.data_level == 'l2':
-        
             # Check if the input data path exists
             if os.path.isdir(self.datapath_in):
-                
                 # Process each file in the directory
                 for datafile_in in os.scandir(self.datapath_in):
                     # Check that entry is a file
