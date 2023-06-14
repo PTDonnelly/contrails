@@ -192,26 +192,26 @@ class IASIExtractor:
         """
         Processes all IASI files in the input directory.
         """
-        # Check if the input data path exists
-        if os.path.isdir(self.datapath_in):
+        # # Check if the input data path exists
+        # if os.path.isdir(self.datapath_in):
             
-            # Process each file in the directory
-            for i, datafile_in in enumerate(os.scandir(self.datapath_in)):
-                if i > 1:
-                    pass
-                else:
-                    # Check that entry is a file
-                    if datafile_in.is_file():
-                        # Set the current input file
-                        self.datafile_in = datafile_in.name
-                        # Preprocess the current input file. If no IASI data files are found, skip processing (empty file still created, delete after)
-                        check, intermediate_file = self.preprocess()
-                        if check:
-                            # Process the current file
-                            self.process(intermediate_file)
-                        else:
-                            # Delete the intermediate file (intermediate file will only be a few bytes, so there is not much I/O overhead)
-                            self._delete_intermediate_reduction_data(intermediate_file)
+        #     # Process each file in the directory
+        #     for i, datafile_in in enumerate(os.scandir(self.datapath_in)):
+        #         if i > 1:
+        #             pass
+        #         else:
+        #     # Check that entry is a file
+        #     if datafile_in.is_file():
+        # Set the current input file
+        # self.datafile_in = datafile_in.name
+        # Preprocess the current input file. If no IASI data files are found, skip processing (empty file still created, delete after)
+        check, intermediate_file = self.preprocess()
+        if check:
+            # Process the current file
+            self.process(intermediate_file)
+        else:
+            # Delete the intermediate file (intermediate file will only be a few bytes, so there is not much I/O overhead)
+            self._delete_intermediate_reduction_data(intermediate_file)
 
 
     def _delete_intermediate_reduction_data(self, intermediate_file: str):
