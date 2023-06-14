@@ -139,11 +139,10 @@ class Pisco:
         """
         # Build the command string to execute the binary script
         command = self._get_command()
-
+        print(command)
         try:
             # Run the command in a bash shell and capture the output
             result = subprocess.run(command, shell=True, capture_output=True, text=True, check=True)
-            print(command)
         except subprocess.CalledProcessError as e:
             # The subprocess module will raise a CalledProcessError if the process returns a non-zero exit status
             # The standard error of the command is available in e.stderr
