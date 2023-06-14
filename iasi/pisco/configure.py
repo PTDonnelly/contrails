@@ -69,9 +69,9 @@ class Config:
         # Specify level of IASI data for zeroth-level extraction ("L1C" | "L2")
         if self.mode == "Process":
             if self.L1C:
-                self.data_level = ["l1c"]
+                self.data_level = "l1c"
             elif self.L2:
-                self.data_level = ["l2"]
+                self.data_level = "l2"
         elif self.mode == "Correlate":
             self.data_level = ["l2", "l1c"]
         else:

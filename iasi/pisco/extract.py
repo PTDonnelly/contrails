@@ -3,8 +3,6 @@ import subprocess
 from typing import Optional, Tuple
 
 from .configure import Config
-# from .process import L1CProcessor, L2Processor
-# from .correlate import L1C_L2_Correlator
 
 class Extractor:
     def __init__(self):
@@ -19,7 +17,7 @@ class Extractor:
         # Instantiate the Config class and set_parameters() for analysis
         self.config = Config()
         self.config.set_parameters()
-        self.data_level: str = None
+        self.data_level: str = self.config.data_level
         self.year: str = None
         self.month: str = None
         self.day: str = None
