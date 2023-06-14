@@ -6,7 +6,7 @@ from typing import Tuple, List, Union
 
 import numpy as np
 
-class L1C:
+class L1CProcessor:
     """
     Processor for the intermediate binary file of IASI L1C products output by OBR script.
 
@@ -19,12 +19,12 @@ class L1C:
         self.targets = targets
 
 
-    def __enter__(self) -> 'L1C':
+    def __enter__(self) -> 'L1CProcessor':
         """
         Opens the binary file and prepares the preprocessing.
         
         Returns:
-        self: The L1C object itself.
+        self: The L1CProcessor object itself.
         """
         # Open binary file
         print("Loading intermediate L1C file:")
@@ -416,7 +416,7 @@ class L1C:
         self.save_observations(datapath_out, datafile_out, header, good_data)
 
 
-class L2:
+class L2Processor:
     """
     Processor for the intermediate binary file of IASI L2 products output by OBR script.
 
@@ -432,12 +432,12 @@ class L2:
         self.cloud_phase = cloud_phase
 
 
-    def __enter__(self) -> 'L2':
+    def __enter__(self) -> 'L2Processor':
         """
         Opens the csv file and prepares the preprocessing.
         
         Returns:
-        self: The L2 object itself.
+        self: The L2Processor object itself.
         """
         # Open csv file
         print("Loading intermediate L2 file:")

@@ -2,9 +2,9 @@ import os
 import subprocess
 from typing import Optional, Tuple
 
-from config import Config
-from processor import L1C, L2
-from correlator import Correlator
+from configure import Config
+from process import L1CProcessor, L2Processor
+from correlate import Correlator
 
 class Pisco:
     def __init__(self):
@@ -239,7 +239,7 @@ class Pisco:
 
         The result is a HDF5 file containing all locations of ice cloud from this intermediate file.
         """
-        with L2(intermediate_file, self.config.latitude_range, self.config.longitude_range, self.config.cloud_phase) as file:
+        with L2Processor(intermediate_file, self.config.latitude_range, self.config.longitude_range, self.config.cloud_phase) as file:
             file.extract_ice_clouds()
         return
 
@@ -253,7 +253,7 @@ class Pisco:
         The result is a HDF5 file containing all good spectra from this intermediate file.
         """
         # Process extracted IASI data from intermediate binary files
-        with L1C(intermediate_file, self.config.targets) as file:
+        with L1CProcessor(intermediate_file, self.config.targets) as file:
             file.extract_spectra(self.datapath_out, self.datafile_out, self.year, self.month, self.day)
         return
 
