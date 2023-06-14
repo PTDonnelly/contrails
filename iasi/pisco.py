@@ -1,16 +1,15 @@
-from datetime import datetime
 import os
-import pandas as pd
 import subprocess
 from typing import Optional, Tuple
 
-from iasi_config import Config
-from iasi_processor import L1CProcessor, L2Processor, Correlator
+from config import Config
+from processor import L1C, L2
+from correlator import Correlator
 
-class IASIExtractor:
+class Pisco:
     def __init__(self):
         """
-        Initialize the IASI extractor class with given parameters.
+        Initialize the Pisco class with given parameters.
 
         Args:
             year (int): The year for which data is to be processed.
@@ -201,7 +200,7 @@ class IASIExtractor:
         """
         if self.data_level == 'l1c':
             # Preprocess the current input file. If no IASI data files are found, skip processing (empty file still created, delete after)
-            check, intermediate_file = self.preprocess()
+            intermediate_file, check = self.preprocess()
             if check:
                 # Process the current file
                 self.process(intermediate_file)
@@ -218,7 +217,7 @@ class IASIExtractor:
                         # Set the current input file
                         self.datafile_in = datafile_in.name
                         # Preprocess the current input file. If no IASI data files are found, skip processing (empty file still created, delete after)
-                        check, intermediate_file = self.preprocess()
+                        intermediate_file, check = self.preprocess()
                         if check:
                             # Process the current file
                             self.process(intermediate_file)
@@ -241,7 +240,7 @@ class IASIExtractor:
 
         The result is a HDF5 file containing all locations of ice cloud from this intermediate file.
         """
-        with L2Processor(intermediate_file, self.config.latitude_range, self.config.longitude_range, self.config.cloud_phase) as file:
+        with L2(intermediate_file, self.config.latitude_range, self.config.longitude_range, self.config.cloud_phase) as file:
             file.extract_ice_clouds()
         return
 
@@ -257,7 +256,7 @@ class IASIExtractor:
         # Process extracted IASI data from intermediate binary files
         print(intermediate_file)
         exit()
-        with L1CProcessor(intermediate_file, self.config.targets) as file:
+        with L1C(intermediate_file, self.config.targets) as file:
             file.extract_spectra(self.datapath_out, self.datafile_out, self.year, self.month, self.day)
         return
 

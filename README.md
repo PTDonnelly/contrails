@@ -1,6 +1,6 @@
-# Python IASI Cloud Extraction and Processing for Spectrum Analysis (PyICECAPS)
+# Package for IASI Spectra and Cloud Observations (PISCO)
 
-PyICECAPS is a Python package designed to facilitate the extraction, processing and analysis of Infrared Atmospheric Sounding Interferometer (IASI) cloud data.
+PISCO is a Python package designed to facilitate the extraction, processing and analysis of Infrared Atmospheric Sounding Interferometer (IASI) spectra and retrieved cloud products.
 
 ## Features
 
