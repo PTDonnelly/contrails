@@ -309,7 +309,7 @@ class L1CProcessor:
         Stores the datetime components from the datetime field data.
 
         Returns:
-            List: A list of the datetime components from the transposed field data (formatted like the outputs of the L2 reader)
+            np.Array: An array of the datetime components from the transposed field data (formatted like the outputs of the L2 reader)
         """
         print([f"{d[0]}{d[1]:02d}{d[2]:02d}.{d[3]:02d}{d[4]:02d}{d[5]:02d}" for d in list(zip(*self.field_data["datetime"]))])
         return np.array([f"{d[0]}{d[1]:02d}{d[2]:02d}.{d[3]:02d}{d[4]:02d}{d[5]:02d}" for d in list(zip(*self.field_data["datetime"]))])
@@ -342,18 +342,13 @@ class L1CProcessor:
         datetimes = self._store_datetime_components()
 
         # Concatenate processed observations into a single 2D array (number of parameters x number of measurements).
-        # latitude = latitude[:, np.newaxis]
-        # longitude = longitude[:, np.newaxis]
-        # datetimes = datetimes[:, np.newaxis]
-        # local_time = local_time[:, np.newaxis]
-        # print(np.shape(latitude), np.shape(longitude), np.shape(datetimes), np.shape(local_time), np.shape(radiances), np.shape(target_parameters))
-        data = np.concatenate(
-            (latitude[:, np.newaxis], 
-             longitude[:, np.newaxis], 
-             datetimes[:, np.newaxis],
-             local_time[:, np.newaxis], 
-             radiances, 
-             target_parameters), axis=1)
+        # But first add an extra dimension to the 1D arrays to match the 2D structure of radiances and target_parameters
+        data = np.concatenate((latitude[:, np.newaxis], 
+                                longitude[:, np.newaxis], 
+                                datetimes[:, np.newaxis],
+                                local_time[:, np.newaxis], 
+                                radiances, 
+                                target_parameters), axis=1)
 
         # Construct a header that contains the name of each data column
         header = self._build_header(target_parameter_names)
@@ -419,7 +414,8 @@ class L1CProcessor:
         header, all_data = self.extract_data()
         
         # Check observation quality and filter out bad observations
-        good_data = self.filter_bad_observations(all_data, date=datetime(year, month, day))
+        date = datetime(int(year), int(month), int(day))
+        good_data = self.filter_bad_observations(all_data, date=date)
 
         # Define the output filename and save outputs
         # datafile_out = f"IASI_L1C_{year}_{month}_{day}"
