@@ -4,6 +4,7 @@ import commentjson
 class Config:
     def __init__(self, path_to_config_file: str):
         self.data_level: str = ""
+        
         # Initialise the Config class with your JSON configuration file
         with open(path_to_config_file, 'r') as file:
             # Access the parameters directly as attributes of the class. 
@@ -15,7 +16,7 @@ class Config:
     def set_channels(self):
         # Set the list of IASI channel indices
         n = 5#8461
-        self.channels: List[int] = [(i + 1) for i in range(n)]
+        return [(i + 1) for i in range(n)]
 
     def check_mode_and_data_level(self):
         # Check execution mode data level inputs agree before execution
