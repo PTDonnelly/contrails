@@ -161,7 +161,7 @@ class Extractor:
         """
         if self.data_level == 'l1c':
             # Get the output file name from the input file name
-            self.datafile_out = "intermediate.bin"
+            self.datafile_out = "extracted_spectra"
         elif self.data_level == 'l2':
             self.datafile_out = self.datafile_in.split(",")[2]
             # Determine if the time is during the day or night
