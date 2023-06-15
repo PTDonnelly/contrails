@@ -243,7 +243,6 @@ class L1CProcessor:
         # Subtract 6 hours from the total time, shifting the reference for day and night (so that 6 AM becomes 0)
         time_shifted = time_in_range - 6
 
-        print(len(time_shifted[0]))
         # Take the modulus again to ensure the time is within the 0 to 23 hours range
         return np.mod(time_shifted, 24)
     
@@ -259,7 +258,7 @@ class L1CProcessor:
         local_time = self._calculate_local_time()
 
         # Return the longitude, latitude, and a Boolean indicating day (True) or night (False)
-        return self.field_data['latitude'], self.field_data['longitude'], (6 < local_time < 18)
+        return self.field_data['latitude'], self.field_data['longitude'], (6 < local_time) & (local_time < 18)
 
 
     def _store_spectral_radiance(self) -> np.ndarray:
