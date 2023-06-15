@@ -156,21 +156,22 @@ class Extractor:
         Creates the directory to save the output files, based on the input file name and time.
         
         Returns:
-            intermediate_file (str): the full path to the intermediate file produced by IASI extraction script.Z
+            intermediate_file (str): the full path to the intermediate file produced by IASI extraction script.
         """
         if self.data_level == 'l1c':
             # Get the output file name from the input file name
             self.datafile_out = "extracted_spectra.bin"
         elif self.data_level == 'l2':
             self.datafile_out = self.datafile_in.split(",")[2]
-            # Determine if the time is during the day or night
-            hour = int(self.datafile_out[27:29])
-            time = "day" if (6 <= hour <= 18) else "night"
-            # Trim day/night subdirectory from any previous iterations
-            if ("day" in self.datapath_out) or ("night" in self.datapath_out):
-                self.datapath_out = f"{os.path.dirname(os.path.dirname(self.datapath_out))}/"
-            # Update the output data path
-            self.datapath_out = f"{self.datapath_out}{time}_"
+            print("DON'T FORGET TO FINISH THIS BLOCK WHEN YOU HAVE THE BUFR READER")
+            # # Determine if the time is during the day or night
+            # hour = int(self.datafile_out[27:29])
+            # time = "day" if (6 <= hour <= 18) else "night"
+            # # Trim day/night subdirectory from any previous iterations
+            # if ("day" in self.datapath_out) or ("night" in self.datapath_out):
+            #     self.datapath_out = f"{os.path.dirname(os.path.dirname(self.datapath_out))}/"
+            # # Update the output data path
+            # self.datapath_out = f"{self.datapath_out}"
         else:
             # If the data level is not 'l1c' or 'l2', raise an error
             raise ValueError("Invalid data path type. Accepts 'l1c' or 'l2'.")

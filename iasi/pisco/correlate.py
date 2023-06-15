@@ -44,7 +44,6 @@ class L1C_L2_Correlator:
         """
         Defines the paths to the intermediate analysis data files.
         """
-        print(f"{self.datapath_out}")
         self.datafile_l1c = f"{self.datapath_out}l1c/{self.date}extracted_spectra.csv"
         self.datafile_l2 = f"{self.datapath_out}l2/{self.date}cloud_products.csv"
 
@@ -75,7 +74,7 @@ class L1C_L2_Correlator:
         return None if cloud_phase is None else f"{self.datapath_out}{cloud_phase}/"
 
 
-    def _save_merged_data(self, merged_df: pd.DataFrame) -> None:
+    def _save_merged_data(self, merged_df_day: pd.DataFrame, merged_df_night: pd.DataFrame) -> None:
         """
         Save the merged DataFrame to a CSV file in the output directory.
         If the output directory is unknown (because the cloud phase is unknown), print a message and return.
@@ -84,9 +83,13 @@ class L1C_L2_Correlator:
         if datapath_out is None:
             print("Cloud_phase is unknown or uncertain, skipping data.")
         else:
-            final_file = f"{datapath_out}extracted_spectra.csv"
             print(f"Saving: {final_file}")
-            merged_df.to_csv(final_file, index=False)
+            # final_file = f"{datapath_out}extracted_spectra.csv"
+            # merged_df.to_csv(final_file, index=False)
+            # # Save the DataFrame to a file in csv format, split by local time
+            # df.to_hdf(f"{datapath_out}{datafile_out}.h5", key='df', mode='w')
+            merged_df_day.to_csv(f"{datapath_out}day_extracted_spectra.csv", index=False, mode='w')
+            merged_df_night.to_csv(f"{datapath_out}night_extracted_spectra.csv", index=False, mode='w')
         return
 
 
@@ -95,19 +98,34 @@ class L1C_L2_Correlator:
         Merge two DataFrames based on latitude, longitude and datetime. 
         The latitude and longitude values are rounded to 2 decimal places.
         Rows from df_l1c that do not have a corresponding row in df_l2 are dropped.
+
+        Then separate into day and night observations
         """
         decimal_places = 2
         self.df_l1c[['Latitude', 'Longitude']] = self.df_l1c[['Latitude', 'Longitude']].round(decimal_places)
         self.df_l2[['Latitude', 'Longitude']] = self.df_l2[['Latitude', 'Longitude']].round(decimal_places)
 
         merged_df = pd.merge(self.df_l1c, self.df_l2, on=['Latitude', 'Longitude', 'Datetime'], how='inner')
-        return merged_df.dropna()
+
+
+        # Convert the DataFrame 'Local Time' column (np.array) to boolean values
+        merged_df['Local Time'] = merged_df['Local Time'].astype(bool)
+        # Split the DataFrame into two based on 'Local Time' column
+        merged_df_day = merged_df[merged_df['Local Time'] == True]
+        merged_df_night = merged_df[merged_df['Local Time'] == False]
+        # # Drop the 'Local Time' column from both DataFrames
+        # merged_df_day = merged_df_day.drop(columns=['Local Time'])
+        # merged_df_night = merged_df_night.drop(columns=['Local Time'])
+        # # Remove 'Local Time' from the header list
+        # header.remove('Local Time')
+        
+        return merged_df_day.dropna(), merged_df_night.dropna()
 
 
     def filter_spectra(self) -> None:
         """
         Loads the data, correlates measurements, saves the merged data, and deletes the original data.
         """
-        merged_df = self._correlate_measurements()
-        self._save_merged_data(merged_df)
+        merged_df_day, merged_df_night = self._correlate_measurements()
+        self._save_merged_data(merged_df_day, merged_df_night)
         # self._delete_intermediate_analysis_data()
