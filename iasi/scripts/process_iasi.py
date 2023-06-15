@@ -1,3 +1,5 @@
+import os
+
 from pisco import L1CProcessor, L2Processor, L1C_L2_Correlator
 
 def process_l1c(ex: object):
@@ -10,6 +12,7 @@ def process_l1c(ex: object):
     The result is a HDF5 file containing all good spectra from this intermediate file.
     """
     # Preprocess IASI Level 1C data
+    ex.data_level = "l1c"
     ex.get_datapaths()
     ex.preprocess()
     ex.rename_files()
@@ -31,6 +34,7 @@ def process_l2(ex: object):
     The result is a HDF5 file containing all locations of ice cloud from this intermediate file.
     """
     # Preprocess IASI Level 2 data
+    ex.data_level = "l2"
     ex.get_datapaths()
     for datafile_in in os.scandir(ex.datapath_in):
         # Check that entry is a file
@@ -57,7 +61,6 @@ def correlate_l1c_l2(ex: object):
     The result is a csv file containing all spectra at those locations and times.
     """
     # Preprocess IASI Level 2 data
-    ex.get_datapaths()
     with L1C_L2_Correlator(ex.datapath_out, ex.datafile_out, ex.config.cloud_phase) as file:
         file.filter_spectra()
     return

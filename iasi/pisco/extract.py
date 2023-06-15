@@ -5,19 +5,17 @@ from typing import Optional, Tuple
 from .configure import Config
 
 class Extractor:
-    def __init__(self):
+    def __init__(self, path_to_config_file: str):
         """
         Initialize the Extractor class with given parameters.
 
         Args:
-            mode (str): --
-            L1C (List[int]): --
-            L2 (List[int]): --
+           path_to_config_file (str): Location of jsonc configuration file
         """
         # Instantiate the Config class and set_parameters() for analysis
-        self.config = Config()
-        self.config.set_parameters()
-        self.data_level: str = self.config.data_level
+        self.config = Config(path_to_config_file)
+        self.config.check_mode_and_data_level()
+        self.data_level: str = None
         self.year: str = None
         self.month: str = None
         self.day: str = None

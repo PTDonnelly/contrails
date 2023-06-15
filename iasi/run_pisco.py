@@ -10,8 +10,11 @@ def main():
     developed by IASI team, then produce conveniently-formatted spatio-temporal data
     of IASI products: L1C calibrated spectra or L2 cloud products.
     """
+    # Point to location of jsonc configuration file
+    path_to_config_file = "./inputs/config.jsonc"
+    
     # Instantiate a Pisco class to get data from raw binary files
-    ex = Extractor()
+    ex = Extractor(path_to_config_file)
 
     # Scan years, months, days (specific days or all calendar days, dependent on Config attributes)
     for year in ex.config.year_list:
@@ -22,17 +25,18 @@ def main():
             for day in day_range:
                 ex.day = f"{day:02d}"
                 
-                # Run relevant preprocessing, processing and correlating scripts
-                if (ex.config.mode == "Process") and (ex.config.L1C == True):
-                    process_l1c(ex)
-                elif (ex.config.mode == "Process") and (ex.config.L2 == True):
-                    process_l2(ex)
-                elif (ex.config.mode == "Correlate") and (ex.config.L1C == True) and (ex.config.L2 == True):
-                    process_l2(ex)
-                    process_l1c(ex)
-                    correlate_l1c_l2(ex)
-                elif (ex.config.mode == "Correlate") and (ex.config.L1C == False) and (ex.config.L2 == False):
-                    correlate_l1c_l2(ex)
+                if ex.config.mode == "Process":
+                    if ex.config.L1C:
+                        process_l1c(ex)
+                    if ex.config.L2:
+                        process_l2(ex)
+                elif ex.config.mode == "Correlate":
+                    if ex.config.L1C and ex.config.L2:
+                        process_l2(ex)
+                        process_l1c(ex)
+                        correlate_l1c_l2(ex)
+                    elif not ex.config.L1C and not ex.config.L2:
+                        correlate_l1c_l2(ex)
 
 if __name__ == "__main__":
     main()
