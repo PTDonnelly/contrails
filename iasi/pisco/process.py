@@ -318,7 +318,7 @@ class L1CProcessor:
         # Add the main data columns to the header
         header = ["Latitude", "Longitude", "Datetime", "Local Time"]
         # Add the IASI channel IDs: List[str]
-        header.extend([f"Channel + {id}" for id in self.channel_IDs])
+        header.extend([f"Channel {id}" for id in self.channel_IDs])
         # Add the L1C target parameter names: List[str]
         header.extend(target_parameter_names)
         return header
@@ -395,17 +395,23 @@ class L1CProcessor:
             
         Returns:
             None
-        """
-        # # Transpose the data to match the previous structure
-        # data = np.transpose(data)
-        
+        """        
         # Create a DataFrame with the transposed data
         df = pd.DataFrame(data, columns=header)
-        
+
+        # Split the DataFrame into two based on 'Local Time' column
+        df_day = df[df['Local Time'] == True]
+        df_night = df[df['Local Time'] == False]
+        daypath = f"{datapath_out}day/"
+        nightpath = f"{datapath_out}night/"
+        os.makedirs(daypath, exist_ok=True)
+        os.makedirs(nightpath, exist_ok=True)
+
         # Save the DataFrame to a file in HDF5 format
-        outfile = f"{datapath_out}{datafile_out}".split(".")[0]
+        outfile = f"{datafile_out}".split(".")[0]
         # df.to_hdf(f"{datapath_out}{datafile_out}.h5", key='df', mode='w')
-        df.to_csv(f"{outfile}.csv", columns=header, index=False, mode='w')
+        df_day.to_csv(f"{daypath}{outfile}.csv", columns=header, index=False, mode='w')
+        df_night.to_csv(f"{nightpath}{outfile}.csv", columns=header, index=False, mode='w')
         return
 
     
