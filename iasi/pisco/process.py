@@ -312,7 +312,7 @@ class L1CProcessor:
             List: A list of the datetime components from the field data (formatted like the outputs of the L2 reader)
         """
         print(len(self.field_data['datetime']))
-        print([(len(d), d) for d in self.field_data['datetime']])
+        print([d for d in self.field_data['datetime']])
         return [f"{d[0]}{d[1]}{d[2]}.{d[3]}{d[4]}{d[5]}" for d in self.field_data['datetime']]
 
 
