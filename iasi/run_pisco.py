@@ -29,9 +29,11 @@ def main():
                     if ex.config.L2:
                         process_l2(ex)
                 elif ex.config.mode == "Correlate":
-                    if ex.config.L1C and ex.config.L2:
+                    if ex.config.L2:
                         process_l2(ex)
+                    if ex.config.L1C:
                         process_l1c(ex)
+                    if ex.config.L1C or ex.config.L2:
                         correlate_l1c_l2(ex)
                     elif not ex.config.L1C and not ex.config.L2:
                         correlate_l1c_l2(ex)
