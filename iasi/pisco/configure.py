@@ -50,7 +50,7 @@ class Config:
                         'quality_flag_3', 'cloud_fraction', 'surface_type']
         
         # Create a list of all IASI channel indices
-        n = 1#8461
+        n = 8461
         self.channels = [(i + 1) for i in range(n)]
 
 
