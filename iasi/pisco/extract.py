@@ -169,7 +169,7 @@ class Extractor:
             if ("day" in self.datapath_out) or ("night" in self.datapath_out):
                 self.datapath_out = f"{os.path.dirname(os.path.dirname(self.datapath_out))}/"
             # Update the output data path
-            self.datapath_out = f"{self.datapath_out}{time}/"
+            self.datapath_out = f"{self.datapath_out}{time}_"
         else:
             # If the data level is not 'l1c' or 'l2', raise an error
             raise ValueError("Invalid data path type. Accepts 'l1c' or 'l2'.")

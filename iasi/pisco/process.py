@@ -411,8 +411,8 @@ class L1CProcessor:
         header.remove('Local Time')
 
         # Prepare split directories
-        daypath = f"{datapath_out}day/"
-        nightpath = f"{datapath_out}night/"
+        daypath = f"{datapath_out}day_"
+        nightpath = f"{datapath_out}night_"
         os.makedirs(daypath, exist_ok=True)
         os.makedirs(nightpath, exist_ok=True)
 
