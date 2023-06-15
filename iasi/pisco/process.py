@@ -400,8 +400,15 @@ class L1CProcessor:
         df = pd.DataFrame(data, columns=header)
 
         # Split the DataFrame into two based on 'Local Time' column
-        df_day = df['Local Time'] == True
-        df_night = df['Local Time'] == False
+        df_day = df[df['Local Time'] == True]
+        df_night = df[df['Local Time'] == False]
+        # Drop the 'Local Time' column from both DataFrames
+        df_day = df_day.drop(columns=['Local Time'])
+        df_night = df_night.drop(columns=['Local Time'])
+        # Remove 'Local Time' from the header list
+        header.remove('Local Time')
+
+        # Prepare split directories
         daypath = f"{datapath_out}day/"
         nightpath = f"{datapath_out}night/"
         os.makedirs(daypath, exist_ok=True)
