@@ -25,6 +25,7 @@ class Config:
         self.set_level_2_parameters()
         self.set_processing_mode_and_data_level()
 
+
     def set_filepath_parameters(self):
         # Sets the data path for the processed output files (defined by user)
         self.datapath_out = f"/data/pdonnelly/iasi/metopc/"
@@ -63,9 +64,9 @@ class Config:
         # Specify the processing mode ("Process" | "Correlate")
         # if self.mode == "Process": process only one IASI data level at a time (spectra or cloud products)
         # if self.mode == "Correlate": process both IASI data levels (spectra or cloud products) and save correlated observations
-        self.mode = "Process"
+        self.mode = "Correlate"
         # Specify the IASI product for extraction
-        self.L1C, L2 = True, False
+        self.L1C, L2 = False, False
 
         # Specify level of IASI data for zeroth-level extraction ("L1C" | "L2")
         if self.mode == "Process":

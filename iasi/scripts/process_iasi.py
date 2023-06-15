@@ -4,7 +4,7 @@ def process_l1c(ex: object):
     """
     Process level 1C IASI data.
 
-    Extracts and processes IASI data from intermediate binary files,
+    Extracts and processes IASI spectral data from intermediate binary files,
     applies quality control and saves the output.
 
     The result is a HDF5 file containing all good spectra from this intermediate file.
@@ -48,6 +48,16 @@ def process_l2(ex: object):
     return
 
 def correlate_l1c_l2(ex: object):
+    """
+    Correlate level 1C spectra and level 2 cloud products.
+
+    Compares processed IASI products from csv files and
+    stores all spectra co-located with instances of a given Cloud Phase.
+
+    The result is a csv file containing all spectra at those locations and times.
+    """
+    # Preprocess IASI Level 2 data
+    ex.get_datapaths()
     with L1C_L2_Correlator(ex.datapath_out, ex.datafile_out, ex.config.cloud_phase) as file:
         file.filter_spectra()
     return
