@@ -22,7 +22,7 @@ def main():
             for day in day_range:
                 ex.day = f"{day:02d}"
                 
-                
+                # Run relevant preprocessing, processing and correlating scripts
                 if (ex.config.mode == "Process") and (ex.config.L1C == True):
                     process_l1c(ex)
                 elif (ex.config.mode == "Process") and (ex.config.L2 == True):
