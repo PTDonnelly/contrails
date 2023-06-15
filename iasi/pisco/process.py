@@ -311,6 +311,7 @@ class L1CProcessor:
         Returns:
             List: A list of the datetime components from the transposed field data (formatted like the outputs of the L2 reader)
         """
+        print([f"{d[0]}{d[1]}{d[2]}.{d[3]}{d[4]}{d[5]}" for d in list(zip(*self.field_data["datetime"]))])
         return [f"{d[0]}{d[1]}{d[2]}.{d[3]}{d[4]}{d[5]}" for d in list(zip(*self.field_data["datetime"]))]
 
 
@@ -341,6 +342,7 @@ class L1CProcessor:
         datetimes = self._store_datetime_components()
 
         # Concatenate processed observations into a single 2D array (number of parameters x number of measurements).
+        print(len(latitude), len(longitude), len(datetimes), len(local_time), len(radiances), len(target_parameters))
         data = np.concatenate((latitude, longitude, datetimes, local_time, radiances, target_parameters), axis=0)
 
         # Construct a header that contains the name of each data column
