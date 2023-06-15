@@ -400,8 +400,8 @@ class L1CProcessor:
         df = pd.DataFrame(data, columns=header)
 
         # Split the DataFrame into two based on 'Local Time' column
-        df_day = df[df['Local Time'] == True]
-        df_night = df[df['Local Time'] == False]
+        df_day = df['Local Time'] == True
+        df_night = df['Local Time'] == False
         daypath = f"{datapath_out}day/"
         nightpath = f"{datapath_out}night/"
         os.makedirs(daypath, exist_ok=True)
