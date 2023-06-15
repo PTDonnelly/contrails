@@ -309,11 +309,9 @@ class L1CProcessor:
         Stores the datetime components from the datetime field data.
 
         Returns:
-            List: A list of the datetime components from the field data (formatted like the outputs of the L2 reader)
+            List: A list of the datetime components from the transposed field data (formatted like the outputs of the L2 reader)
         """
-        print(len(self.field_data['datetime']))
-        print([d for d in self.field_data['datetime']])
-        return [f"{d[0]}{d[1]}{d[2]}.{d[3]}{d[4]}{d[5]}" for d in self.field_data['datetime']]
+        return [f"{d[0]}{d[1]}{d[2]}.{d[3]}{d[4]}{d[5]}" for d in list(zip(*self.field_data["datetime"]))]
 
 
     def _build_header(self, target_parameter_names: List[str]):
