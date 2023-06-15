@@ -15,7 +15,7 @@
     "month_list": [3],
 
     // day_list: List[int] or str, List of specific days or "all" to scan all calendar days in month
-    "day_list": "all",
+    "day_list": [24],
 
     // days_in_months: List[int], Number of calendar days in each month
     "days_in_months": [31, 28, 31, 30, 31, 30, 31, 31, 30, 31, 30, 31],

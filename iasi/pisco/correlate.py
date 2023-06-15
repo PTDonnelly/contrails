@@ -3,9 +3,10 @@ import pandas as pd
 from typing import Optional
 
 class L1C_L2_Correlator:
-    def __init__(self, datapath_out: str, datafile_out: str, cloud_phase: int):
+    def __init__(self, datapath_out: str, year: str, month: str, day: str, cloud_phase: int):
         self.datapath_out: str = datapath_out
-        self.datafile_out: str = datafile_out
+        self.date: str = f"{year}/{month}/{day}/"
+        # self.datafile_out: str = datafile_out
         self.cloud_phase: int = cloud_phase
         self.df_l1c: object = None
         self.df_l2: object = None
@@ -43,8 +44,9 @@ class L1C_L2_Correlator:
         """
         Defines the paths to the intermediate analysis data files.
         """
-        self.datafile_l1c = f"{self.datapath_out}L1C_test.csv"
-        self.datafile_l2 = f"{self.datapath_out}L2_test.csv"
+        print(f"{self.datapath_out}")
+        self.datafile_l1c = f"{self.datapath_out}l1c/{self.date}extracted_spectra.csv"
+        self.datafile_l2 = f"{self.datapath_out}l2/{self.date}cloud_products.csv"
 
 
     def _delete_intermediate_analysis_data(self) -> None:
@@ -82,7 +84,7 @@ class L1C_L2_Correlator:
         if datapath_out is None:
             print("Cloud_phase is unknown or uncertain, skipping data.")
         else:
-            final_file = f"{datapath_out}{self.datafile_out}.csv"
+            final_file = f"{datapath_out}extracted_spectra.csv"
             print(f"Saving: {final_file}")
             merged_df.to_csv(final_file, index=False)
         return
