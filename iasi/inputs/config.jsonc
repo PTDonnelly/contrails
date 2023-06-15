@@ -1,9 +1,9 @@
 {
     // mode: str, The processing mode. Options are 'Process' or 'Correlate'
-    "mode": "Correlate",
+    "mode": "Process",
 
     // L1C: bool, Specifies whether Level 1C data should be processed
-    "L1C": false,
+    "L1C": true,
 
     // L2: bool, Specifies whether Level 2 data should be processed
     "L2": false,
