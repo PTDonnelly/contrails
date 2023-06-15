@@ -318,7 +318,7 @@ class L1CProcessor:
         # Add the main data columns to the header
         header = ["Latitude", "Longitude", "Datetime", "Local Time"]
         # Add the IASI channel IDs: List[str]
-        header.extend(self.channel_IDs)
+        header.extend([f"Channel + {id}" for id in self.channel_IDs])
         # Add the L1C target parameter names: List[str]
         header.extend(target_parameter_names)
         return header
