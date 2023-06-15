@@ -311,7 +311,6 @@ class L1CProcessor:
         Returns:
             np.Array: An array of the datetime components from the transposed field data (formatted like the outputs of the L2 reader)
         """
-        print([f"{d[0]}{d[1]:02d}{d[2]:02d}.{d[3]:02d}{d[4]:02d}{d[5]:02d}" for d in list(zip(*self.field_data["datetime"]))])
         return np.array([f"{d[0]}{d[1]:02d}{d[2]:02d}.{d[3]:02d}{d[4]:02d}{d[5]:02d}" for d in list(zip(*self.field_data["datetime"]))])
 
 
@@ -379,7 +378,7 @@ class L1CProcessor:
             # check_data = np.sum(data[0:-6, :], axis=1) > 0
         good_flag = check_quality_flags #np.logical_and(check_quality_flags)#, check_data)
         
-        good_data = data[:, good_flag]
+        good_data = data[good_flag, :]
         print(f"{np.round((data.shape[1] / good_data.shape[1]) * 100, 2)} % good data of {data.shape[1]} observations")
         return good_data
 
