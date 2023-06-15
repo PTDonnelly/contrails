@@ -289,7 +289,7 @@ class L1CProcessor:
             data[:, measurement] = np.nan if len(value) == 0 else value
 
         # Return the array of spectral radiance data
-        return data
+        return np.transpose(data)
 
 
     def _store_target_parameters(self) -> List:
@@ -297,11 +297,11 @@ class L1CProcessor:
         Stores the target parameters from the field data.
 
         Returns:
-            List: A list of the target parameters from the field data.
+            List: A list of the target parameter names and the transposed parameters from the field data.
         """
         target_parameter_names = [field for field, _ in self.field_data.items() if (field in self.targets)]
         target_parameters =  [data for field, data in self.field_data.items() if (field in self.targets)]
-        return target_parameter_names, target_parameters
+        return target_parameter_names, list(map(list, zip(*target_parameters)))
 
 
     def _store_datetime_components(self) -> List:
