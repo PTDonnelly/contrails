@@ -19,6 +19,7 @@ def process_l1c(ex: object):
     
     # Process IASI Level 1C data
     if ex.intermediate_file_check:
+        print(ex.intermediate_fil)
         # Process extracted IASI data from intermediate binary files
         with L1CProcessor(ex.intermediate_file, ex.config.targets) as file:
             file.extract_spectra(ex.datapath_out, ex.datafile_out, ex.year, ex.month, ex.day)
