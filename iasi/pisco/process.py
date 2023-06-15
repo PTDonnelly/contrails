@@ -201,12 +201,12 @@ class L1CProcessor:
                 self.field_data[field] = data
 
         # Store datetime components field at the end of dictionary for later construction
-        self.field_data["datetime"] = [int(self.field_data['year']),
-                                        int(self.field_data['month']),
-                                        int(self.field_data['day']),
-                                        int(self.field_data['hour']),
-                                        int(self.field_data['minute']),
-                                        int(self.field_data['millisecond']/10000)]
+        self.field_data["datetime"] = [np.asarray(self.field_data['year'], dtype=int),
+                                        np.asarray(self.field_data['month'], dtype=int),
+                                        np.asarray(self.field_data['day'], dtype=int),
+                                        np.asarray(self.field_data['hour'], dtype=int),
+                                        np.asarray(self.field_data['minute'], dtype=int),
+                                        np.asarray(self.field_data['millisecond']/10000, dtype=int)]
         
 
     def _calculate_local_time(self) -> np.ndarray:
