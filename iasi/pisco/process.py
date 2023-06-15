@@ -336,6 +336,7 @@ class L1CProcessor:
         # Extract and process binary data
         self._read_field_data()
         latitude, longitude, local_time = self._store_space_time_coordinates()
+        print(type(local_time))
         radiances = self._store_spectral_radiance()
         target_parameter_names, target_parameters = self._store_target_parameters()
         datetimes = self._store_datetime_components()
@@ -407,6 +408,12 @@ class L1CProcessor:
         df_night = df_night.drop(columns=['Local Time'])
         # Remove 'Local Time' from the header list
         header.remove('Local Time')
+
+        print(df.head())
+        print(df.dtypes)
+        # df['Local Time'] = df['Local Time'].astype(bool)
+        print(df[df['Local Time'] == True].head())
+        print(df[df['Local Time'] == False].head())
 
         # Prepare split directories
         daypath = f"{datapath_out}day/"
