@@ -342,8 +342,18 @@ class L1CProcessor:
         datetimes = self._store_datetime_components()
 
         # Concatenate processed observations into a single 2D array (number of parameters x number of measurements).
-        print(np.shape(latitude), np.shape(longitude), np.shape(datetimes), np.shape(local_time), np.shape(radiances), np.shape(target_parameters))
-        data = np.concatenate((latitude, longitude, datetimes, local_time, radiances, target_parameters), axis=1)
+        # latitude = latitude[:, np.newaxis]
+        # longitude = longitude[:, np.newaxis]
+        # datetimes = datetimes[:, np.newaxis]
+        # local_time = local_time[:, np.newaxis]
+        # print(np.shape(latitude), np.shape(longitude), np.shape(datetimes), np.shape(local_time), np.shape(radiances), np.shape(target_parameters))
+        data = np.concatenate(
+            (latitude[:, np.newaxis], 
+             longitude[:, np.newaxis], 
+             datetimes[:, np.newaxis],
+             local_time[:, np.newaxis], 
+             radiances, 
+             target_parameters), axis=1)
 
         # Construct a header that contains the name of each data column
         header = self._build_header(target_parameter_names)
