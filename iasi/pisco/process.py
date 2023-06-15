@@ -399,8 +399,9 @@ class L1CProcessor:
         # Create a DataFrame with the transposed data
         df = pd.DataFrame(data, columns=header)
 
-        # Split the DataFrame into two based on 'Local Time' column
+        # Convert the DataFrame 'Local Time' column (np.array) to boolean values
         df['Local Time'] = df['Local Time'].astype(bool)
+        # Split the DataFrame into two based on 'Local Time' column
         df_day = df[df['Local Time'] == True]
         df_night = df[df['Local Time'] == False]
         # Drop the 'Local Time' column from both DataFrames
@@ -408,12 +409,6 @@ class L1CProcessor:
         df_night = df_night.drop(columns=['Local Time'])
         # Remove 'Local Time' from the header list
         header.remove('Local Time')
-
-        print(df.head())
-        print(df.dtypes)
-        # df['Local Time'] = df['Local Time'].astype(bool)
-        print(df[df['Local Time'] == True].head())
-        print(df[df['Local Time'] == False].head())
 
         # Prepare split directories
         daypath = f"{datapath_out}day/"
