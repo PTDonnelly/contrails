@@ -53,7 +53,7 @@ class L1C_L2_Correlator:
         Delete the intermediate analysis data files used for correlating spectra and clouds.
         """
         os.remove(self.datafile_l1c)
-        os.remove(self.datafile_l2)
+        # os.remove(self.datafile_l2)
 
 
     def _get_cloud_phase(self) -> Optional[str]:
@@ -128,4 +128,4 @@ class L1C_L2_Correlator:
         """
         merged_df_day, merged_df_night = self._correlate_measurements()
         self._save_merged_data(merged_df_day, merged_df_night)
-        # self._delete_intermediate_analysis_data()
+        self._delete_intermediate_analysis_data()
