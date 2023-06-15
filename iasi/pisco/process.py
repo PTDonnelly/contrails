@@ -243,7 +243,7 @@ class L1CProcessor:
         # Subtract 6 hours from the total time, shifting the reference for day and night (so that 6 AM becomes 0)
         time_shifted = time_in_range - 6
 
-        print(len(time_shifted))
+        print(len(time_shifted[0]))
         # Take the modulus again to ensure the time is within the 0 to 23 hours range
         return np.mod(time_shifted, 24)
     
