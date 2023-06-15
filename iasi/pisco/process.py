@@ -336,7 +336,6 @@ class L1CProcessor:
         # Extract and process binary data
         self._read_field_data()
         latitude, longitude, local_time = self._store_space_time_coordinates()
-        print(type(local_time))
         radiances = self._store_spectral_radiance()
         target_parameter_names, target_parameters = self._store_target_parameters()
         datetimes = self._store_datetime_components()
@@ -401,6 +400,7 @@ class L1CProcessor:
         df = pd.DataFrame(data, columns=header)
 
         # Split the DataFrame into two based on 'Local Time' column
+        df['Local Time'] = df['Local Time'].astype(bool)
         df_day = df[df['Local Time'] == True]
         df_night = df[df['Local Time'] == False]
         # Drop the 'Local Time' column from both DataFrames
