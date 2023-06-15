@@ -399,28 +399,30 @@ class L1CProcessor:
         # Create a DataFrame with the transposed data
         df = pd.DataFrame(data, columns=header)
 
-        # Convert the DataFrame 'Local Time' column (np.array) to boolean values
-        df['Local Time'] = df['Local Time'].astype(bool)
-        # Split the DataFrame into two based on 'Local Time' column
-        df_day = df[df['Local Time'] == True]
-        df_night = df[df['Local Time'] == False]
-        # Drop the 'Local Time' column from both DataFrames
-        df_day = df_day.drop(columns=['Local Time'])
-        df_night = df_night.drop(columns=['Local Time'])
-        # Remove 'Local Time' from the header list
-        header.remove('Local Time')
+        # # Convert the DataFrame 'Local Time' column (np.array) to boolean values
+        # df['Local Time'] = df['Local Time'].astype(bool)
+        # # Split the DataFrame into two based on 'Local Time' column
+        # df_day = df[df['Local Time'] == True]
+        # df_night = df[df['Local Time'] == False]
+        # # Drop the 'Local Time' column from both DataFrames
+        # df_day = df_day.drop(columns=['Local Time'])
+        # df_night = df_night.drop(columns=['Local Time'])
+        # # Remove 'Local Time' from the header list
+        # header.remove('Local Time')
 
-        # Prepare split directories
-        daypath = f"{datapath_out}day_"
-        nightpath = f"{datapath_out}night_"
-        os.makedirs(daypath, exist_ok=True)
-        os.makedirs(nightpath, exist_ok=True)
+        # # Prepare split directories
+        # daypath = f"{datapath_out}day_"
+        # nightpath = f"{datapath_out}night_"
+        # os.makedirs(daypath, exist_ok=True)
+        # os.makedirs(nightpath, exist_ok=True)
 
         # Save the DataFrame to a file in HDF5 format
         outfile = f"{datafile_out}".split(".")[0]
         # df.to_hdf(f"{datapath_out}{datafile_out}.h5", key='df', mode='w')
-        df_day.to_csv(f"{daypath}{outfile}.csv", columns=header, index=False, mode='w')
-        df_night.to_csv(f"{nightpath}{outfile}.csv", columns=header, index=False, mode='w')
+        print(f"{outfile}.csv")
+        df.to_csv(f"{outfile}.csv", columns=header, index=False, mode='w')
+        # df_day.to_csv(f"{daypath}{outfile}.csv", columns=header, index=False, mode='w')
+        # df_night.to_csv(f"{nightpath}{outfile}.csv", columns=header, index=False, mode='w')
         return
 
     
