@@ -417,9 +417,8 @@ class L1CProcessor:
         # os.makedirs(nightpath, exist_ok=True)
 
         # Save the DataFrame to a file in HDF5 format
-        outfile = f"{datafile_out}".split(".")[0]
+        outfile = f"{datapath_out}{datafile_out}".split(".")[0]
         # df.to_hdf(f"{datapath_out}{datafile_out}.h5", key='df', mode='w')
-        print(f"{outfile}.csv")
         df.to_csv(f"{outfile}.csv", columns=header, index=False, mode='w')
         # df_day.to_csv(f"{daypath}{outfile}.csv", columns=header, index=False, mode='w')
         # df_night.to_csv(f"{nightpath}{outfile}.csv", columns=header, index=False, mode='w')
