@@ -379,7 +379,7 @@ class L1CProcessor:
         good_flag = check_quality_flags #np.logical_and(check_quality_flags)#, check_data)
         
         good_data = data[good_flag, :]
-        print(f"{np.round((data.shape[1] / good_data.shape[1]) * 100, 2)} % good data of {data.shape[1]} observations")
+        print(f"{np.round((data.shape[0] / good_data.shape[0]) * 100, 2)} % good data of {data.shape[0]} observations")
         return good_data
 
     @staticmethod
