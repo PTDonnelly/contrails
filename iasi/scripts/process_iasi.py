@@ -41,7 +41,7 @@ def process_l2(ex: object):
         if datafile_in.is_file():
             # Set the current input file
             ex.datafile_in = datafile_in.name
-    #         ex.preprocess()
+            ex.preprocess()
     ex.rename_files()
     
     # Process IASI Level 2 data

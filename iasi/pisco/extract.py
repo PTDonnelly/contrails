@@ -186,8 +186,8 @@ class Extractor:
         """
         # Create the output directory and point to intermediate file (L1C: OBR, L2: BUFR)
         self.intermediate_file = self._create_run_directory()
-        # Run the command to extract the data
-        result = self._run_command()
+        # # Run the command to extract the data
+        # result = self._run_command()
         # Check if files are produced. If not, skip processing
         self.intermediate_file_check = self._check_preprocessed_files(result)
 
