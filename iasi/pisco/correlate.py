@@ -81,7 +81,7 @@ class L1C_L2_Correlator:
             os.makedirs(datapath_out)
             return datapath_out
 
-    def save_merged_data(self, merged_df: pd.DataFrame) -> None:
+    def save_merged_data(self) -> None:
         """
         Save the merged DataFrame to a CSV file in the output directory.
         If the output directory is unknown (because the cloud phase is unknown), print a message and return.
@@ -110,7 +110,7 @@ class L1C_L2_Correlator:
         if missing_headers_l1c or missing_headers_l2:
             raise ValueError(f"Missing required headers in df_l1c: {missing_headers_l1c} or df_l2: {missing_headers_l2}")
         
-    def correlate_measurements(self) -> pd.DataFrame:
+    def correlate_measurements(self) -> None:
         """
         Create a single DataFrame for all contemporaneous observations 
         Then separate into day and night observations
