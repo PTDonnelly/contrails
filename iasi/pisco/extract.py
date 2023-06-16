@@ -73,22 +73,17 @@ class Extractor:
         # Get the output data path
         self.datapath_out = self._get_datapath_out()
 
-    @staticmethod
-    def _delete_intermediate_reduction_data(intermediate_file: str):
-        # Delete intermediate binary file (after extracting spectra and metadata)
-        os.remove(intermediate_file)
-        pass
 
-    def _check_preprocessed_files(self, result: object) -> bool:
-        if "No L1C data files found" in result.stdout:
+    def check_preprocessed_files(self, result: object) -> bool:
+        # If binary script runs but detects no data, report back, delete the empty intermediate file, and return False
+        if ("No L1C data files found" in result.stdout) or ("No L2 data files found" in result.stdout):
             print(result.stdout)
-            return False
-        elif "No L2 data files found" in result.stdout:
-            print(result.stdout)
+            os.remove(self.intermediate_file)
             return False
         else:
             return True
-    
+
+
     def _build_parameters(self) -> str:
         """
         Builds the parameter string for the IASI data extraction command.
@@ -132,7 +127,7 @@ class Extractor:
             # If the data level is not 'l1c' or 'l2', raise an error
             raise ValueError("Invalid data path type. Accepts 'l1c' or 'l2'.")
 
-    def _run_command(self) -> Optional[bool]:
+    def run_command(self) -> Optional[bool]:
         """
         Executes and monitors the command to extract IASI data.
         """
@@ -150,8 +145,9 @@ class Extractor:
             # Catch any other exceptions
             raise RuntimeError(f"An unexpected error occurred while running the command '{command}': {str(e)}")
         return result
-    
-    def _create_run_directory(self) -> None:
+
+
+    def create_intermediate_filepath(self) -> None:
         """
         Creates the directory to save the output files, based on the input file name and time.
         
@@ -162,14 +158,8 @@ class Extractor:
             # Get the output file name from the input file name
             self.datafile_out = "extracted_spectra.bin"
         elif self.data_level == 'l2':
-            print("DON'T FORGET TO FINISH THIS BLOCK WHEN YOU HAVE THE BUFR READER")
-            self.datafile_out = "cloud_products.csv"
-            # self.datafile_out = self.datafile_in.split(",")[2]
-            # # Determine if the time is during the day or night
-            # hour = int(self.datafile_out[27:29])
-            # time = "day" if (6 <= hour <= 18) else "night"
-            # # Update the output data path
-            # self.datapath_out = f"{self.datapath_out}"
+            # self.datafile_out = "cloud_products.csv"
+            self.datafile_out = self.datafile_in.split(",")[2]
         else:
             # If the data level is not 'l1c' or 'l2', raise an error
             raise ValueError("Invalid data path type. Accepts 'l1c' or 'l2'.")
@@ -178,22 +168,17 @@ class Extractor:
         os.makedirs(self.datapath_out, exist_ok=True)
         return f"{self.datapath_out}{self.datafile_out}"
 
+
     def preprocess(self) -> Tuple[bool, str]:
         """
         Preprocesses the IASI data.
         """
         # Create the output directory and point to intermediate file (L1C: OBR, L2: BUFR)
-        self.intermediate_file = self._create_run_directory()
+        self.intermediate_file = self.create_intermediate_filepath()
         # Run the command to extract the data
-        result = self._run_command()
-        # Check if files are produced. If not, skip processing
-        self.intermediate_file_check = self._check_preprocessed_files(result)
-
-        if not self.intermediate_file_check:
-            # If binary script runs but detects no data, delete the intermediate file.
-            # It will only be a few bytes, so there is not much I/O overhead.
-            self._delete_intermediate_reduction_data(self.intermediate_file)
-        return
+        result = self.run_command()
+        # Check if files are produced. If not, skip processing.
+        self.intermediate_file_check = self.check_preprocessed_files(result)
                         
 
     def _get_suffix(self):

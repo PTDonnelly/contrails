@@ -402,7 +402,7 @@ class L1CProcessor:
         # Save the DataFrame to a file in HDF5 format
         outfile = f"{datapath_out}{datafile_out}".split(".")[0]
         # df.to_hdf(f"{datapath_out}{datafile_out}.h5", key='df', mode='w')
-        df.to_csv(f"{outfile}.csv", columns=header, index=False, mode='w')
+        df.to_csv(f"{outfile}_all.csv", columns=header, index=False, mode='w')
         return
 
     
@@ -431,11 +431,11 @@ class L2Processor:
     """
     def __init__(self, filepath: str, latitude_range: Tuple[float, float],  longitude_range: Tuple[float, float],  cloud_phase: int):
         self.filepath = filepath
-        self.lat_range = latitude_range
-        self.lon_range = longitude_range
-        self.extracted_columns = None
-        self.filtered_data = None
-        self.cloud_phase = cloud_phase
+        self.latitudes = latitude_range
+        self.longitudes = longitude_range
+        self.extracted_columns: List[str] = None
+        self.filtered_data: object = None
+        self.cloud_phase: int = cloud_phase
 
 
     def __enter__(self) -> 'L2Processor':
@@ -468,7 +468,7 @@ class L2Processor:
 
     def _save_data(self):
         # Save the data to a file
-        outfile = f"{self.filepath.split('.')[0]}_all.csv"
+        outfile = f"{self.filepath.split('.')[0]}.csv"
         self.filtered_data.to_csv(outfile, columns=self.extracted_columns, index=False, mode='w')
         # self.filtered_data.to_hdf(f"{outfile}.h5", key='df', mode='w')
 
@@ -478,10 +478,18 @@ class L2Processor:
         self.extracted_columns = ['Latitude', 'Longitude', 'Datetime', 'Cloud Fraction', 'Cloud-top Temperature', 'Cloud-top Pressure', 'Cloud Phase']
         data = []
         for _, row in self.df.iterrows():
-            if (self.lat_range[0] <= row['Latitude'] <= self.lat_range[1]) and (self.lon_range[0] <= row['Longitude'] <= self.lon_range[1]):
+            if (self.latitudes[0] <= row['Latitude'] <= self.latitudes[1]) and (self.longitudes[0] <= row['Longitude'] <= self.longitudes[1]):
                 if (row['Cloud Phase'] == self.cloud_phase) and np.isfinite(row['Cloud-top Temperature']): 
                     data.append([row[column] for column in self.extracted_columns])
         self.filtered_data =  pd.DataFrame(data, columns=self.extracted_columns)
+
+        # Determine if the time is during the day or night (True or False)
+        self.datafile_out = self.filepath.split(",")[2]
+        hour = int(self.datafile_out[27:29])
+        local_time = True if (6 <= hour <= 18) else False
+
+        # Add this to a column in the DataFrame after Datetime
+        self.filtered_data.insert(loc=self.filtered_data.columns.get_loc('Datetime') + 1, column='Local Time', value=local_time)
 
     
     def extract_cloud_products(self):

@@ -11,7 +11,7 @@ def main():
     # Point to location of jsonc configuration file
     path_to_config_file = "./inputs/config.jsonc"
     
-    # Instantiate a Pisco class to get data from raw binary files
+    # Instantiate an Extractor class to get data from raw binary files
     ex = Extractor(path_to_config_file)
 
     # Scan years, months, days (specific days or all calendar days, dependent on Config attributes)
