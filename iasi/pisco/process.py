@@ -484,6 +484,6 @@ class L2Processor:
         self.filtered_data =  pd.DataFrame(data, columns=self.extracted_columns)
 
     
-    def extract_ice_clouds(self):
+    def extract_cloud_products(self):
         self._filter_data()
         self._save_data()
