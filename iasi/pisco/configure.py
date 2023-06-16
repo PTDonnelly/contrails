@@ -15,7 +15,7 @@ class Config:
     
     def set_channels(self):
         # Set the list of IASI channel indices
-        n = 5#8461
+        n = 8461
         return [(i + 1) for i in range(n)]
 
     def check_mode_and_data_level(self):
