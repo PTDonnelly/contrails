@@ -162,8 +162,9 @@ class Extractor:
             # Get the output file name from the input file name
             self.datafile_out = "extracted_spectra.bin"
         elif self.data_level == 'l2':
-            self.datafile_out = self.datafile_in.split(",")[2]
             print("DON'T FORGET TO FINISH THIS BLOCK WHEN YOU HAVE THE BUFR READER")
+            self.datafile_out = "cloud_products.csv"
+            # self.datafile_out = self.datafile_in.split(",")[2]          
             # # Determine if the time is during the day or night
             # hour = int(self.datafile_out[27:29])
             # time = "day" if (6 <= hour <= 18) else "night"
