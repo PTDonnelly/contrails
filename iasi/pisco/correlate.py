@@ -78,7 +78,7 @@ class L1C_L2_Correlator:
             return None
         else:
             datapath_out = f"{self.datapath_l1c}{cloud_phase}/"
-            os.makedirs(datapath_out)
+            os.makedirs(datapath_out, exist_ok=True)
             return datapath_out
 
     def save_merged_data(self) -> None:
