@@ -92,7 +92,7 @@ class L1C_L2_Correlator:
             print("Cloud_phase is unknown or uncertain, skipping data.")
         else:
             print(f"Saving final spectra for {datapath_out}")
-            merged_df.to_csv(f"{datapath_out}extracted_spectra.csv", index=False, mode='w')
+            self.merged_df.to_csv(f"{datapath_out}extracted_spectra.csv", index=False, mode='w')
             # # # Save the DataFrame to a file in csv format, split by local time
             # # df.to_hdf(f"{datapath_out}{datafile_out}.h5", key='df', mode='w')
             # merged_df_day.to_csv(f"{datapath_out}day_extracted_spectra.csv", index=False, mode='w')
