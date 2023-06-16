@@ -104,8 +104,8 @@ class L1C_L2_Correlator:
         print(self.df_l1c.columns)
         print(self.df_l2.columns)
         decimal_places = 2
-        self.df_l1c[['Latitude', 'Longitude']] = self.df_l1c[['Latitude', 'Longitude']].round(decimal_places)
-        self.df_l2[['Latitude', 'Longitude']] = self.df_l2[['Latitude', 'Longitude']].round(decimal_places)
+        self.df_l1c['Latitude', 'Longitude'] = self.df_l1c['Latitude', 'Longitude'].round(decimal_places)
+        self.df_l2['Latitude', 'Longitude'] = self.df_l2['Latitude', 'Longitude'].round(decimal_places)
 
         merged_df = pd.merge(self.df_l1c, self.df_l2, on=['Latitude', 'Longitude', 'Datetime'], how='inner')
 
