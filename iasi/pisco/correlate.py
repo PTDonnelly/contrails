@@ -7,7 +7,7 @@ class L1C_L2_Correlator:
     def __init__(self, datapath_out: str, year: str, month: str, day: str, cloud_phase: int):
         self.cloud_phase: int = cloud_phase
         self.datapath_l1c = f"{datapath_out}l1c/{year}/{month}/{day}/"
-        self.datapath_l2 = f"{datapath_out}l2/{year}/{month}/{day}"
+        self.datapath_l2 = f"{datapath_out}l2/{year}/{month}/{day}/"
         self.df_l1c: object = None
         self.df_l2: object = None
         self.merged_df: object = None
