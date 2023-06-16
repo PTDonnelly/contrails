@@ -92,7 +92,6 @@ class Extractor:
             str: Parameters for the command.
         """
         # Define the parameters for the command
-        print(self.config.channels)
         list_of_parameters = [
             f"-fd {self.year}-{self.month}-{self.day} -ld {self.year}-{self.month}-{self.day}",  # first and last day
             f"-c {self.config.channels[0]}-{self.config.channels[-1]}",  # spectral channels
