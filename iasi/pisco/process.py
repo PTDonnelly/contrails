@@ -463,7 +463,7 @@ class L2Processor:
             value (Any): The exception value.
             traceback (Any): The traceback object.
         """
-        self.df.close()
+        # self.df.close()
     
 
     def _save_data(self):

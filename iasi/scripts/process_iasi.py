@@ -46,7 +46,6 @@ def process_l2(ex: object):
     
     # Process IASI Level 2 data
     if ex.intermediate_file_check:
-        print(ex.intermediate_file)
         # Process extracted IASI data from intermediate binary files
         with L2Processor(ex.intermediate_file, ex.config.latitude_range, ex.config.longitude_range, ex.config.cloud_phase) as file:
             file.extract_ice_clouds() 
