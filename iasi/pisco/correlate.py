@@ -134,7 +134,7 @@ class L1C_L2_Correlator:
         """
         Defines the paths to the intermediate analysis data files.
         """
-        self.datafile_l1c = f"{self.datapath_l1c}extracted_spectra_all.csv"
+        self.datafile_l1c = f"{self.datapath_l1c}extracted_spectra.csv"
         self.datafile_l2 = f"{self.datapath_l2}cloud_products.csv"
     
     def load_data(self) -> None:
