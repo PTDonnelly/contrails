@@ -75,7 +75,7 @@ class L1C_L2_Correlator:
         return None if cloud_phase is None else f"{self.datapath_out}{cloud_phase}/"
 
 
-    def _save_merged_data(self, merged_df_day: pd.DataFrame, merged_df_night: pd.DataFrame) -> None:
+    def _save_merged_data(self, merged_df: pd.DataFrame) -> None:
         """
         Save the merged DataFrame to a CSV file in the output directory.
         If the output directory is unknown (because the cloud phase is unknown), print a message and return.
@@ -86,12 +86,12 @@ class L1C_L2_Correlator:
             print("Cloud_phase is unknown or uncertain, skipping data.")
         else:
             print(f"Saving final spectra for {datapath_out}")
-            # final_file = f"{datapath_out}extracted_spectra.csv"
-            # merged_df.to_csv(final_file, index=False)
-            # # Save the DataFrame to a file in csv format, split by local time
-            # df.to_hdf(f"{datapath_out}{datafile_out}.h5", key='df', mode='w')
-            merged_df_day.to_csv(f"{datapath_out}day_extracted_spectra.csv", index=False, mode='w')
-            merged_df_night.to_csv(f"{datapath_out}night_extracted_spectra.csv", index=False, mode='w')
+            final_file = f"{datapath_out}extracted_spectra.csv"
+            merged_df.to_csv(final_file, index=False)
+            # # # Save the DataFrame to a file in csv format, split by local time
+            # # df.to_hdf(f"{datapath_out}{datafile_out}.h5", key='df', mode='w')
+            # merged_df_day.to_csv(f"{datapath_out}day_extracted_spectra.csv", index=False, mode='w')
+            # merged_df_night.to_csv(f"{datapath_out}night_extracted_spectra.csv", index=False, mode='w')
         
         # Delete original csv files
         self._delete_intermediate_analysis_data()
@@ -99,7 +99,7 @@ class L1C_L2_Correlator:
 
 
     def _check_headers(self):
-        required_headers = ['Latitude', 'Longitude', 'Datetime', 'Local Time']
+        required_headers = ['Latitude', 'Longitude', 'Datetime']#, 'Local Time']
         missing_headers_l1c = [header for header in required_headers if header not in self.df_l1c.columns]
         missing_headers_l2 = [header for header in required_headers if header not in self.df_l2.columns]
         print(missing_headers_l1c)
@@ -125,25 +125,25 @@ class L1C_L2_Correlator:
         # rows from df_l1c that do not have a corresponding row in df_l2 are dropped.
         merged_df = pd.merge(self.df_l1c, self.df_l2, on=['Latitude', 'Longitude', 'Datetime'], how='inner')
 
-        # Convert the DataFrame 'Local Time' column (np.array) to boolean values
-        merged_df['Local Time'] = merged_df['Local Time'].astype(bool)
-        # Split the DataFrame into two based on 'Local Time' column
-        merged_df_day = merged_df[merged_df['Local Time'] == True]
-        merged_df_night = merged_df[merged_df['Local Time'] == False]
-        # # Drop the 'Local Time' column from both DataFrames
+        # # Convert the DataFrame 'Local Time' column (np.array) to boolean values
+        # merged_df['Local Time'] = merged_df['Local Time'].astype(bool)
+        # # Split the DataFrame into two based on 'Local Time' column
+        # merged_df_day = merged_df[merged_df['Local Time'] == True]
+        # merged_df_night = merged_df[merged_df['Local Time'] == False]
+        # # # Drop the 'Local Time' column from both DataFrames
         # merged_df_day = merged_df_day.drop(columns=['Local Time'])
         # merged_df_night = merged_df_night.drop(columns=['Local Time'])
         # # Remove 'Local Time' from the header list
         # header.remove('Local Time')
-        return merged_df_day.dropna(), merged_df_night.dropna()
+        return merged_df#merged_df_day.dropna(), merged_df_night.dropna()
 
 
     def filter_spectra(self) -> None:
         """
         Loads the data, correlates measurements, saves the merged data, and deletes the original data.
         """           
-        merged_df_day, merged_df_night = self._correlate_measurements()
-        self._save_merged_data(merged_df_day, merged_df_night)
+        merged_df = self._correlate_measurements()
+        self._save_merged_data(merged_df)
 
     @classmethod
     def gather_files(cls, datapath_out: str, year: int, month: int, day: int) -> None:
