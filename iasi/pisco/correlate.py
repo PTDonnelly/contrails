@@ -72,8 +72,12 @@ class L1C_L2_Correlator:
         If the cloud phase is unknown, returns None.
         """
         cloud_phase = self._get_cloud_phase()
-        return None if cloud_phase is None else f"{self.datapath_out}{cloud_phase}/"
-
+        if cloud_phase is None:
+            return None
+        else:
+            datapath_out = f"{self.datapath_out}{cloud_phase}/"
+            os.makedirs(datapath_out)
+            return datapath_out
 
     def _save_merged_data(self, merged_df: pd.DataFrame) -> None:
         """
@@ -102,8 +106,6 @@ class L1C_L2_Correlator:
         required_headers = ['Latitude', 'Longitude', 'Datetime']#, 'Local Time']
         missing_headers_l1c = [header for header in required_headers if header not in self.df_l1c.columns]
         missing_headers_l2 = [header for header in required_headers if header not in self.df_l2.columns]
-        print(missing_headers_l1c)
-        print(missing_headers_l2)
         if missing_headers_l1c or missing_headers_l2:
             raise ValueError(f"Missing required headers in df_l1c: {missing_headers_l1c} or df_l2: {missing_headers_l2}")
 
