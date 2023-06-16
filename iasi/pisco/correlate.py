@@ -58,7 +58,7 @@ class L1C_L2_Correlator:
         Delete the intermediate analysis data files used for correlating spectra and clouds.
         """
         os.remove(self.datafile_l1c)
-        # os.remove(self.datafile_l2)
+        os.remove(self.datafile_l2)
 
     def _get_cloud_phase(self) -> Optional[str]:
         """
@@ -92,15 +92,14 @@ class L1C_L2_Correlator:
             print("Cloud_phase is unknown or uncertain, skipping data.")
         else:
             print(f"Saving final spectra for {datapath_out}")
-            final_file = f"{datapath_out}extracted_spectra.csv"
-            merged_df.to_csv(final_file, index=False)
+            merged_df.to_csv(f"{datapath_out}extracted_spectra.csv", index=False, mode='w')
             # # # Save the DataFrame to a file in csv format, split by local time
             # # df.to_hdf(f"{datapath_out}{datafile_out}.h5", key='df', mode='w')
             # merged_df_day.to_csv(f"{datapath_out}day_extracted_spectra.csv", index=False, mode='w')
             # merged_df_night.to_csv(f"{datapath_out}night_extracted_spectra.csv", index=False, mode='w')
         
         # Delete original csv files
-        self._delete_intermediate_analysis_data()
+        # self._delete_intermediate_analysis_data()
         return
 
 
