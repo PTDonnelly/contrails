@@ -189,7 +189,7 @@ class Extractor:
         # # Run the command to extract the data
         # result = self._run_command()
         # Check if files are produced. If not, skip processing
-        self.intermediate_file_check = self._check_preprocessed_files(result)
+        self.intermediate_file_check = True #self._check_preprocessed_files(result)
 
         if not self.intermediate_file_check:
             # If binary script runs but detects no data, delete the intermediate file.
