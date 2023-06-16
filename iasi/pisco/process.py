@@ -46,7 +46,7 @@ class L1CProcessor:
 
     def __exit__(self, type, value, traceback) -> None:
         """
-        Ensure the file is closed when exiting the context.
+        Ensure the original binary file is closed when exiting the context, and delete it.
 
         Args:
             type (Any): The exception type.
