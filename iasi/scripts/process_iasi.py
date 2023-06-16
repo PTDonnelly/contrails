@@ -61,7 +61,7 @@ def correlate_l1c_l2(ex: object):
     The result is a csv file containing all spectra at those locations and times.
     """
     # Concatenate all L2 csv files into a single coud products file
-    L1C_L2_Correlator.gather_files(ex.config.datapath_out)
+    L1C_L2_Correlator.gather_files(ex.config.datapath_out, ex.year, ex.month, ex.day)
     
     # Preprocess IASI Level 2 data
     with L1C_L2_Correlator(ex.config.datapath_out, ex.year, ex.month, ex.day, ex.config.cloud_phase) as file:

@@ -146,7 +146,7 @@ class L1C_L2_Correlator:
         self._save_merged_data(merged_df_day, merged_df_night)
 
     @classmethod
-    def gather_files(cls, datapath_out: str) -> None:
+    def gather_files(cls, datapath_out: str, year: int, month: int, day: int) -> None:
         """
         Gather all CSV files from a specified directory, combine them into a single dataframe, 
         and save this combined dataframe as a new CSV file in the same directory.
@@ -167,9 +167,10 @@ class L1C_L2_Correlator:
         The row indices are not included in the saved CSV file.
         """
         print("Combining L2 cloud products into single file")
-        print(datapath_out)
+        search_directory = f"{datapath_out}l1c/{year}/{month}/{day}/"
+        print(search_directory)
         df_list = []  # Create an empty list to hold dataframes
-        for datafile_out in os.scandir(datapath_out):
+        for datafile_out in os.scandir(search_directory):
             # Check that entry is a file
             if datafile_out.is_file():
                 # Open csv as data frame
@@ -180,8 +181,8 @@ class L1C_L2_Correlator:
         combined_df = pd.concat(df_list, ignore_index=True)  # concatenate all dataframes in the list
 
         # Delete all original csv files in data_path_out
-        [os.remove(file) for file in glob.glob(os.path.join(datapath_out, '*.csv'))]
+        [os.remove(file) for file in glob.glob(os.path.join(search_directory, '*.csv'))]
 
         # Save as single csv
-        combined_df.to_csv(os.path.join(datapath_out, 'cloud_products.csv'), index=False)
+        combined_df.to_csv(os.path.join(search_directory, 'cloud_products.csv'), index=False)
         return
