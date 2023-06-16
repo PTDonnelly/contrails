@@ -20,6 +20,6 @@ class Config:
 
     def check_mode_and_data_level(self):
         # Check execution mode data level inputs agree before execution
-        if self.mode == "Process":
+        if not self.correlate:
             if (self.L1C and self.L2) or (not self.L1C and not self.L2):
                 raise ValueError("Invalid data path type. Process mode requires either 'l1C' or 'l2'.")

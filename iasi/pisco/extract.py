@@ -14,7 +14,7 @@ class Extractor:
         """
         # Instantiate the Config class and set_parameters() for analysis
         self.config = Config(path_to_config_file)
-        self.config.check_mode_and_data_level()
+        # self.config.check_mode_and_data_level()
         self.data_level: str = None
         self.year: str = None
         self.month: str = None
