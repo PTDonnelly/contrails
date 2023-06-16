@@ -167,7 +167,7 @@ class L1C_L2_Correlator:
         The row indices are not included in the saved CSV file.
         """
         print("Combining L2 cloud products into single file")
-        search_directory = f"{datapath_out}l1c/{year}/{month}/{day}/"
+        search_directory = f"{datapath_out}l2/{year}/{month}/{day}/"
         
         # Create an empty list to hold dataframes
         df_list = []
