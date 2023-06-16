@@ -403,7 +403,7 @@ class L1CProcessor:
         # Save the DataFrame to a file in HDF5 format
         outfile = f"{datapath_out}{datafile_out}".split(".")[0]
         # df.to_hdf(f"{datapath_out}{datafile_out}.h5", key='df', mode='w')
-        df.to_csv(f"{outfile}_all.csv", columns=header, index=False, mode='w')
+        df.to_csv(f"{outfile}.csv", columns=header, index=False, mode='w')
         return
 
     
