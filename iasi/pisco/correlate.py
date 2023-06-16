@@ -74,12 +74,13 @@ class L1C_L2_Correlator:
         If the cloud phase is unknown, returns None.
         """
         cloud_phase = self._get_cloud_phase()
-        if cloud_phase is None:
-            return None
-        else:
-            datapath_out = f"{self.datapath_l1c}{cloud_phase}/"
-            os.makedirs(datapath_out, exist_ok=True)
-            return datapath_out
+        return None if cloud_phase is None else cloud_phase
+        # if cloud_phase is None:
+        #     return None
+        # else:
+        #     datapath_out = f"{self.datapath_l1c}{cloud_phase}/"
+        #     os.makedirs(datapath_out, exist_ok=True)
+        #     return datapath_out
 
     def save_merged_data(self) -> None:
         """
@@ -87,12 +88,13 @@ class L1C_L2_Correlator:
         If the output directory is unknown (because the cloud phase is unknown), print a message and return.
         Delete the intermediate l1c and l2 products.
         """
-        datapath_out = self._build_output_directory_path()
-        if datapath_out is None:
+        cloud_phase = self._build_output_directory_path()
+        if cloud_phase is None:
             print("Cloud_phase is unknown or uncertain, skipping data.")
         else:
-            print(f"Saving final spectra for {datapath_out}")
-            self.merged_df.to_csv(f"{datapath_out}extracted_spectra.csv", index=False, mode='w')
+            print(f"Saving {cloud_phase} spectra for {self.datapath_l1c}")
+            outfile = f"{self.datapath_l1c}extracted_spectra_{cloud_phase}.csv"
+            self.merged_df.to_csv(f"{outfile}, index=False, mode='w')
             # # # Save the DataFrame to a file in csv format, split by local time
             # # df.to_hdf(f"{datapath_out}{datafile_out}.h5", key='df', mode='w')
             # merged_df_day.to_csv(f"{datapath_out}day_extracted_spectra.csv", index=False, mode='w')
