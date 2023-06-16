@@ -1,6 +1,6 @@
 {
-    // mode: str, The processing mode. Options are 'Process' or 'Correlate'
-    "mode": "Correlate",
+    // correlate: bool, Specifies whether Level 1C and Level 2 data should be correlated for filtering spectra
+    "correlate": true,
 
     // L1C: bool, Specifies whether Level 1C data should be processed
     "L1C": true,
