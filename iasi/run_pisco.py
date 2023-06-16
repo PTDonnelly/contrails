@@ -26,7 +26,7 @@ def main():
                 if ex.config.mode == "Process":
                     if ex.config.L1C:
                         process_l1c(ex)
-                    if ex.config.L2:
+                    elif ex.config.L2:
                         process_l2(ex)
                 elif ex.config.mode == "Correlate":
                     if ex.config.L2:
