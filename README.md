@@ -71,7 +71,7 @@ Remember to replace "path_to_your_config_file.json" with the actual path to your
 
 It scans through each specified year, month, and day in the configuration. For each day, it will either process Level 1C or Level 2 data, or correlate both Level 1C and Level 2 data, depending on your settings in the configuration file.
 
-The `process_l1c(ex)`, `process_l2(ex)`, and `correlate_l1c_l2(ex)` are functions imported from the scripts.process_iasi module, and they accept the Extractor class as an argument. Make sure these scripts are available and properly defined in your project. 
+The `process_l1c()`, `process_l2()`, and `correlate_l1c_l2()` are functions imported from the `scripts.process_iasi` module, and they accept the Extractor class as an argument. Make sure these scripts are available and properly defined in your project. 
 
 ## Summary 
 
