@@ -468,8 +468,8 @@ class L2Processor:
 
     def _save_data(self):
         # Save the data to a file
-        outfile = self.filepath.split('.')[0]
-        self.filtered_data.to_csv(f"{outfile}.csv", columns=self.extracted_columns, index=False, mode='w')
+        outfile = f"{self.filepath.split('.')[0]}_all.csv"
+        self.filtered_data.to_csv(outfile, columns=self.extracted_columns, index=False, mode='w')
         # self.filtered_data.to_hdf(f"{outfile}.h5", key='df', mode='w')
 
 
