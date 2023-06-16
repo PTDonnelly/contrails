@@ -54,6 +54,7 @@ class L1CProcessor:
             traceback (Any): The traceback object.
         """
         self.f.close()
+        os.remove(self.filepath)
 
 
     def _print_metadata(self):
@@ -418,9 +419,6 @@ class L1CProcessor:
         # datafile_out = f"IASI_L1C_{year}_{month}_{day}"
         self.save_observations(datapath_out, datafile_out, header, good_data)
 
-        # Delete intermediate binary file
-        ex._delete_intermediate_reduction_data(self.filepath)
-
 
 class L2Processor:
     """
@@ -463,7 +461,7 @@ class L2Processor:
             value (Any): The exception value.
             traceback (Any): The traceback object.
         """
-        # self.df.close()
+        pass
     
 
     def _save_data(self):
@@ -471,6 +469,7 @@ class L2Processor:
         outfile = f"{self.filepath.split('.')[0]}.csv"
         self.filtered_data.to_csv(outfile, columns=self.extracted_columns, index=False, mode='w')
         # self.filtered_data.to_hdf(f"{outfile}.h5", key='df', mode='w')
+        return
 
 
     def _filter_data(self):
@@ -490,7 +489,7 @@ class L2Processor:
 
         # Add this to a column in the DataFrame after Datetime
         self.filtered_data.insert(loc=self.filtered_data.columns.get_loc('Datetime') + 1, column='Local Time', value=local_time)
-
+        return
     
     def extract_cloud_products(self):
         self._filter_data()
