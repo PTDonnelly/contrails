@@ -168,17 +168,18 @@ class L1C_L2_Correlator:
         """
         print("Combining L2 cloud products into single file")
         search_directory = f"{datapath_out}l1c/{year}/{month}/{day}/"
-        print(search_directory)
-        df_list = []  # Create an empty list to hold dataframes
+        
+        # Create an empty list to hold dataframes
+        df_list = []
         for datafile_out in os.scandir(search_directory):
             # Check that entry is a file
             if datafile_out.is_file():
-                # Open csv as data frame
-                df = pd.read_csv(datafile_out.path)  # read the CSV file into a dataframe
-                df_list.append(df)  # add the dataframe to the list
+                # Open csv as data frame and append
+                df = pd.read_csv(datafile_out.path)
+                df_list.append(df)
 
-        # Combine dataframes
-        combined_df = pd.concat(df_list, ignore_index=True)  # concatenate all dataframes in the list
+        # Concatenate all dataframes in the list
+        combined_df = pd.concat(df_list, ignore_index=True)
 
         # Delete all original csv files in data_path_out
         [os.remove(file) for file in glob.glob(os.path.join(search_directory, '*.csv'))]
