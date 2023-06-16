@@ -167,6 +167,7 @@ class L1C_L2_Correlator:
         The row indices are not included in the saved CSV file.
         """
         print("Combining L2 cloud products into single file")
+        print(datapath_out)
         df_list = []  # Create an empty list to hold dataframes
         for datafile_out in os.scandir(datapath_out):
             # Check that entry is a file
