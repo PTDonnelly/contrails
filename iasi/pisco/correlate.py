@@ -101,6 +101,8 @@ class L1C_L2_Correlator:
 
         Then separate into day and night observations
         """
+        print(self.df_l1c.columns)
+        print(self.df_l2.columns)
         decimal_places = 2
         self.df_l1c[['Latitude', 'Longitude']] = self.df_l1c[['Latitude', 'Longitude']].round(decimal_places)
         self.df_l2[['Latitude', 'Longitude']] = self.df_l2[['Latitude', 'Longitude']].round(decimal_places)
