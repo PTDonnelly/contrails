@@ -94,7 +94,7 @@ class L1C_L2_Correlator:
         else:
             print(f"Saving {cloud_phase} spectra for {self.datapath_l1c}")
             outfile = f"{self.datapath_l1c}extracted_spectra_{cloud_phase}.csv"
-            self.merged_df.to_csv(f"{outfile}, index=False, mode='w')
+            self.merged_df.to_csv(outfile, index=False, mode='w')
             # # # Save the DataFrame to a file in csv format, split by local time
             # # df.to_hdf(f"{datapath_out}{datafile_out}.h5", key='df', mode='w')
             # merged_df_day.to_csv(f"{datapath_out}day_extracted_spectra.csv", index=False, mode='w')
