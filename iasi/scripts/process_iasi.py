@@ -19,7 +19,7 @@ def process_l1c(ex: object):
     
     # Process IASI Level 1C data
     if ex.intermediate_file_check:
-        # Process extracted IASI data from intermediate binary files
+        # Process extracted IASI data from intermediate binary files and save to csv
         with L1CProcessor(ex.intermediate_file, ex.config.targets) as file:
             file.extract_spectra(ex.datapath_out, ex.datafile_out, ex.year, ex.month, ex.day)
     return
@@ -42,13 +42,13 @@ def process_l2(ex: object):
             # Set the current input file
             ex.datafile_in = datafile_in.name
             ex.preprocess()
-    ex.rename_files()
-    
-    # Process IASI Level 2 data
-    if ex.intermediate_file_check:
-        # Process extracted IASI data from intermediate binary files
-        with L2Processor(ex.intermediate_file, ex.config.latitude_range, ex.config.longitude_range, ex.config.cloud_phase) as file:
-            file.extract_ice_clouds() 
+            ex.rename_files()
+            
+            # Process IASI Level 2 data
+            if ex.intermediate_file_check:
+                # Process extracted IASI data from intermediate binary files, and save to csv
+                with L2Processor(ex.intermediate_file, ex.config.latitude_range, ex.config.longitude_range, ex.config.cloud_phase) as file:
+                    file.extract_ice_clouds() 
     return
 
 def correlate_l1c_l2(ex: object):
@@ -60,6 +60,9 @@ def correlate_l1c_l2(ex: object):
 
     The result is a csv file containing all spectra at those locations and times.
     """
+    # Concatenate all L2 csv files into a single coud products file
+    L1C_L2_Correlator.gather_files(ex.config.datapath_out)
+    
     # Preprocess IASI Level 2 data
     with L1C_L2_Correlator(ex.config.datapath_out, ex.year, ex.month, ex.day, ex.config.cloud_phase) as file:
         file.filter_spectra()

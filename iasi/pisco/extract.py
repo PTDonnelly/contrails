@@ -164,13 +164,10 @@ class Extractor:
         elif self.data_level == 'l2':
             print("DON'T FORGET TO FINISH THIS BLOCK WHEN YOU HAVE THE BUFR READER")
             self.datafile_out = "cloud_products.csv"
-            # self.datafile_out = self.datafile_in.split(",")[2]          
+            # self.datafile_out = self.datafile_in.split(",")[2]
             # # Determine if the time is during the day or night
             # hour = int(self.datafile_out[27:29])
             # time = "day" if (6 <= hour <= 18) else "night"
-            # # Trim day/night subdirectory from any previous iterations
-            # if ("day" in self.datapath_out) or ("night" in self.datapath_out):
-            #     self.datapath_out = f"{os.path.dirname(os.path.dirname(self.datapath_out))}/"
             # # Update the output data path
             # self.datapath_out = f"{self.datapath_out}"
         else:
@@ -187,10 +184,10 @@ class Extractor:
         """
         # Create the output directory and point to intermediate file (L1C: OBR, L2: BUFR)
         self.intermediate_file = self._create_run_directory()
-        # # Run the command to extract the data
-        # result = self._run_command()
+        # Run the command to extract the data
+        result = self._run_command()
         # Check if files are produced. If not, skip processing
-        self.intermediate_file_check = True #self._check_preprocessed_files(result)
+        self.intermediate_file_check = self._check_preprocessed_files(result)
 
         if not self.intermediate_file_check:
             # If binary script runs but detects no data, delete the intermediate file.
