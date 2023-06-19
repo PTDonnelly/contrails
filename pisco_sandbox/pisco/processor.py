@@ -184,31 +184,29 @@ class L1CProcessor:
             if (i < 8) or (field in self.targets):
                 print(f"Extracting: {field}")
 
-                # Move the file pointer to the starting position of the current field
-                self.f.seek(self.header_size + 12 + cumsize, 0)
-
                 # Calculate the byte offset to the next measurement
                 byte_offset = self.record_size + 8 - dtype_size
-
-                # # Prepare an empty array to store the data of the current field
-                # data = np.empty(self.number_of_measurements)
-
-                # # Read the data of each measurement
-                # for im, measurement in enumerate(range(self.number_of_measurements)):
-                #     if im % 100 == 0:  # Check if measurement number is divisible by 100
-                #         value = np.fromfile(self.f, dtype=dtype, count=1, sep='', offset=byte_offset)
-                #         data[measurement] = np.nan if len(value) == 0 else value[0]
-                #     else:
-                #         data[measurement] = np.nan  # or any other default value
-        
-                # self.number_of_measurements = 1296000 // 100
 
                 # Prepare an empty array to store the data of the current field
                 data = np.empty(self.number_of_measurements)
                 
                 # Read the data of each measurement
                 for measurement in range(self.number_of_measurements):
-                    value = np.fromfile(self.f, dtype=dtype, count=1, sep='', offset=byte_offset*100*measurement)
+                    # Move the file pointer to the starting position of the current field
+                    self.f.seek((self.header_size + 12 + cumsize) * 100 * measurement, 0)
+
+                    # # Prepare an empty array to store the data of the current field
+                    # data = np.empty(self.number_of_measurements)
+
+                    # # Read the data of each measurement
+                    # for im, measurement in enumerate(range(self.number_of_measurements)):
+                    #     if im % 100 == 0:  # Check if measurement number is divisible by 100
+                    #         value = np.fromfile(self.f, dtype=dtype, count=1, sep='', offset=byte_offset)
+                    #         data[measurement] = np.nan if len(value) == 0 else value[0]
+                    #     else:
+                    #         data[measurement] = np.nan  # or any other default value
+            
+                    value = np.fromfile(self.f, dtype=dtype, count=1, sep='', offset=byte_offset)
                     data[measurement] = np.nan if len(value) == 0 else value[0]
 
                 # Store the data in the field_data dictionary
