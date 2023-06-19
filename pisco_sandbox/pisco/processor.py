@@ -158,7 +158,7 @@ class L1CProcessor:
         return fields
         
 
-    def __ents(self) -> int:
+    def _count_measurements(self) -> int:
         """
         Calculate the number of measurements in the binary file based on its size, 
         header size and record size.
