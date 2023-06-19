@@ -206,12 +206,13 @@ class L1CProcessor:
                 
                 # Read the data of each measurement
                 for measurement in range(self.number_of_measurements):
+                    print(byte_offset, measurement, byte_offset*measurement)
                     value = np.fromfile(self.f, dtype=dtype, count=1, sep='', offset=byte_offset*measurement)
                     data[measurement] = np.nan if len(value) == 0 else value[0]
+                exit()
 
                 # Store the data in the field_data dictionary
                 self.field_data[field] = data
-                print(f"FIELD SIZE: {len(self.field_data[field])}")
 
         # Store datetime components field at the end of dictionary for later construction
         self.field_data["datetime"] = [np.asarray(self.field_data['year'], dtype=int),
