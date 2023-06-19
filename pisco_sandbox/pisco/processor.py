@@ -205,7 +205,7 @@ class L1CProcessor:
                 data = np.empty(self.number_of_measurements // 100)
                 
                 # Read the data of each measurement
-                for im, measurement in enumerate(range(self.number_of_measurements//100)):
+                for im, measurement in enumerate(range(self.number_of_measurements)):
                     if im % 100 == 0:  # Check if measurement number is divisible by 100
                         value = np.fromfile(self.f, dtype=dtype, count=1, sep='', offset=byte_offset)
                         data[measurement] = np.nan if len(value) == 0 else value[0]
