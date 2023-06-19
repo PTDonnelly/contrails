@@ -1,8 +1,8 @@
 import os
 
-from pisco import L1CProcessor, L2Processor, L1C_L2_Correlator
+from pisco import Extractor, L1CProcessor, L2Processor, L1C_L2_Correlator
 
-def process_l1c(ex: object):
+def process_l1c(ex: Extractor):
     """
     Process level 1C IASI data.
 
@@ -27,7 +27,7 @@ def process_l1c(ex: object):
             file.extract_spectra(ex.datapath_out, ex.datafile_out, ex.year, ex.month, ex.day)
     return
 
-def process_l2(ex: object):
+def process_l2(ex: Extractor):
     """
     Process level 2 IASI data.
 
@@ -58,7 +58,7 @@ def process_l2(ex: object):
                     file.extract_cloud_products() 
     return
 
-def correlate_l1c_l2(ex: object):
+def correlate_l1c_l2(ex: Extractor):
     """
     Correlate level 1C spectra and level 2 cloud products.
 
@@ -84,4 +84,6 @@ def correlate_l1c_l2(ex: object):
     
     # Saves the merged data, and deletes the original data.
     co.save_merged_data()
+
+    co.preview_merged_data()
     return

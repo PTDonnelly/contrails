@@ -11,6 +11,7 @@ class L1C_L2_Correlator:
         self.df_l1c: object = None
         self.df_l2: object = None
         self.merged_df: object = None
+        self.merged_datafile: str = None
 
     def gather_files(self) -> None:
         """
@@ -53,45 +54,28 @@ class L1C_L2_Correlator:
         return
 
 
-    def _delete_intermediate_analysis_data(self) -> None:
+    def _get_intermediate_analysis_data_paths(self) -> None:
         """
-        Delete the intermediate analysis data files used for correlating spectra and clouds.
+        Defines the paths to the intermediate analysis data files.
         """
-        os.remove(self.datafile_l1c)
-        os.remove(self.datafile_l2)
+        self.datafile_l1c = f"{self.datapath_l1c}extracted_spectra.csv"
+        self.datafile_l2 = f"{self.datapath_l2}cloud_products.csv"
 
-    def _get_cloud_phase(self) -> Optional[str]:
+       # Check if L1C and/or L2 data files exist
+        if not os.path.exists(self.datafile_l1c) and not os.path.exists(self.datafile_l2):
+            raise ValueError('Neither L1C nor L2 data files exist. Nothing to correlate.')
+    
+    def load_data(self) -> None:
         """
-        Returns the cloud phase as a string based on the cloud phase value.
-        If the retrieved cloud phase is unknown or uncertain, returns None.
-        """
-        cloud_phase_dictionary = {1: "aqueous", 2: "icy", 3: "mixed", 4: "clear"}
-        cloud_phase = cloud_phase_dictionary.get(self.cloud_phase)
-        return None if cloud_phase is None else cloud_phase
-
-    def save_merged_data(self) -> None:
-        """
-        Save the merged DataFrame to a CSV file in the output directory.
-        If the output directory is unknown (because the cloud phase is unknown), print a message and return.
-        Delete the intermediate l1c and l2 products.
-        """
-        cloud_phase = self._get_cloud_phase()
-        if cloud_phase is None:
-            print("Cloud_phase is unknown or uncertain, skipping data.")
-        else:
-            print(f"Saving {cloud_phase} spectra to {self.datapath_l1c}")
-            outfile = f"{self.datapath_l1c}extracted_spectra_{cloud_phase}.csv"
-            self.merged_df.to_csv(outfile, index=False, mode='w')
-            
-            # # # Save the DataFrame to a file in csv format, split by local time
-            # # df.to_hdf(f"{datapath_out}{datafile_out}.h5", key='df', mode='w')
-            # merged_df_day.to_csv(f"{datapath_out}day_extracted_spectra.csv", index=False, mode='w')
-            # merged_df_night.to_csv(f"{datapath_out}night_extracted_spectra.csv", index=False, mode='w')
+        Opens two DataFrames loaded from the intermediate analysis data files.
         
-        # Delete original csv files
-        # self._delete_intermediate_analysis_data()
+        """
+        # Open csv files
+        print("Loading L1C spectra and L2 cloud products:")
+        self._get_intermediate_analysis_data_paths()
+        self.df_l1c, self.df_l2 = pd.read_csv(self.datafile_l1c), pd.read_csv(self.datafile_l2)
         return
-
+    
 
     def _check_headers(self):
         required_headers = ['Latitude', 'Longitude', 'Datetime']#, 'Local Time']
@@ -128,26 +112,54 @@ class L1C_L2_Correlator:
         # # Remove 'Local Time' from the header list
         # header.remove('Local Time')
         return #merged_df_day.dropna(), merged_df_night.dropna()
-
-
-    def _get_intermediate_analysis_data_paths(self) -> None:
-        """
-        Defines the paths to the intermediate analysis data files.
-        """
-        self.datafile_l1c = f"{self.datapath_l1c}extracted_spectra.csv"
-        self.datafile_l2 = f"{self.datapath_l2}cloud_products.csv"
-
-       # Check if L1C and/or L2 data files exist
-        if not os.path.exists(self.datafile_l1c) and not os.path.exists(self.datafile_l2):
-            raise ValueError('Neither L1C nor L2 data files exist. Nothing to correlate.')
     
-    def load_data(self) -> None:
+
+    def _delete_intermediate_analysis_data(self) -> None:
         """
-        Opens two DataFrames loaded from the intermediate analysis data files.
+        Delete the intermediate analysis data files used for correlating spectra and clouds.
+        """
+        os.remove(self.datafile_l1c)
+        os.remove(self.datafile_l2)
+
+    def _get_cloud_phase(self) -> Optional[str]:
+        """
+        Returns the cloud phase as a string based on the cloud phase value.
+        If the retrieved cloud phase is unknown or uncertain, returns None.
+        """
+        cloud_phase_dictionary = {1: "aqueous", 2: "icy", 3: "mixed", 4: "clear"}
+        cloud_phase = cloud_phase_dictionary.get(self.cloud_phase)
+        return None if cloud_phase is None else cloud_phase
+
+    def save_merged_data(self) -> None:
+        """
+        Save the merged DataFrame to a CSV file in the output directory.
+        If the output directory is unknown (because the cloud phase is unknown), print a message and return.
+        Delete the intermediate l1c and l2 products.
+        """
+        cloud_phase = self._get_cloud_phase()
+        if cloud_phase is None:
+            print("Cloud_phase is unknown or uncertain, skipping data.")
+        else:
+            print(f"Saving {cloud_phase} spectra to {self.datapath_l1c}")
+            self.merged_datafile = f"{self.datapath_l1c}extracted_spectra_{cloud_phase}.csv"
+            self.merged_df.to_csv(self.merged_datafile, index=False, mode='w')
+            
+            # # # Save the DataFrame to a file in csv format, split by local time
+            # # df.to_hdf(f"{datapath_out}{datafile_out}.h5", key='df', mode='w')
+            # merged_df_day.to_csv(f"{datapath_out}day_extracted_spectra.csv", index=False, mode='w')
+            # merged_df_night.to_csv(f"{datapath_out}night_extracted_spectra.csv", index=False, mode='w')
         
-        """
-        # Open csv files
-        print("Loading L1C spectra and L2 cloud products:")
-        self._get_intermediate_analysis_data_paths()
-        self.df_l1c, self.df_l2 = pd.read_csv(self.datafile_l1c), pd.read_csv(self.datafile_l2)
+        # Delete original csv files
+        # self._delete_intermediate_analysis_data()
+        return
+    
+
+    def preview_merged_data(self) -> None:
+        # Load the CSV file
+        df = pd.read_csv(self.merged_datafile)
+
+        # Get the number of rows (records) and columns in the DataFrame
+        num_rows, num_cols = df.shape
+
+        print(f"The dataframe has {num_rows} rows and {num_cols} columns.")
         return
