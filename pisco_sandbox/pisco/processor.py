@@ -214,7 +214,7 @@ class L1CProcessor:
 
                 # Store the data in the field_data dictionary
                 self.field_data[field] = data
-            print(f"FIELD SIZE: {len(self.field_data[field])}")
+                print(f"FIELD SIZE: {len(self.field_data[field])}")
 
         # Store datetime components field at the end of dictionary for later construction
         self.field_data["datetime"] = [np.asarray(self.field_data['year'], dtype=int),
