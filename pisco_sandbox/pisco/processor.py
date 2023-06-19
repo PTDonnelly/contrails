@@ -35,7 +35,8 @@ class L1CProcessor:
         # Get structure of file header and data record
         self.header_size, self.number_of_channels, self.channel_IDs = self._read_header()
         self.record_size = self._read_record_size()
-        self.number_of_measurements = self._count_measurements() // 10
+        self.skip_measurements = 10
+        self.number_of_measurements = self._count_measurements() // self.skip_measurements
         self._print_metadata()
 
         # Get fields information and prepare to store extracted data
@@ -193,7 +194,7 @@ class L1CProcessor:
                 # Read the data of each measurement
                 for measurement in range(self.number_of_measurements):
                     # Move the file pointer to the starting position of the current field
-                    self.f.seek((self.header_size + 12 + cumsize) * 100 * measurement, 0)
+                    self.f.seek((self.header_size + 12 + cumsize) * self.skip_measurements * measurement, 0)
                     
                     # Read bytes
                     value = np.fromfile(self.f, dtype=dtype, count=1, sep='', offset=byte_offset)
@@ -287,7 +288,7 @@ class L1CProcessor:
         # Iterate over each measurement and extract the spectral radiance data
         for measurement in range(self.number_of_measurements):
             # Move the file pointer to the starting position of the current field
-            self.f.seek(start_read_position * 100 * measurement, 0)
+            self.f.seek(start_read_position * self.skip_measurements * measurement, 0)
             value = np.fromfile(self.f, dtype='float32', count=self.number_of_channels, sep='', offset=byte_offset)
             data[:, measurement] = np.nan if len(value) == 0 else value
 
