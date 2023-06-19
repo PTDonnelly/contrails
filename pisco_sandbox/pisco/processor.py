@@ -202,7 +202,7 @@ class L1CProcessor:
                 #         data[measurement] = np.nan  # or any other default value
                 
                 # Read the data of every 100th measurement
-                indices = range(0, self.number_of_measurements, 100)
+                indices = range(0, self.number_of_measurements // 100)
                 # Prepare an empty array to store the data of the current field
                 data = np.empty(len(indices))
                 # Read bytes
