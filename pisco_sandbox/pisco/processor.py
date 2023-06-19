@@ -41,7 +41,7 @@ class L1CProcessor:
 
         # Get fields information and prepare to store extracted data
         self.fields = self._get_fields()
-        self.field_data = {}
+        self.field_df = pd.DataFrame
         return self
 
 
@@ -201,15 +201,15 @@ class L1CProcessor:
                     data[measurement] = np.nan if len(value) == 0 else value[0]
 
                 # Store the data in the field_data dictionary
-                self.field_data[field] = data
+                self.field_df[field] = data
 
         # Store datetime components field at the end of dictionary for later construction
-        self.field_data["datetime"] = [np.asarray(self.field_data['year'], dtype=int),
-                                        np.asarray(self.field_data['month'], dtype=int),
-                                        np.asarray(self.field_data['day'], dtype=int),
-                                        np.asarray(self.field_data['hour'], dtype=int),
-                                        np.asarray(self.field_data['minute'], dtype=int),
-                                        np.asarray(self.field_data['millisecond']/10000, dtype=int)]
+        self.field_df["datetime"] = [np.asarray(self.field_df['year'], dtype=int),
+                                        np.asarray(self.field_df['month'], dtype=int),
+                                        np.asarray(self.field_df['day'], dtype=int),
+                                        np.asarray(self.field_df['hour'], dtype=int),
+                                        np.asarray(self.field_df['minute'], dtype=int),
+                                        np.asarray(self.field_df['millisecond']/10000, dtype=int)]
         
 
     def _calculate_local_time(self) -> np.ndarray:
@@ -221,7 +221,7 @@ class L1CProcessor:
         """
 
         # Retrieve the necessary field data
-        hour, minute, millisecond, longitude = self.field_data['hour'], self.field_data['minute'], self.field_data['millisecond'], self.field_data['longitude']
+        hour, minute, millisecond, longitude = self.field_df['hour'], self.field_df['minute'], self.field_df['millisecond'], self.field_df['longitude']
 
         # Calculate the total time in hours, minutes, and milliseconds
         total_time = (hour * 1e4) + (minute * 1e2) + (millisecond / 1e3)
@@ -261,7 +261,7 @@ class L1CProcessor:
         local_time = self._calculate_local_time()
 
         # Return the longitude, latitude, and a Boolean indicating day (True) or night (False)
-        return self.field_data['latitude'], self.field_data['longitude'], (6 < local_time) & (local_time < 18)
+        return self.field_df['latitude'], self.field_df['longitude'], (6 < local_time) & (local_time < 18)
 
 
     def _store_spectral_radiance(self) -> np.ndarray:
@@ -303,8 +303,8 @@ class L1CProcessor:
         Returns:
             List: A list of the target parameter names and the transposed parameters from the field data.
         """
-        target_parameter_names = [field for field, _ in self.field_data.items() if (field in self.targets)]
-        target_parameters =  [data for field, data in self.field_data.items() if (field in self.targets)]
+        target_parameter_names = [field for field, _ in self.field_df.items() if (field in self.targets)]
+        target_parameters =  [data for field, data in self.field_df.items() if (field in self.targets)]
         return target_parameter_names, list(map(list, zip(*target_parameters)))
 
 
@@ -315,7 +315,7 @@ class L1CProcessor:
         Returns:
             np.Array: An array of the datetime components from the transposed field data (formatted like the outputs of the L2 reader)
         """
-        return np.array([f"{d[0]}{d[1]:02d}{d[2]:02d}.{d[3]:02d}{d[4]:02d}{d[5]:02d}" for d in list(zip(*self.field_data["datetime"]))])
+        return np.array([f"{d[0]}{d[1]:02d}{d[2]:02d}.{d[3]:02d}{d[4]:02d}{d[5]:02d}" for d in list(zip(*self.field_df["datetime"]))])
 
 
     def _build_header(self, target_parameter_names: List[str]):
@@ -375,9 +375,9 @@ class L1CProcessor:
             check_data = np.sum(data[2:-4, :], axis=1) > 0
             good_flag = np.logical_and(check_quality_flag, check_data)
         else:
-            check_quality_flags = np.logical_and(self.field_data['quality_flag_1'][:] == 0,
-                                                self.field_data['quality_flag_2'][:] == 0,
-                                                self.field_data['quality_flag_3'][:] == 0)
+            check_quality_flags = np.logical_and(self.field_df['quality_flag_1'][:] == 0,
+                                                self.field_df['quality_flag_2'][:] == 0,
+                                                self.field_df['quality_flag_3'][:] == 0)
             # check_quality_flags = np.logical_and(data[-11, :] == 0, data[-10, :] == 0, data[-9, :] == 0)
             # check_data = np.sum(data[0:-6, :], axis=1) > 0
         good_flag = check_quality_flags #np.logical_and(check_quality_flags)#, check_data)
