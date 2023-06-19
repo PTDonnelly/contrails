@@ -93,7 +93,7 @@ class L1C_L2_Correlator:
         self._check_headers()
 
         # Latitude and longitude values are rounded to 2 decimal places.
-        decimal_places = 2
+        decimal_places = 1
         self.df_l1c[['Latitude', 'Longitude']] = self.df_l1c[['Latitude', 'Longitude']].round(decimal_places)
         self.df_l2[['Latitude', 'Longitude']] = self.df_l2[['Latitude', 'Longitude']].round(decimal_places)
         
