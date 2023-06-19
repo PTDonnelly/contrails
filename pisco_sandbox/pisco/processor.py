@@ -188,7 +188,7 @@ class L1CProcessor:
                 self.f.seek(self.header_size + 12 + cumsize, 0)
 
                 # Calculate the byte offset to the next measurement
-                byte_offset = self.record_size + 8 - dtype_size
+                byte_offset = (self.record_size + 8 - dtype_size) * 100
 
                 # Prepare an empty array to store the data of the current field
                 data = np.empty(self.number_of_measurements)
