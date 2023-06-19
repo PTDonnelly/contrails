@@ -194,7 +194,7 @@ class L1CProcessor:
                 data = np.empty(self.number_of_measurements)
 
                 # Read the data of each measurement
-                for im, measurement in enumerate(self.number_of_measurements):
+                for im, measurement in enumerate(range(self.number_of_measurements)):
                     value = np.fromfile(self.f, dtype=dtype, count=1, sep='', offset=byte_offset * (im*100))
                     data[measurement] = np.nan if len(value) == 0 else value[0]
 
