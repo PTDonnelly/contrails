@@ -190,16 +190,21 @@ class L1CProcessor:
                 # Calculate the byte offset to the next measurement
                 byte_offset = self.record_size + 8 - dtype_size
 
-                # Prepare an empty array to store the data of the current field
-                data = np.empty(self.number_of_measurements)
+                # # Prepare an empty array to store the data of the current field
+                # data = np.empty(self.number_of_measurements)
 
-                # Read the data of each measurement
-                for im, measurement in enumerate(range(self.number_of_measurements)):
-                    if im % 100 == 0:  # Check if measurement number is divisible by 100
-                        value = np.fromfile(self.f, dtype=dtype, count=1, sep='', offset=byte_offset)
-                        data[measurement] = np.nan if len(value) == 0 else value[0]
-                    else:
-                        data[measurement] = np.nan  # or any other default value
+                # # Read the data of each measurement
+                # for im, measurement in enumerate(range(self.number_of_measurements)):
+                #     if im % 100 == 0:  # Check if measurement number is divisible by 100
+                #         value = np.fromfile(self.f, dtype=dtype, count=1, sep='', offset=byte_offset)
+                #         data[measurement] = np.nan if len(value) == 0 else value[0]
+                #     else:
+                #         data[measurement] = np.nan  # or any other default value
+                
+                # Read the data of every 100th measurement
+                indices = range(0, self.number_of_measurements, 100)
+                data = [np.fromfile(self.f, dtype=dtype, count=1, sep='', offset=byte_offset*index)[0] for index in indices]
+
                 # Store the data in the field_data dictionary
                 self.field_data[field] = data
 
