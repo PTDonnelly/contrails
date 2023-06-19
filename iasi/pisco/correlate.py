@@ -136,6 +136,10 @@ class L1C_L2_Correlator:
         """
         self.datafile_l1c = f"{self.datapath_l1c}extracted_spectra.csv"
         self.datafile_l2 = f"{self.datapath_l2}cloud_products.csv"
+
+       # Check if L1C and/or L2 data files exist
+        if not os.path.exists(self.datafile_l1c) and not os.path.exists(self.datafile_l2):
+            raise ValueError('Neither L1C nor L2 data files exist. Nothing to correlate.')
     
     def load_data(self) -> None:
         """

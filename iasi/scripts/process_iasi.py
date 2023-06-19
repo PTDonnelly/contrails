@@ -9,7 +9,10 @@ def process_l1c(ex: object):
     Extracts and processes IASI spectral data from intermediate binary files,
     applies quality control and saves the output.
 
-    The result is a HDF5 file containing all good spectra from this intermediate file.
+    Args:
+        Instance of the Extractor class 
+    Result:
+        A HDF5 file containing all good spectra from this intermediate file.
     """
     # Preprocess IASI Level 1C data
     ex.data_level = "l1c"
@@ -31,7 +34,11 @@ def process_l2(ex: object):
     Extracts and processes IASI cloud products from intermediate CSV files and
     stores all data points with Cloud Phase == 2 (ice).
 
-    The result is a HDF5 file containing all locations of ice cloud from this intermediate file.
+    Args:
+        Instance of the Extractor class 
+    
+    Result:
+        A HDF5 file containing all locations of ice cloud from this intermediate file.
     """
     # Preprocess IASI Level 2 data
     ex.data_level = "l2"
@@ -58,8 +65,12 @@ def correlate_l1c_l2(ex: object):
     Compares processed IASI products from CSV files and
     stores all spectra co-located with instances of a given Cloud Phase.
 
-    The result is a CSV file containing all spectra at those locations and times.
-    """
+    Args:
+        Instance of the Extractor class 
+    
+    Result:
+        A CSV file containing all spectra at those locations and times.
+    """  
     co = L1C_L2_Correlator(ex.config.datapath_out, ex.year, ex.month, ex.day, ex.config.cloud_phase)
 
     # Concatenate all L2 CSV files into a single coud products file
