@@ -92,22 +92,19 @@ class L1C_L2_Correlator:
         # Check that latitude, longitude, datetime, and local time are present in both file headers 
         self._check_headers()
 
-        print(self.df_l1c.columns)
-        print(self.df_l1c[['Latitude', 'Longitude', 'Datetime']])
+        print(self.df_l1c)
         print("")
-        print(self.df_l2.columns)
-        print(self.df_l2[['Latitude', 'Longitude', 'Datetime']])
+        print(self.df_l2)
         print("")
         # Latitude and longitude values are rounded to 2 decimal places.
-        decimal_places = 4
+        decimal_places = 2
         self.df_l1c[['Latitude', 'Longitude']] = self.df_l1c[['Latitude', 'Longitude']].round(decimal_places)
         self.df_l2[['Latitude', 'Longitude']] = self.df_l2[['Latitude', 'Longitude']].round(decimal_places)
         
         # Merge two DataFrames based on latitude, longitude and datetime,
         # rows from df_l1c that do not have a corresponding row in df_l2 are dropped.
         self.merged_df = pd.merge(self.df_l1c, self.df_l2, on=['Latitude', 'Longitude', 'Datetime'], how='inner')
-        print(self.merged_df.columns)
-        print(self.merged_df[['Latitude', 'Longitude', 'Datetime']])
+        print(self.merged_df)
         print("")
         # # Convert the DataFrame 'Local Time' column (np.array) to boolean values
         # merged_df['Local Time'] = merged_df['Local Time'].astype(bool)
