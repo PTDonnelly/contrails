@@ -2,7 +2,7 @@ import os
 import subprocess
 from typing import Optional, Tuple
 
-from .configure import Config
+from .configurer import Configurer
 
 class Extractor:
     def __init__(self, path_to_config_file: str):
@@ -13,7 +13,7 @@ class Extractor:
            path_to_config_file (str): Location of jsonc configuration file
         """
         # Instantiate the Config class and set_parameters() for analysis
-        self.config = Config(path_to_config_file)
+        self.config = Configurer(path_to_config_file)
         self.data_level: str = None
         self.year: str = None
         self.month: str = None

@@ -1,7 +1,7 @@
 from typing import List
 import commentjson
 
-class Config:
+class Configurer:
     def __init__(self, path_to_config_file: str):
         self.data_level: str = ""
         

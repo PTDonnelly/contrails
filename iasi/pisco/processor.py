@@ -6,7 +6,7 @@ from typing import Tuple, List, Union
 
 import numpy as np
 
-from .extract import Extractor as ex
+from .extractor import Extractor as ex
 
 class L1CProcessor:
     """
