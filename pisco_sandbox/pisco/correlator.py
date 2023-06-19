@@ -92,6 +92,11 @@ class L1C_L2_Correlator:
         # Check that latitude, longitude, datetime, and local time are present in both file headers 
         self._check_headers()
 
+
+        print(self.df_l1c['Latitude'])
+        print("")
+        print(self.df_l2['Latitude'])
+        print("")
         # Latitude and longitude values are rounded to 2 decimal places.
         decimal_places = 4
         self.df_l1c[['Latitude', 'Longitude']] = self.df_l1c[['Latitude', 'Longitude']].round(decimal_places)
