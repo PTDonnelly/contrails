@@ -35,7 +35,7 @@ class L1CProcessor:
         # Get structure of file header and data record
         self.header_size, self.number_of_channels, self.channel_IDs = self._read_header()
         self.record_size = self._read_record_size()
-        self.number_of_measurements = self._count_measurements()
+        self.number_of_measurements = self._count_measurements() // 100
         self._print_metadata()
 
         # Get fields information and prepare to store extracted data
@@ -201,14 +201,15 @@ class L1CProcessor:
                 #     else:
                 #         data[measurement] = np.nan  # or any other default value
         
+                # self.number_of_measurements = 1296000 // 100
+
                 # Prepare an empty array to store the data of the current field
-                data = np.empty(self.number_of_measurements // 100)
+                data = np.empty(self.number_of_measurements)
                 
                 # Read the data of each measurement
-                for im, measurement in enumerate(range(self.number_of_measurements)):
-                    if im % 100 == 0:  # Check if measurement number is divisible by 100
-                        value = np.fromfile(self.f, dtype=dtype, count=1, sep='', offset=byte_offset)
-                        data[measurement] = np.nan if len(value) == 0 else value[0]
+                for measurement in range(self.number_of_measurements):
+                    value = np.fromfile(self.f, dtype=dtype, count=1, sep='', offset=byte_offset*100*measurement)
+                    data[measurement] = np.nan if len(value) == 0 else value[0]
 
                 # Store the data in the field_data dictionary
                 self.field_data[field] = data
