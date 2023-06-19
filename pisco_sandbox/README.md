@@ -11,7 +11,7 @@ Pisco is a Python package designed to facilitate the extraction, processing and 
 - Configured by a separate JSON file, which is read and sets class attributes for the Configurer.
 
 ## Future
-
+- Restructure L1Processor from np.Array->dict to pd.DataFrame. This will make manipulation throughout the L1Processor more streamlined and consistent.
 - Day/night separation of filtered spectra
 - HDF5 output format if files tend to be too large
 
