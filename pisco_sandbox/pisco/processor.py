@@ -205,8 +205,7 @@ class L1CProcessor:
                 indices = range(0, self.number_of_measurements, 100)
                 # Prepare an empty array to store the data of the current field
                 data = np.empty(len(indices))
-
-                data = [np.fromfile(self.f, dtype=dtype, count=1, sep='', offset=byte_offset*index)[0] for index in indices]
+                # Read bytes
                 for index in indices:
                     value = np.fromfile(self.f, dtype=dtype, count=1, sep='', offset=byte_offset*index)
                     data[index] = np.nan if len(value) == 0 else value[0]
