@@ -93,10 +93,10 @@ class L1C_L2_Correlator:
         self._check_headers()
 
         print(self.df_l1c.columns)
-        print(self.df_l1c['Latitude'])
+        print(self.df_l1c[['Latitude', 'Longitude']])
         print("")
         print(self.df_l2.columns)
-        print(self.df_l2['Latitude'])
+        print(self.df_l2[['Latitude', 'Longitude']])
         print("")
         # Latitude and longitude values are rounded to 2 decimal places.
         decimal_places = 4
@@ -107,7 +107,7 @@ class L1C_L2_Correlator:
         # rows from df_l1c that do not have a corresponding row in df_l2 are dropped.
         self.merged_df = pd.merge(self.df_l1c, self.df_l2, on=['Latitude', 'Longitude', 'Datetime'], how='inner')
         print(self.merged_df.columns)
-        print(self.merged_df['Latitude'])
+        print(self.merged_df[['Latitude', 'Longitude']])
         print("")
         # # Convert the DataFrame 'Local Time' column (np.array) to boolean values
         # merged_df['Local Time'] = merged_df['Local Time'].astype(bool)
