@@ -203,8 +203,10 @@ class L1CProcessor:
                 
                 # Read the data of every 100th measurement
                 indices = range(0, self.number_of_measurements // 100)
+                
                 # Prepare an empty array to store the data of the current field
                 data = np.empty(len(indices))
+                
                 # Read bytes
                 for index in indices:
                     value = np.fromfile(self.f, dtype=dtype, count=1, sep='', offset=byte_offset*index)
@@ -212,6 +214,7 @@ class L1CProcessor:
 
                 # Store the data in the field_data dictionary
                 self.field_data[field] = data
+            print(f"FIELD SIZE: {len(self.field_data[field])}")
 
         # Store datetime components field at the end of dictionary for later construction
         self.field_data["datetime"] = [np.asarray(self.field_data['year'], dtype=int),
