@@ -35,7 +35,7 @@ class L1CProcessor:
         # Get structure of file header and data record
         self.header_size, self.number_of_channels, self.channel_IDs = self._read_header()
         self.record_size = self._read_record_size()
-        self.number_of_measurements = self._count_measurements() // 100
+        self.number_of_measurements = self._count_measurements() // 10
         self._print_metadata()
 
         # Get fields information and prepare to store extracted data
