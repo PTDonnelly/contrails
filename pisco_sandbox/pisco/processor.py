@@ -188,14 +188,14 @@ class L1CProcessor:
                 self.f.seek(self.header_size + 12 + cumsize, 0)
 
                 # Calculate the byte offset to the next measurement
-                byte_offset = (self.record_size + 8 - dtype_size) * 100
+                byte_offset = self.record_size + 8 - dtype_size
 
                 # Prepare an empty array to store the data of the current field
                 data = np.empty(self.number_of_measurements)
 
                 # Read the data of each measurement
-                for measurement in range(self.number_of_measurements):
-                    value = np.fromfile(self.f, dtype=dtype, count=1, sep='', offset=byte_offset)
+                for im, measurement in enumerate(self.number_of_measurements):
+                    value = np.fromfile(self.f, dtype=dtype, count=1, sep='', offset=byte_offset * (im*100))
                     data[measurement] = np.nan if len(value) == 0 else value[0]
 
                 # Store the data in the field_data dictionary
