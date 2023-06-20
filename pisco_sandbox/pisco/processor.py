@@ -36,7 +36,7 @@ class L1CProcessor:
         self.header_size, self.number_of_channels, self.channel_IDs = self._read_header()
         self.record_size = self._read_record_size()
         self.skip_measurements = 100
-        self.number_of_measurements = self._count_measurements() // self.skip_measurements
+        self.number_of_measurements = self._count_measurements()# // self.skip_measurements
         self._print_metadata()
 
         # Get fields information and prepare to store extracted data in an empty DataFrame
@@ -192,16 +192,17 @@ class L1CProcessor:
                 byte_offset = self.record_size + 8 - dtype_size
 
                 # Prepare an empty array to store the data of the current field
-                data = np.empty(self.number_of_measurements)
+                data = np.empty(self.number_of_measurements // self.skip_measurements)
                 
                 # Read the data of each measurement
-                for measurement in range(self.number_of_measurements):
-                    # Move the file pointer to the starting position of the current field
-                    self.f.seek(field_start * self.skip_measurements * measurement, 0)
-                    
-                    # Read bytes
-                    value = np.fromfile(self.f, dtype=dtype, count=1, sep='', offset=byte_offset)
-                    data[measurement] = np.nan if len(value) == 0 else value[0]
+                for im, measurement in enumerate(range(self.number_of_measurements)):
+                    if im %  self.skip_measurements:
+                        # Move the file pointer to the starting position of the current field
+                        # self.f.seek(field_start * self.skip_measurements * measurement, 0)
+                        
+                        # Read bytes
+                        value = np.fromfile(self.f, dtype=dtype, count=1, sep='', offset=byte_offset)
+                        data[measurement] = np.nan if len(value) == 0 else value[0]
 
                 # Store the data in the DataFrame
                 self.field_df[field] = data
@@ -274,16 +275,18 @@ class L1CProcessor:
         byte_offset = self.record_size + 8 - (4 * self.number_of_channels)
         
         # Initialize an empty numpy array to store the spectral radiance data
-        data = np.empty((self.number_of_channels, self.number_of_measurements))
+        data = np.empty((self.number_of_channels, self.number_of_measurements // self.skip_measurements))
 
         # Iterate over each measurement and extract the spectral radiance data
         for measurement in range(self.number_of_measurements):
-            # Move the file pointer to the starting position of the current field
-            # self.f.seek(spectrum_start * self.skip_measurements * measurement, 0)
+            for im, measurement in enumerate(range(self.number_of_measurements)):
+                if im %  self.skip_measurements:
+                    # Move the file pointer to the starting position of the current field
+                    # self.f.seek(spectrum_start * self.skip_measurements * measurement, 0)
 
-            # Read bytes
-            value = np.fromfile(self.f, dtype='float32', count=self.number_of_channels, sep='', offset=byte_offset)
-            data[:, measurement] = np.nan if len(value) == 0 else value
+                    # Read bytes
+                    value = np.fromfile(self.f, dtype='float32', count=self.number_of_channels, sep='', offset=byte_offset)
+                    data[:, measurement] = np.nan if len(value) == 0 else value
 
         # Assign channel IDs and values to DataFrame
         for i, id in enumerate(self.channel_IDs):
