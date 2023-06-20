@@ -36,7 +36,7 @@ class L1CProcessor:
         self.header_size, self.number_of_channels, self.channel_IDs = self._read_header()
         self.record_size = self._read_record_size()
         self.skip_measurements = 1
-        self.number_of_measurements = self._count_measurements()# // self.skip_measurements
+        self.number_of_measurements = 10000#self._count_measurements()# // self.skip_measurements
         self._print_metadata()
 
         # Get fields information and prepare to store extracted data in an empty DataFrame
@@ -206,7 +206,7 @@ class L1CProcessor:
                 # Store the data in the DataFrame
                 self.field_df[field] = data
         print(self.field_df.head())
-        
+
     def _calculate_local_time(self) -> np.ndarray:
         """
         Calculate the local time (in hours, UTC) that determines whether it is day or night at a specific longitude.
