@@ -196,8 +196,9 @@ class L1CProcessor:
                 
                 # Read the data of each measurement
                 for measurement in range(self.number_of_measurements):
+                    print(header_start, byte_offset, header_start * self.skip_measurements * measurement)
                     # Move the file pointer to the starting position of the current field
-                    self.f.seek(header_start + self.skip_measurements * measurement, 0)
+                    self.f.seek(header_start * self.skip_measurements * measurement, 0)
                     
                     # Read bytes
                     value = np.fromfile(self.f, dtype=dtype, count=1, sep='', offset=byte_offset)
