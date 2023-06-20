@@ -258,7 +258,7 @@ class L1CProcessor:
         # Store the Boolean indicating day (True) or night (False) in the DataFrame
         self.field_df['Local Time'] = (6 < local_time) & (local_time < 18)
 
-        # Drop original columns
+        # Drop original time element columns
         self.field_df = self.field_df.drop(columns=['year', 'month', 'day', 'hour', 'minute', 'millisecond'])
         return
 
@@ -290,9 +290,8 @@ class L1CProcessor:
             value = np.fromfile(self.f, dtype='float32', count=self.number_of_channels, sep='', offset=byte_offset)
             data[:, measurement] = np.nan if len(value) == 0 else value
 
-        # Assign to DataFrame instead of returning
-    
-        self.field_df[[self.channel_IDs]] = np.transpose(data)
+        # Assign channel IDs and values to DataFrame
+        self.field_df[[f'Channel {id}' for id in self.channel_IDs]] = np.transpose(data)
         return
 
     def _store_datetime_components(self) -> List:
@@ -303,37 +302,7 @@ class L1CProcessor:
             np.Array: An array of the datetime components from the transposed field data (formatted like the outputs of the L2 reader)
         """
         self.field_df["Datetime"] = np.array([f"{d[0]}{d[1]:02d}{d[2]:02d}.{d[3]:02d}{d[4]:02d}{d[5]:02d}" for d in list(zip(*self.field_df["datetime"]))])
-        return
-
-    # def extract_data(self) -> Tuple[List[int], np.array]:
-    #     """
-    #     Extracts relevant data from the observation dataset, processes it, and consolidates it into a 2D array.
-
-    #     Returns:
-    #         Tuple[List[int], np.array]: A tuple containing a header (which represents lengths of various components of data)
-    #         and a 2D numpy array of consolidated data.
-
-    #     """
-    #     # Extract and process binary data
-    #     self._read_field_data()
-    #     latitude, longitude, local_time = self._store_space_time_coordinates()
-    #     radiances = self._store_spectral_radiance()
-    #     target_parameter_names, target_parameters = self._store_target_parameters()
-    #     datetimes = self._store_datetime_components()
-
-    #     # Concatenate processed observations into a single 2D array (number of parameters x number of measurements).
-    #     # But first add an extra dimension to the 1D arrays to match the 2D structure of radiances and target_parameters
-    #     data = np.concatenate((latitude[:, np.newaxis], 
-    #                             longitude[:, np.newaxis], 
-    #                             datetimes[:, np.newaxis],
-    #                             local_time[:, np.newaxis], 
-    #                             radiances, 
-    #                             target_parameters), axis=1)
-
-    #     # Construct a header that contains the name of each data column
-    #     header = self._build_header(target_parameter_names)
-    #     return header, data
-    
+        return    
 
     def extract_data(self) -> pd.DataFrame:
         """
