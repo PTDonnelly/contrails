@@ -25,7 +25,7 @@ def process_l1c(ex: Extractor):
     # Process IASI Level 1C data
     if ex.intermediate_file_check:
         # Process extracted IASI data from intermediate binary files and save to CSV
-        with L1Alternate(ex.intermediate_file, ex.config.targets) as file:
+        with L1Alternate(ex.intermediate_file) as file:
             file.extract_data(ex.datapath_out, ex.datafile_out, ex.year, ex.month, ex.day)
     return
 
