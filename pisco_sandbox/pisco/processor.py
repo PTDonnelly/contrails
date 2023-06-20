@@ -209,7 +209,7 @@ class L1CProcessor:
                                     self.field_df['day'].apply(lambda x: f'{int(x):02d}.') + \
                                     self.field_df['hour'].apply(lambda x: f'{int(x):02d}') + \
                                     self.field_df['minute'].apply(lambda x: f'{int(x):02d}' + \
-                                    self.field_df['millisecond'].apply(lambda x: f'{int(x)/10000:02d}'))
+                                    self.field_df['millisecond'].apply(lambda x: f'{int(x/10000):02d}'))
 
 
         # # Store datetime components field at the end of dictionary for later construction
