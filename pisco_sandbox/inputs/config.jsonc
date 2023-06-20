@@ -26,6 +26,9 @@
     // targets: List[str], List of target IASI L1C products
     "targets": ["satellite_zenith_angle", "quality_flag_1", "quality_flag_2", "quality_flag_3", "cloud_fraction", "surface_type"],
 
+    // products: str, string containing desired IASI L2 products
+    "products": "clp",
+
     // latitude_range: List[int], The spatial range for binning latitudes
     "latitude_range": [-90, 90],
 

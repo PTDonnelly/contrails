@@ -99,7 +99,7 @@ class Extractor:
             list_of_parameters = [
                 f"-d2 {self.datapath_in}",
                 f"-fd {self.year}-{self.month}-{self.day} -ld {self.year}-{self.month}-{self.day}",
-                f"–t2 clp",
+                f"-t2 {self.config.products}",
                 f"-of bin"  # output file format
             ]
         # Join the parameters into a single string and return

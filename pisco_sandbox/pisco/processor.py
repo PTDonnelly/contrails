@@ -468,7 +468,6 @@ class IASIMetadata:
             ('height_of_station', 'float32', 4,)]
         return common_fields
     
-
     def get_iasi_l1c_record_fields(self) -> List[tuple]:
         # Format of fields in binary file (field_name, data_type, data_size, cumulative_data_size)
         l1c_fields = [
@@ -516,6 +515,70 @@ class IASIMetadata:
 
     def get_ems_record_fields(self):
         pass
+
+
+class L1Processor_test:
+    """
+    Processor for the intermediate binary file of IASI L2 products output by OBR script.
+
+    Attributes:
+    filepath (str): Path to the binary file.
+    targets (List[str]): List of target variables to extract.
+    """
+    def __init__(self, filepath: str):
+        self.filepath = filepath
+        self.f: object = None
+        self.header: IASIMetadata = None
+        self.field_df = pd.DataFrame
+
+      
+    def read_binary_file(self):
+        # Open binary file
+        print("Loading intermediate L1C file:")
+        self.f = open(self.filepath, 'rb')
+        
+        # Get structure of file header and data record
+        self.header = IASIMetadata(self.f)
+        self.header.get_iasi_common_header()
+
+
+    def read_record_fields(self) -> None:
+        """
+        Reads the data of each field from the binary file and store it in the field_data dictionary.
+
+        This function only extracts the first 8 fields and the ones listed in the targets attribute.
+        """
+        # Read in binary field table
+        fields = self.header.get_iasi_l1c_record_fields()
+
+        # Iterate over each field
+        for field, dtype, dtype_size in fields:
+            print(f"Extracting: {field}")
+            
+            # Start counting number of bytes passed
+            cumsize += dtype_size
+
+            # Move the file pointer to the starting position of the current field
+            field_start = self.header.header_size + 12 + cumsize
+            self.f.seek(field_start, 0)
+
+            # Calculate the byte offset to the next measurement
+            byte_offset = self.header.record_size + 8 - dtype_size
+
+            # Prepare an empty array to store the data of the current field
+            data = np.empty(self.header.number_of_measurements)
+            
+            # Read the data of each measurement
+            for measurement in range(self.header.number_of_measurements):
+                value = np.fromfile(self.f, dtype=dtype, count=1, sep='', offset=byte_offset)
+                data[measurement] = np.nan if len(value) == 0 else value[0]
+
+            # Store the data in the DataFrame
+            self.field_df[field] = data
+        print(self.field_df.head())
+
+    def close_binary_file(self):
+        self.f.close()
 
 class L2Processor:
     """
@@ -578,69 +641,5 @@ class L2Processor:
         print(self.field_df.head())
 
 
-
-
     def close_binary_file(self):
         self.f.close()
-
-
-    # def filter_bad_observations(self, date: object) -> pd.DataFrame:
-    #     """
-    #     Filters bad observations based on IASI L1 data quality flags and date.
-        
-    #     Args:
-    #         data (pd.DataFrame): A DataFrame containing the observation data.
-    #         date (object): The date for filtering the observations.
-            
-    #     Returns:
-    #         pd.DataFrame: A filtered DataFrame containing the good observations.
-    #     """
-    #     print("Filtering spectra:")
-
-    #     if date <= datetime(2012, 2, 8):
-    #         check_quality_flag = self.field_df['quality_flag'] == 0
-    #         check_data = self.field_df.drop(['quality_flag', 'date_column'], axis=1).sum(axis=1) > 0
-    #         good_flag = check_quality_flag & check_data
-    #     else:
-    #         check_quality_flags = (self.field_df['quality_flag_1'] == 0) & (self.field_df['quality_flag_2'] == 0) & (self.field_df['quality_flag_3'] == 0)
-    #         good_flag = check_quality_flags
-
-    #     # Throw away bad data, return the good
-    #     good_df = self.field_df[good_flag]
-    #     print(f"{np.round((len(good_df) / len(self.field_df)) * 100, 2)} % good data of {len(self.field_df)} observations")
-    #     return good_df
-
-    # @staticmethod
-    # def save_observations(datapath_out: str, datafile_out: str, good_df: pd.DataFrame) -> None:
-    #     """
-    #     Saves the observation data to a file.
-        
-    #     Args:
-    #         datapath_out (str): The path to save the file.
-    #         datafile_out (str): The name of the output file.
-    #         good_data (pd.DataFrame): A pandas DataFrame containing the observation data.
-    #     """        
-    #     # Save the DataFrame to a file in HDF5 format
-    #     outfile = f"{datapath_out}{datafile_out}".split(".")[0]
-    #     # good_df.to_hdf(f"{datapath_out}{datafile_out}.h5", key='df', mode='w')
-    #     good_df.to_csv(f"{outfile}.csv", index=False, mode='w')
-    #     return
-
-    
-    # def extract_spectra(self, datapath_out: str, datafile_out: str, year: str, month: str, day: str):
-    #     # Extract and process binary data
-    #     self._read_field_data()
-    #     # self._store_space_time_coordinates()
-    #     # self._read_spectral_radiance()
-    #     # # self._store_target_parameters()
-    #     # self._store_datetime_components()
-
-    #     # print the DataFrame
-    #     print(self.field_df.head())
-        
-    #     # # Check observation quality and filter out bad observations
-    #     # date = datetime(int(year), int(month), int(day))
-    #     # good_df = self.filter_bad_observations(date=date)
-
-    #     # # Define the output filename and save outputs
-    #     # self.save_observations(datapath_out, datafile_out, good_df)
