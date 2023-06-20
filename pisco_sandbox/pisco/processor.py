@@ -205,7 +205,7 @@ class L1CProcessor:
 
                 # Store the data in the DataFrame
                 self.field_df[field] = data
-
+        print(self.field_df.head())
     def _calculate_local_time(self) -> np.ndarray:
         """
         Calculate the local time (in hours, UTC) that determines whether it is day or night at a specific longitude.
