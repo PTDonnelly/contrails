@@ -223,7 +223,7 @@ class L1CProcessor:
                 data[measurement] = np.nan if len(value) == 0 else value[0]
 
             # Store the data in the DataFrame
-            self.field_df[field] = data
+            self.field_df[[field]] = data
         print(self.field_df.head())
 
     def close_binary_file(self):
