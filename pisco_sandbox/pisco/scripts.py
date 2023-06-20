@@ -1,7 +1,7 @@
 import os
 
 from .extractor import Extractor
-from .processor import L1CProcessor_test, L2Processor
+from .processor import L1Alternate, L2Processor
 from .correlator import L1C_L2_Correlator
 
 def process_l1c(ex: Extractor):
@@ -25,7 +25,7 @@ def process_l1c(ex: Extractor):
     # Process IASI Level 1C data
     if ex.intermediate_file_check:
         # Process extracted IASI data from intermediate binary files and save to CSV
-        with L1CProcessor_test(ex.intermediate_file, ex.config.targets) as file:
+        with L1Alternate(ex.intermediate_file, ex.config.targets) as file:
             file.extract_data(ex.datapath_out, ex.datafile_out, ex.year, ex.month, ex.day)
     return
 

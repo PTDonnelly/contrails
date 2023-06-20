@@ -517,7 +517,7 @@ class IASIMetadata:
         pass
 
 
-class L1Processor_test:
+class L1Alternate:
     """
     Processor for the intermediate binary file of IASI L2 products output by OBR script.
 
