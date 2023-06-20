@@ -53,12 +53,9 @@ class Extractor:
             str: Input data path.
         """
         # Check the data level
-        if self.data_level == 'l1c':
+        if (self.data_level == 'l1c') or (self.data_level == 'l2'):
             # Format the input path string and return it
             return f"/bdd/metopc/{self.data_level}/iasi/"
-        elif self.data_level == 'l2':
-            # Format the input path string with an additional 'clp/' at the end and return it
-            return f"/bdd/metopc/{self.data_level}/iasi/{self.year}/{self.month}/{self.day}/clp/"
         else:
             # If the data level is not 'l1c' or 'l2', raise an error
             raise ValueError("Invalid data path type. Accepts 'l1c' or 'l2'.")
@@ -91,11 +88,17 @@ class Extractor:
             str: Parameters for the command.
         """
         # Define the parameters for the command
-        list_of_parameters = [
-            f"-fd {self.year}-{self.month}-{self.day} -ld {self.year}-{self.month}-{self.day}",  # first and last day
-            f"-c {self.config.channels[0]}-{self.config.channels[-1]}",  # spectral channels
-            f"-of bin"  # output file format
-        ]
+        if (self.data_level == 'l1c'):
+            list_of_parameters = [
+                f"-fd {self.year}-{self.month}-{self.day} -ld {self.year}-{self.month}-{self.day}",  # first and last day
+                f"-c {self.config.channels[0]}-{self.config.channels[-1]}",  # spectral channels
+                f"-of bin"  # output file format
+            ]
+        elif (self.data_level == 'l2'):
+            list_of_parameters = [
+                f"-fd {self.year}-{self.month}-{self.day} -ld {self.year}-{self.month}-{self.day}",
+                f"-of bin"  # output file format
+            ]
         # Join the parameters into a single string and return
         return ' '.join(list_of_parameters)
 
@@ -109,18 +112,13 @@ class Extractor:
         Returns:
             str: Command to run for data extraction.
         """
-        if self.data_level == 'l1c':
+        if (self.data_level == 'l1c') or (self.data_level == 'l2'):
             # Define the path to the run executable
             runpath = f"./bin/obr_v4"
             # Get the command parameters
             parameters = self._build_parameters()
             # Return the complete command
             return f"{runpath} -d {self.datapath_in} {parameters} -out {self.datapath_out}{self.datafile_out}"
-        elif self.data_level == 'l2':
-            # Define the path to the run executable
-            runpath = "./bin/BUFR_iasi_clp_reader_from20190514"
-            # Return the complete command
-            return f"{runpath} {self.datapath_in}{self.datafile_in} {self.datapath_out}{self.datafile_out}"
         else:
             # If the data level is not 'l1c' or 'l2', raise an error
             raise ValueError("Invalid data path type. Accepts 'l1c' or 'l2'.")
@@ -156,8 +154,8 @@ class Extractor:
             # Get the output file name from the input file name
             self.datafile_out = "extracted_spectra.bin"
         elif self.data_level == 'l2':
-            # self.datafile_out = "cloud_products.csv"
-            self.datafile_out = self.datafile_in.split(",")[2]
+            self.datafile_out = "cloud_products.bin"
+            # self.datafile_out = self.datafile_in.split(",")[2]
         else:
             # If the data level is not 'l1c' or 'l2', raise an error
             raise ValueError("Invalid data path type. Accepts 'l1c' or 'l2'.")
