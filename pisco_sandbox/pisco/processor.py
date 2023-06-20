@@ -290,9 +290,13 @@ class L1CProcessor:
             value = np.fromfile(self.f, dtype='float32', count=self.number_of_channels, sep='', offset=byte_offset)
             data[:, measurement] = np.nan if len(value) == 0 else value
 
+        # Create Channel columns in DataFrame
+        for i, id in enumerate(self.channel_IDs):
+            self.field_df[f'Channel {id}'] = data[i, :]  # assuming id is 1-indexed and data is 0-indexed
+
         # Assign channel IDs and values to DataFrame
-        print(self.channel_IDs, np.shape(data))
-        self.field_df[[f'Channel {id}' for id in self.channel_IDs]] = data
+        # print(self.channel_IDs, np.shape(data))
+        # self.field_df[[f'Channel {id}' for id in self.channel_IDs]] = data
         return
 
     def _store_datetime_components(self) -> List:
