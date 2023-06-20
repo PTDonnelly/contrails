@@ -177,7 +177,7 @@ class L1CProcessor:
         self.filepath = filepath
         self.f: object = None
         self.header: IASIMetadata = None
-        self.field_df = pd.DataFrame
+        self.field_df = pd.DataFrame()
 
       
     def read_binary_file(self):
@@ -223,7 +223,7 @@ class L1CProcessor:
                 data[measurement] = np.nan if len(value) == 0 else value[0]
 
             # Store the data in the DataFrame
-            self.field_df[[field]] = data
+            self.field_df[field] = data
         print(self.field_df.head())
 
     def close_binary_file(self):
