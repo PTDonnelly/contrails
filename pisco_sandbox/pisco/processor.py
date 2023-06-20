@@ -80,9 +80,9 @@ class IASIMetadata:
         return
     
     def get_iasi_common_header(self):
-        self.header_size, self.number_of_channels, self.channel_IDs = self.read_iasi_common_header_metadata()
-        self.record_size = self.read_record_size()
-        self.number_of_measurements = self.count_measurements()
+        self.read_iasi_common_header_metadata()
+        self.read_record_size()
+        self.count_measurements()
 
     def get_iasi_common_record_fields(self) -> List[tuple]:
         # Format of fields in binary file (field_name, data_type, data_size, cumulative_data_size)
