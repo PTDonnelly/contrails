@@ -204,8 +204,13 @@ class L1CProcessor:
                 self.field_df[field] = data
 
         # Create datetime components and add them to DataFrame
-        self.field_df["datetime"] = pd.to_datetime(self.field_df[['year', 'month', 'day', 'hour', 'minute']])
-        self.field_df["datetime"] = self.field_df["datetime"] + pd.to_timedelta(self.field_df['millisecond']/10000, unit='s')
+        self.field_df["Datetime"] = self.field_df['year'].astype(str) + \
+                                    self.field_df['month'].apply(lambda x: f'{x:02d}') + \
+                                    self.field_df['day'].apply(lambda x: f'{x:02d}.') + \
+                                    self.field_df['hour'].apply(lambda x: f'{x:02d}') + \
+                                    self.field_df['minute'].apply(lambda x: f'{x:02d}' + \
+                                    self.field_df['millisecond'].apply(lambda x: f'{x/10000:02d}'))
+
 
         # # Store datetime components field at the end of dictionary for later construction
         # self.field_data["datetime"] = [np.asarray(self.field_data['year'], dtype=int),
@@ -377,7 +382,7 @@ class L1CProcessor:
         self._store_space_time_coordinates()
         self._store_spectral_radiance()
         # self._store_target_parameters()
-        self._store_datetime_components()
+        # self._store_datetime_components()
 
         # print the DataFrame
         print(self.field_df)
