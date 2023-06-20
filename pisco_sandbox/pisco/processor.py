@@ -256,12 +256,9 @@ class L1CProcessor:
         return
 
 
-    def _read_spectral_radiance(self) -> np.ndarray:
+    def _read_spectral_radiance(self) -> None:
         """
         Extracts and stores the spectral radiance measurements from the binary file.
-
-        Returns:
-            np.ndarray: An array of spectral radiance measurements for each channel.
         """
         print("Extracting: radiance")
 
@@ -281,8 +278,7 @@ class L1CProcessor:
         # Iterate over each measurement and extract the spectral radiance data
         for measurement in range(self.number_of_measurements):
             # Move the file pointer to the starting position of the current field
-            # self.f.seek(spectrum_start * self.skip_measurements * measurement, 0)
-            self.f.seek(byte_offset * self.skip_measurements * measurement)
+            self.f.seek(spectrum_start * self.skip_measurements * measurement, 0)
 
             # Read bytes
             value = np.fromfile(self.f, dtype='float32', count=self.number_of_channels, sep='', offset=byte_offset)
