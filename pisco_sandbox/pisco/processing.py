@@ -6,7 +6,7 @@ from typing import Tuple, List, Union
 
 import numpy as np
 
-from .extractor import Extractor as ex
+from .extraction import Extractor as ex
 
 
 class Metadata:
@@ -182,9 +182,10 @@ class Preprocessor:
         self.data_level = data_level
         self.f: object = None
         self.header: Metadata = None
-        self.field_df = pd.DataFrame()
+        self.common_record_df: pd.DataFrame()
+        self.data_record_df = pd.DataFrame()
 
-    def read_binary_file(self):
+    def open_binary_file(self):
         # Open binary file
         print("Loading intermediate L1C file:")
         self.f = open(self.filepath, 'rb')
@@ -194,19 +195,13 @@ class Preprocessor:
         self.header.get_iasi_common_header()
         self.header.close_file()
         return
-
-    def read_record_fields(self, data_level: str) -> pd.DataFrame:
+    
+    def read_record_fields(self, fields) -> pd.DataFrame:
         """
-        Reads the data of each field from the binary file and store it in the field_data dictionary.
+        Reads the data of each field from the binary file and store it in the field_df dictionary.
 
         This function only extracts the first 8 fields and the ones listed in the targets attribute.
         """
-        # Read in binary field table
-        if self.data_level == "l1c":
-            fields = self.header.get_iasi_l1c_record_fields()
-        elif self.data_level == "l2":
-            fields = self.header.get_iasi_l2_record_fields()
-
         # Iterate over each field
         cumsize = 0
         for field, dtype, dtype_size in fields:
@@ -232,8 +227,66 @@ class Preprocessor:
 
             # Store the data in the DataFrame
             self.field_df[field] = data
-        return self.field_df
+        return
+
+    def _calculate_local_time(self) -> np.ndarray:
+        """
+        Calculate the local time (in hours, UTC) that determines whether it is day or night at a specific longitude.
+
+        Returns:
+        np.ndarray: Local time (in hours, UTC) within a 24 hour range, used to determine day (6-18) or night (0-6, 18-23).
+        """
+
+        # Retrieve the necessary field data
+        hour, minute, millisecond, longitude = self.field_df['hour'], self.field_df['minute'], self.field_df['millisecond'], self.field_df['longitude']
+
+        # Calculate the total time in hours, minutes, and milliseconds
+        total_time = (hour * 1e4) + (minute * 1e2) + (millisecond / 1e3)
+
+        # Extract the hour, minute and second components from total_time
+        hour_component = np.floor(total_time / 10000)
+        minute_component = np.mod((total_time - np.mod(total_time, 100)) / 100, 100)
+        second_component_in_minutes = np.mod(total_time, 100) / 60
+
+        # Calculate the total time in hours
+        total_time_in_hours = (hour_component + minute_component + second_component_in_minutes) / 60
+
+        # Convert longitude to time in hours and add it to the total time
+        total_time_with_longitude = total_time_in_hours + (longitude / 15)
+
+        # Add 24 hours to the total time to ensure it is always positive
+        total_time_positive = total_time_with_longitude + 24
+
+        # Take the modulus of the total time by 24 to get the time in the range of 0 to 23 hours
+        time_in_range = np.mod(total_time_positive, 24)
+
+        # Subtract 6 hours from the total time, shifting the reference for day and night (so that 6 AM becomes 0)
+        time_shifted = time_in_range - 6
+
+        # Take the modulus again to ensure the time is within the 0 to 23 hours range
+        return np.mod(time_shifted, 24)
+
+    def filter_observations(self):
+        pass
+
 
     def close_binary_file(self):
         self.f.close()
         return
+    
+
+    def preprocess_files(self) -> None:
+        
+        # Open binary file and extract metadata
+        self.open_binary_file()
+        
+        # Read common IASI record fields
+        self.common_record_df = self.read_record_fields(self.header.get_iasi_common_record_fields())
+        
+        # Read L1C or L2 data record fields
+        if self.data_level == "l1c":
+            self.data_record_df = self.read_record_fields(self.header.get_iasi_l1c_record_fields())
+        elif self.data_level == "l2":
+            self.data_record_df = self.read_record_fields(self.header.get_iasi_l2_record_fields())
+        
+        self.close_binary_file()

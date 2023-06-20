@@ -1,8 +1,8 @@
 import os
 
-from .extractor import Extractor
-from .processor import Preprocessor
-from .correlator import L1C_L2_Correlator
+from .extraction import Extractor
+from .processing import Preprocessor
+from .correlation import L1C_L2_Correlator
 
 def process_iasi(ex: Extractor, data_level: str):
     """
@@ -21,14 +21,12 @@ def process_iasi(ex: Extractor, data_level: str):
     ex.get_datapaths()
     ex.extract_files()
     ex.rename_files()
-    
-    # Process IASI Level 1C data
+
+    # If IASI data was successfully extracted from raw binary files    
     if ex.intermediate_file_check:
-        # Preprocess extracted IASI data from intermediate binary files
+        # Preprocess the data into pandas DataFrames
         pre = Preprocessor(ex.intermediate_file, ex.data_level)
-        pre.read_binary_file()
-        pre.read_record_fields()
-        pre.close_binary_file()
+        pre.preprocess_files()
 
         # Process IASI data
     return

@@ -2,7 +2,7 @@ import os
 import subprocess
 from typing import Optional, Tuple
 
-from .configurer import Configurer
+from .configuration import Configurer
 
 class Extractor:
     def __init__(self, path_to_config_file: str):
