@@ -35,7 +35,7 @@ class L1CProcessor:
         # Get structure of file header and data record
         self.header_size, self.number_of_channels, self.channel_IDs = self._read_header()
         self.record_size = self._read_record_size()
-        self.skip_measurements = 10
+        self.skip_measurements = 1000
         self.number_of_measurements = self._count_measurements() // self.skip_measurements
         self._print_metadata()
 
@@ -203,13 +203,17 @@ class L1CProcessor:
                 # Store the data in the DataFrame
                 self.field_df[field] = data
 
-        # Create datetime components and add them to DataFrame
-        self.field_df["Datetime"] = self.field_df['year'].astype(str) + \
-                                    self.field_df['month'].apply(lambda x: f'{int(x):02d}') + \
-                                    self.field_df['day'].apply(lambda x: f'{int(x):02d}.') + \
-                                    self.field_df['hour'].apply(lambda x: f'{int(x):02d}') + \
-                                    self.field_df['minute'].apply(lambda x: f'{int(x):02d}' + \
-                                    self.field_df['millisecond'].apply(lambda x: f'{int(x/10000):02d}'))
+        # Create 'Datetime' column
+        self.field_df['Datetime'] = self.field_df['year'].astype(str) + \
+                                    self.field_df['month'].apply(lambda x: f'{x:02d}') + \
+                                    self.field_df['day'].apply(lambda x: f'{x:02d}') + '.' + \
+                                    self.field_df['hour'].apply(lambda x: f'{x:02d}') + \
+                                    self.field_df['minute'].apply(lambda x: f'{x:02d}') + \
+                                    self.field_df['millisecond'].apply(lambda x: f'{int(x/10000):02d}')
+
+        # Drop original columns
+        self.field_df = self.field_df.drop(columns=['year', 'month', 'day', 'hour', 'minute', 'millisecond'])
+
 
 
         # # Store datetime components field at the end of dictionary for later construction
@@ -385,7 +389,7 @@ class L1CProcessor:
         # self._store_datetime_components()
 
         # print the DataFrame
-        print(self.field_df)
+        print(self.field_df.head())
         exit()
         return self.field_df
 
