@@ -1,4 +1,4 @@
-from .pisco import Extractor, process_iasi, correlate_l1c_l2
+from pisco import Extractor, process_iasi, correlate_l1c_l2
 
 def main():
     """PISCO: Package for IASI Spectra and Cloud Observations
