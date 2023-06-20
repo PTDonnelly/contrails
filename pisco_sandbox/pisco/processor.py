@@ -202,7 +202,7 @@ class L1CProcessor:
                     self.f.seek(byte_offset * (self.skip_measurements * measurement))
 
                     # Read bytes
-                    value = np.fromfile(self.f, dtype=dtype, count=1, sep='', offset=byte_offset)
+                    value = np.fromfile(self.f, dtype=dtype, count=1, sep='')
                     data[measurement] = np.nan if len(value) == 0 else value[0]
 
                 # Store the data in the DataFrame
