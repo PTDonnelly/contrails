@@ -61,9 +61,6 @@ class IASIMetadata:
     def read_iasi_common_header_metadata(self) -> Tuple[int, int]:
         """
         Reads the header of the binary file to obtain the header size and number of channels.
-
-        Returns:
-        Tuple[int, int]: A tuple containing the header size and number of channels.
         """
         # Read header entries
         self.header_size = np.fromfile(self.f, dtype='uint32', count=1)[0]
