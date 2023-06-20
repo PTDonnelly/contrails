@@ -205,10 +205,10 @@ class L1CProcessor:
 
         # Create 'Datetime' column
         self.field_df['Datetime'] = self.field_df['year'].astype(str) + \
-                                    self.field_df['month'].apply(lambda x: f'{x:02d}') + \
-                                    self.field_df['day'].apply(lambda x: f'{x:02d}') + '.' + \
-                                    self.field_df['hour'].apply(lambda x: f'{x:02d}') + \
-                                    self.field_df['minute'].apply(lambda x: f'{x:02d}') + \
+                                    self.field_df['month'].apply(lambda x: f'{int(x):02d}') + \
+                                    self.field_df['day'].apply(lambda x: f'{int(x):02d}') + '.' + \
+                                    self.field_df['hour'].apply(lambda x: f'{int(x):02d}') + \
+                                    self.field_df['minute'].apply(lambda x: f'{int(x):02d}') + \
                                     self.field_df['millisecond'].apply(lambda x: f'{int(x/10000):02d}')
 
         # Drop original columns
