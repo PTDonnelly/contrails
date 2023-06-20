@@ -206,7 +206,7 @@ class L1CProcessor:
 
                 # Store the data in the DataFrame
                 self.field_df[field] = data
-        print(self.field_df.head())
+
 
     def _calculate_local_time(self) -> np.ndarray:
         """
@@ -326,9 +326,6 @@ class L1CProcessor:
 
         # print the DataFrame
         print(self.field_df.head())
-        exit()
-        return
-
 
     def filter_bad_observations(self, date: object) -> pd.DataFrame:
         """
