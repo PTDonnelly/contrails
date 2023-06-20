@@ -25,7 +25,7 @@ def main():
                 if ex.config.L2:
                     process_l2(ex)
                 if ex.config.L1C:
-                    process_l1c(ex)
+                    process_l1c_alt(ex)
                 if ex.config.correlate:
                     correlate_l1c_l2(ex)
 
