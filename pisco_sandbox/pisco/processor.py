@@ -198,10 +198,10 @@ class L1CProcessor:
                 for measurement in range(self.number_of_measurements):
                     # Move the file pointer to the starting position of the current field
                     # self.f.seek(header_start * self.skip_measurements * measurement, 0)
-                    # self.f.seek(header_start * (self.skip_measurements * measurement), 0)
+                    self.f.seek(header_start * self.skip_measurements * measurement)
 
                     # Read bytes
-                    value = np.fromfile(self.f, dtype=dtype, count=1, sep='', offset=byte_offset*(self.skip_measurements * measurement))
+                    value = np.fromfile(self.f, dtype=dtype, count=1, sep='', offset=byte_offset)
                     data[measurement] = np.nan if len(value) == 0 else value[0]
 
                 # Store the data in the DataFrame
