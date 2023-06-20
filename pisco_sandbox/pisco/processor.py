@@ -73,10 +73,10 @@ class IASIMetadata:
         self.record_header_size = np.fromfile(self.f, dtype='uint32', count=1)[0]
         self.brightness_temperature_brilliance = np.fromfile(self.f, dtype='bool', count=1)[0]
         self.number_of_channels = np.fromfile(self.f, dtype='uint32', count=1)[0]
-        self.channel_IDs = np.fromfile(self.f, dtype='uint32', count=number_of_channels)
+        self.channel_IDs = np.fromfile(self.f, dtype='uint32', count=self.number_of_channels)
         self.AVHRR_brilliance = np.fromfile(self.f, dtype='bool', count=1)[0]
         self.number_of_L2_sections = np.fromfile(self.f, dtype='uint16', count=1)[0]
-        self.table_of_L2_sections = np.fromfile(self.f, dtype='uint32', count=number_of_L2_sections)[0]
+        self.table_of_L2_sections = np.fromfile(self.f, dtype='uint32', count=self.number_of_L2_sections)[0]
 
         # Read header size at the end of the header, check for a match
         self._verify_header()       
