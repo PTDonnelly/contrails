@@ -186,7 +186,7 @@ class L1CProcessor:
                 print(f"Extracting: {field}")
 
                 header_start = self.header_size + 12 + cumsize
-                self.f.seek(header_start, 0)
+                # self.f.seek(header_start, 0)
 
                 # Calculate the byte offset to the next measurement
                 byte_offset = self.record_size + 8 - dtype_size
@@ -196,10 +196,9 @@ class L1CProcessor:
                 
                 # Read the data of each measurement
                 for measurement in range(self.number_of_measurements):
-                    print(header_start, byte_offset, (self.skip_measurements * measurement))
                     # Move the file pointer to the starting position of the current field
                     # self.f.seek(header_start * self.skip_measurements * measurement, 0)
-                    self.f.seek(byte_offset * (self.skip_measurements * measurement))
+                    self.f.seek(header_start + byte_offset * (self.skip_measurements * measurement), 0)
 
                     # Read bytes
                     value = np.fromfile(self.f, dtype=dtype, count=1, sep='')
