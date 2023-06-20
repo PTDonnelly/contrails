@@ -185,8 +185,8 @@ class L1CProcessor:
             if (i < 8) or (field in self.targets):
                 print(f"Extracting: {field}")
 
-                header_start = self.header_size + 12 + cumsize
-                self.f.seek(header_start, 0)
+                # header_start = self.header_size + 12 + cumsize
+                # self.f.seek(header_start, 0)
 
                 # Calculate the byte offset to the next measurement
                 byte_offset = self.record_size + 8 - dtype_size
@@ -197,8 +197,8 @@ class L1CProcessor:
                 # Read the data of each measurement
                 for measurement in range(self.number_of_measurements):
                     # Move the file pointer to the starting position of the current field
-                    self.f.seek(header_start * self.skip_measurements * measurement)
-
+                    self.f.seek((self.header_size + 12 + cumsize) * self.skip_measurements * measurement, 0)
+                    
                     # Read bytes
                     value = np.fromfile(self.f, dtype=dtype, count=1, sep='', offset=byte_offset)
                     data[measurement] = np.nan if len(value) == 0 else value[0]
@@ -263,7 +263,7 @@ class L1CProcessor:
         print("Extracting: radiance")
 
         # Determine the position of the anchor point for spectral radiance data in the binary file
-        last_field_end = self.fields[-1][-1] # End of the surface_type field
+        last_field_end = self.fields[-1][-1] # End of the surface_type field for the last measurement
 
         # Go to spectral radiance data (skip header and previous record data, "12"s are related to reading)
         spectrum_start = self.header_size + 12 + last_field_end + (4 * self.number_of_channels) 
