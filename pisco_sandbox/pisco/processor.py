@@ -84,7 +84,6 @@ class IASIMetadata:
         """
         # Get the total size of the file
         file_size = self.f.seek(0, 2)
-        print(file_size, self.header_size, self.record_size)
         # Calculate the number of measurements
         self.number_of_measurements = (file_size - self.header_size - 8) // (self.record_size + 8)
         return
@@ -201,6 +200,7 @@ class L1CProcessor:
         fields = self.header.get_iasi_l1c_record_fields()
 
         # Iterate over each field
+        cumsize = 0
         for field, dtype, dtype_size in fields:
             print(f"Extracting: {field}")
             
