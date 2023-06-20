@@ -39,9 +39,9 @@ class L1CProcessor:
         self.number_of_measurements = self._count_measurements() // self.skip_measurements
         self._print_metadata()
 
-        # Get fields information and prepare to store extracted data
+        # Get fields information and prepare to store extracted data in an empty DataFrame
         self.fields = self._get_fields()
-        self.field_data = {}
+        self.field_df = pd.DataFrame()
         return self
 
 
@@ -200,16 +200,20 @@ class L1CProcessor:
                     value = np.fromfile(self.f, dtype=dtype, count=1, sep='', offset=byte_offset)
                     data[measurement] = np.nan if len(value) == 0 else value[0]
 
-                # Store the data in the field_data dictionary
-                self.field_data[field] = data
+                # Store the data in the DataFrame
+                self.field_df[field] = data
 
-        # Store datetime components field at the end of dictionary for later construction
-        self.field_data["datetime"] = [np.asarray(self.field_data['year'], dtype=int),
-                                        np.asarray(self.field_data['month'], dtype=int),
-                                        np.asarray(self.field_data['day'], dtype=int),
-                                        np.asarray(self.field_data['hour'], dtype=int),
-                                        np.asarray(self.field_data['minute'], dtype=int),
-                                        np.asarray(self.field_data['millisecond']/10000, dtype=int)]
+        # Create datetime components and add them to DataFrame
+        self.field_df["datetime"] = pd.to_datetime(self.field_df[['year', 'month', 'day', 'hour', 'minute']])
+        self.field_df["datetime"] = self.field_df["datetime"] + pd.to_timedelta(self.field_df['millisecond']/10000, unit='s')
+
+        # # Store datetime components field at the end of dictionary for later construction
+        # self.field_data["datetime"] = [np.asarray(self.field_data['year'], dtype=int),
+        #                                 np.asarray(self.field_data['month'], dtype=int),
+        #                                 np.asarray(self.field_data['day'], dtype=int),
+        #                                 np.asarray(self.field_data['hour'], dtype=int),
+        #                                 np.asarray(self.field_data['minute'], dtype=int),
+        #                                 np.asarray(self.field_data['millisecond']/10000, dtype=int)]
         
 
     def _calculate_local_time(self) -> np.ndarray:
@@ -221,7 +225,7 @@ class L1CProcessor:
         """
 
         # Retrieve the necessary field data
-        hour, minute, millisecond, longitude = self.field_data['hour'], self.field_data['minute'], self.field_data['millisecond'], self.field_data['longitude']
+        hour, minute, millisecond, longitude = self.field_df['hour'], self.field_df['minute'], self.field_df['millisecond'], self.field_df['longitude']
 
         # Calculate the total time in hours, minutes, and milliseconds
         total_time = (hour * 1e4) + (minute * 1e2) + (millisecond / 1e3)
@@ -250,19 +254,29 @@ class L1CProcessor:
         return np.mod(time_shifted, 24)
     
 
-    def _store_space_time_coordinates(self) -> List:
-        """
-        Stores the space-time coordinates and a Boolean indicating whether the current time is day or night.
+    # def _store_space_time_coordinates(self) -> List:
+    #     """
+    #     Stores the space-time coordinates and a Boolean indicating whether the current time is day or night.
 
-        Returns:
-            List: A list containing longitude, latitude and a Boolean indicating day or night. 
+    #     Returns:
+    #         List: A list containing longitude, latitude and a Boolean indicating day or night. 
+    #     """
+    #     # Calculate the local time
+    #     local_time = self._calculate_local_time()
+
+    #     # Return the longitude, latitude, and a Boolean indicating day (True) or night (False)
+    #     return self.field_df['latitude'], self.field_df['longitude'], (6 < local_time) & (local_time < 18)
+
+    def _store_space_time_coordinates(self) -> None:
+        """
+        Stores the local time Boolean indicating whether the current time is day or night.
         """
         # Calculate the local time
         local_time = self._calculate_local_time()
 
-        # Return the longitude, latitude, and a Boolean indicating day (True) or night (False)
-        return self.field_data['latitude'], self.field_data['longitude'], (6 < local_time) & (local_time < 18)
-
+        # Store the Boolean indicating day (True) or night (False) in the DataFrame
+        self.field_df['daytime'] = (6 < local_time) & (local_time < 18)
+        return
 
     def _store_spectral_radiance(self) -> np.ndarray:
         """
@@ -292,20 +306,23 @@ class L1CProcessor:
             value = np.fromfile(self.f, dtype='float32', count=self.number_of_channels, sep='', offset=byte_offset)
             data[:, measurement] = np.nan if len(value) == 0 else value
 
-        # Return the array of spectral radiance data
-        return np.transpose(data)
+        # Assign to DataFrame instead of returning
+        self.field_df[[f'Channel {i}' for i in range(self.number_of_channels)]] = np.transpose(data)
+        return
 
+    # def _store_target_parameters(self) -> List:
+    #     """
+    #     Stores the target parameters from the field data.
 
-    def _store_target_parameters(self) -> List:
-        """
-        Stores the target parameters from the field data.
-
-        Returns:
-            List: A list of the target parameter names and the transposed parameters from the field data.
-        """
-        target_parameter_names = [field for field, _ in self.field_data.items() if (field in self.targets)]
-        target_parameters =  [data for field, data in self.field_data.items() if (field in self.targets)]
-        return target_parameter_names, list(map(list, zip(*target_parameters)))
+    #     Returns:
+    #         List: A list of the target parameter names and the transposed parameters from the field data.
+    #     """
+    #     target_parameter_names = [field for field, _ in self.field_data.items() if (field in self.targets)]
+    #     target_parameters =  [data for field, data in self.field_data.items() if (field in self.targets)]
+        
+    #     # # Update the DataFrame directly
+    #     # self.field_df[self.targets] = self.field_df[self.targets]
+    #     return target_parameter_names, list(map(list, zip(*target_parameters)))
 
 
     def _store_datetime_components(self) -> List:
@@ -315,47 +332,57 @@ class L1CProcessor:
         Returns:
             np.Array: An array of the datetime components from the transposed field data (formatted like the outputs of the L2 reader)
         """
-        return np.array([f"{d[0]}{d[1]:02d}{d[2]:02d}.{d[3]:02d}{d[4]:02d}{d[5]:02d}" for d in list(zip(*self.field_data["datetime"]))])
+        self.field_df["Datetime"] = np.array([f"{d[0]}{d[1]:02d}{d[2]:02d}.{d[3]:02d}{d[4]:02d}{d[5]:02d}" for d in list(zip(*self.field_df["datetime"]))])
+        return
 
+    # def extract_data(self) -> Tuple[List[int], np.array]:
+    #     """
+    #     Extracts relevant data from the observation dataset, processes it, and consolidates it into a 2D array.
 
-    def _build_header(self, target_parameter_names: List[str]):
-        # Add the main data columns to the header
-        header = ["Latitude", "Longitude", "Datetime", "Local Time"]
-        # Add the IASI channel IDs: List[str]
-        header.extend([f"Channel {id}" for id in self.channel_IDs])
-        # Add the L1C target parameter names: List[str]
-        header.extend(target_parameter_names)
-        return header
+    #     Returns:
+    #         Tuple[List[int], np.array]: A tuple containing a header (which represents lengths of various components of data)
+    #         and a 2D numpy array of consolidated data.
+
+    #     """
+    #     # Extract and process binary data
+    #     self._read_field_data()
+    #     latitude, longitude, local_time = self._store_space_time_coordinates()
+    #     radiances = self._store_spectral_radiance()
+    #     target_parameter_names, target_parameters = self._store_target_parameters()
+    #     datetimes = self._store_datetime_components()
+
+    #     # Concatenate processed observations into a single 2D array (number of parameters x number of measurements).
+    #     # But first add an extra dimension to the 1D arrays to match the 2D structure of radiances and target_parameters
+    #     data = np.concatenate((latitude[:, np.newaxis], 
+    #                             longitude[:, np.newaxis], 
+    #                             datetimes[:, np.newaxis],
+    #                             local_time[:, np.newaxis], 
+    #                             radiances, 
+    #                             target_parameters), axis=1)
+
+    #     # Construct a header that contains the name of each data column
+    #     header = self._build_header(target_parameter_names)
+    #     return header, data
     
 
-    def extract_data(self) -> Tuple[List[int], np.array]:
+    def extract_data(self) -> pd.DataFrame:
         """
-        Extracts relevant data from the observation dataset, processes it, and consolidates it into a 2D array.
+        Extracts relevant data from the observation dataset, processes it, and consolidates it into a DataFrame.
 
         Returns:
-            Tuple[List[int], np.array]: A tuple containing a header (which represents lengths of various components of data)
-            and a 2D numpy array of consolidated data.
-
+            pd.DataFrame: A DataFrame containing the processed data.
         """
         # Extract and process binary data
         self._read_field_data()
-        latitude, longitude, local_time = self._store_space_time_coordinates()
-        radiances = self._store_spectral_radiance()
-        target_parameter_names, target_parameters = self._store_target_parameters()
-        datetimes = self._store_datetime_components()
+        self._store_space_time_coordinates()
+        self._store_spectral_radiance()
+        # self._store_target_parameters()
+        self._store_datetime_components()
 
-        # Concatenate processed observations into a single 2D array (number of parameters x number of measurements).
-        # But first add an extra dimension to the 1D arrays to match the 2D structure of radiances and target_parameters
-        data = np.concatenate((latitude[:, np.newaxis], 
-                                longitude[:, np.newaxis], 
-                                datetimes[:, np.newaxis],
-                                local_time[:, np.newaxis], 
-                                radiances, 
-                                target_parameters), axis=1)
-
-        # Construct a header that contains the name of each data column
-        header = self._build_header(target_parameter_names)
-        return header, data
+        # print the DataFrame
+        print(self.field_df)
+        exit()
+        return self.field_df
 
 
     def filter_bad_observations(self, data: np.array, date: object) -> np.array:
