@@ -35,8 +35,8 @@ class L1CProcessor:
         # Get structure of file header and data record
         self.header_size, self.number_of_channels, self.channel_IDs = self._read_header()
         self.record_size = self._read_record_size()
-        self.skip_measurements = 1
-        self.number_of_measurements = 10000#self._count_measurements()# // self.skip_measurements
+        self.skip_measurements = 100
+        self.number_of_measurements = self._count_measurements() // self.skip_measurements
         self._print_metadata()
 
         # Get fields information and prepare to store extracted data in an empty DataFrame
@@ -200,7 +200,7 @@ class L1CProcessor:
                     self.f.seek(field_start * self.skip_measurements * measurement, 0)
                     
                     # Read bytes
-                    value = np.fromfile(self.f, dtype=dtype, count=1, sep='')#, offset=byte_offset)
+                    value = np.fromfile(self.f, dtype=dtype, count=1, sep='', offset=byte_offset)
                     data[measurement] = np.nan if len(value) == 0 else value[0]
 
                 # Store the data in the DataFrame
