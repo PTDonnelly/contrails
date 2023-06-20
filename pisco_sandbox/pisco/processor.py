@@ -186,7 +186,7 @@ class L1CProcessor:
                 print(f"Extracting: {field}")
 
                 header_start = self.header_size + 12 + cumsize
-                # self.f.seek(header_start, 0)
+                self.f.seek(header_start, 0)
 
                 # Calculate the byte offset to the next measurement
                 byte_offset = self.record_size + 8 - dtype_size
@@ -198,12 +198,12 @@ class L1CProcessor:
                 for measurement in range(self.number_of_measurements):
                     print(header_start, byte_offset, header_start * self.skip_measurements * measurement)
                     # Move the file pointer to the starting position of the current field
-                    self.f.seek(header_start * self.skip_measurements * measurement, 0)
-                    
+                    # self.f.seek(header_start * self.skip_measurements * measurement, 0)
+                    self.f.seek(byte_offset * self.skip_measurements * measurement)
+
                     # Read bytes
                     value = np.fromfile(self.f, dtype=dtype, count=1, sep='', offset=byte_offset)
                     data[measurement] = np.nan if len(value) == 0 else value[0]
-                input()
 
                 # Store the data in the DataFrame
                 self.field_df[field] = data
@@ -272,7 +272,7 @@ class L1CProcessor:
 
         # Go to spectral radiance data (skip header and previous record data, "12"s are related to reading)
         spectrum_start = self.header_size + 12 + last_field_end + (4 * self.number_of_channels) 
-        # self.f.seek(spectrum_start, 0)
+        self.f.seek(spectrum_start, 0)
 
         # Calculate the offset to skip to the next measurement
         byte_offset = self.record_size + 8 - (4 * self.number_of_channels)
@@ -283,8 +283,9 @@ class L1CProcessor:
         # Iterate over each measurement and extract the spectral radiance data
         for measurement in range(self.number_of_measurements):
             # Move the file pointer to the starting position of the current field
-            self.f.seek(spectrum_start * self.skip_measurements * measurement, 0)
-            
+            # self.f.seek(spectrum_start * self.skip_measurements * measurement, 0)
+            self.f.seek(byte_offset * self.skip_measurements * measurement)
+
             # Read bytes
             value = np.fromfile(self.f, dtype='float32', count=self.number_of_channels, sep='', offset=byte_offset)
             data[:, measurement] = np.nan if len(value) == 0 else value
