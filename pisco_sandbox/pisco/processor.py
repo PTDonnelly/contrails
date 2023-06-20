@@ -35,8 +35,8 @@ class L1CProcessor:
         # Get structure of file header and data record
         self.header_size, self.number_of_channels, self.channel_IDs = self._read_header()
         self.record_size = self._read_record_size()
-        self.skip_measurements = 100
-        self.number_of_measurements = self._count_measurements() // self.skip_measurements
+        self.skip_measurements = 1
+        self.number_of_measurements = self._count_measurements()# // self.skip_measurements
         self._print_metadata()
 
         # Get fields information and prepare to store extracted data in an empty DataFrame
@@ -197,7 +197,7 @@ class L1CProcessor:
                 # Read the data of each measurement
                 for measurement in range(self.number_of_measurements):
                     # Move the file pointer to the starting position of the current field
-                    self.f.seek(header_start * self.skip_measurements * measurement, 0)
+                    # self.f.seek(header_start * self.skip_measurements * measurement, 0)
                     
                     # Read bytes
                     value = np.fromfile(self.f, dtype=dtype, count=1, sep='', offset=byte_offset)
@@ -206,6 +206,7 @@ class L1CProcessor:
                 # Store the data in the DataFrame
                 self.field_df[field] = data
         print(self.field_df.head())
+        
     def _calculate_local_time(self) -> np.ndarray:
         """
         Calculate the local time (in hours, UTC) that determines whether it is day or night at a specific longitude.
@@ -278,7 +279,7 @@ class L1CProcessor:
         # Iterate over each measurement and extract the spectral radiance data
         for measurement in range(self.number_of_measurements):
             # Move the file pointer to the starting position of the current field
-            self.f.seek(spectrum_start * self.skip_measurements * measurement, 0)
+            # self.f.seek(spectrum_start * self.skip_measurements * measurement, 0)
 
             # Read bytes
             value = np.fromfile(self.f, dtype='float32', count=self.number_of_channels, sep='', offset=byte_offset)
