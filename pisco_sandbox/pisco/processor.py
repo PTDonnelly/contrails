@@ -291,9 +291,7 @@ class L1CProcessor:
             data[:, measurement] = np.nan if len(value) == 0 else value
 
         # Assign channel IDs and values to DataFrame
-        print(self.channel_IDs)
-        for id in self.channel_IDs:
-            print(id)
+        print(self.channel_IDs, np.shape(np.transpose(data)))
         self.field_df[[f'Channel {id}' for id in self.channel_IDs]] = np.transpose(data)
         return
 
