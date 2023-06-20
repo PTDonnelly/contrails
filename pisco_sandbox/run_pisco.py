@@ -1,4 +1,4 @@
-from pisco import Extractor, process_l1c, process_l2, correlate_l1c_l2
+from .pisco import Extractor, process_iasi, correlate_l1c_l2
 
 def main():
     """PISCO: Package for IASI Spectra and Cloud Observations
@@ -23,9 +23,9 @@ def main():
                 ex.day = f"{day:02d}"
                 
                 if ex.config.L2:
-                    process_l2(ex)
+                    process_iasi(ex, data_level="l2")
                 if ex.config.L1C:
-                    process_l1c(ex)
+                    process_iasi(ex, data_level="l1c")
                 if ex.config.correlate:
                     correlate_l1c_l2(ex)
 

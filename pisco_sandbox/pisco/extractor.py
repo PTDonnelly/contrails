@@ -70,7 +70,7 @@ class Extractor:
         self.datapath_out = self._get_datapath_out()
 
 
-    def check_preprocessed_files(self, result: object) -> bool:
+    def check_extracted_files(self, result: object) -> bool:
         # If binary script runs but detects no data, report back, delete the empty intermediate file, and return False
         if ("No L1C data files found" in result.stdout) or ("No L2 data files found" in result.stdout):
             print(result.stdout)
@@ -168,7 +168,7 @@ class Extractor:
         return f"{self.datapath_out}{self.datafile_out}"
 
 
-    def preprocess(self) -> Tuple[bool, str]:
+    def extract_files(self) -> Tuple[bool, str]:
         """
         Preprocesses the IASI data.
         """
@@ -177,7 +177,7 @@ class Extractor:
         # Run the command to extract the data
         result = self.run_command()
         # Check if files are produced. If not, skip processing.
-        self.intermediate_file_check = self.check_preprocessed_files(result)
+        self.intermediate_file_check = self.check_extracted_files(result)
                         
 
     def _get_suffix(self):

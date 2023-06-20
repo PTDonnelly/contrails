@@ -1,12 +1,12 @@
 import os
 
 from .extractor import Extractor
-from .processor import L1CProcessor, L2Processor
+from .processor import Preprocessor
 from .correlator import L1C_L2_Correlator
 
-def process_l1c(ex: Extractor):
+def process_iasi(ex: Extractor, data_level: str):
     """
-    Process level 1C IASI data.
+    Process IASI data.
 
     Extracts and processes IASI spectral data from intermediate binary files,
     applies quality control and saves the output.
@@ -17,49 +17,22 @@ def process_l1c(ex: Extractor):
         A HDF5 file containing all good spectra from this intermediate file.
     """
     # Preprocess IASI Level 1C data
-    ex.data_level = "l1c"
+    ex.data_level = data_level
     ex.get_datapaths()
-    ex.preprocess()
+    ex.extract_files()
     ex.rename_files()
     
     # Process IASI Level 1C data
     if ex.intermediate_file_check:
-        # Process extracted IASI data from intermediate binary files and save to CSV
-        processor = L1CProcessor(ex.intermediate_file)
+        # Preprocess extracted IASI data from intermediate binary files
+        pre = Preprocessor(ex.intermediate_file, ex.data_level)
+        pre.read_binary_file()
+        pre.read_record_fields()
+        pre.close_binary_file()
 
-        processor.read_binary_file()
-        processor.read_record_fields()
-        processor.close_binary_file()
+        # Process IASI data
     return
 
-def process_l2(ex: Extractor):
-    """
-    Process level 2 IASI data.
-
-    Extracts and processes IASI spectral data from intermediate binary files,
-    applies quality control and saves the output.
-
-    Args:
-        Instance of the Extractor class 
-    Result:
-        A HDF5 file containing all good spectra from this intermediate file.
-    """
-    # Preprocess IASI Level 2 data
-    ex.data_level = "l2"
-    ex.get_datapaths()
-    ex.preprocess()
-    ex.rename_files()
-    
-    # Process IASI Level 1C data
-    if ex.intermediate_file_check:
-        # Process extracted IASI data from intermediate binary files and save to CSV
-        processor = L2Processor(ex.intermediate_file)
-
-        processor.read_binary_file()
-        processor.read_record_fields()
-        processor.close_binary_file()
-        # processor.extract_data(ex.datapath_out, ex.datafile_out, ex.year, ex.month, ex.day)
-    return
 
 def correlate_l1c_l2(ex: Extractor):
     """

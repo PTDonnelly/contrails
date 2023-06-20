@@ -9,7 +9,7 @@ import numpy as np
 from .extractor import Extractor as ex
 
 
-class IASIMetadata:
+class Metadata:
     """
     """
     def __init__(self, file: object):
@@ -29,6 +29,10 @@ class IASIMetadata:
         self.record_size: int = None
         self.number_of_measurements: int = None
 
+    def close_file(self):
+        self.f.close()
+        return
+    
     def _verify_header(self) -> None:
         """
         Verifies the header size by comparing it with the header size at the end of the header.
@@ -165,7 +169,7 @@ class IASIMetadata:
         pass
 
 
-class L1CProcessor:
+class Preprocessor:
     """
     Processor for the intermediate binary file of IASI L2 products output by OBR script.
 
@@ -173,31 +177,35 @@ class L1CProcessor:
     filepath (str): Path to the binary file.
     targets (List[str]): List of target variables to extract.
     """
-    def __init__(self, filepath: str):
+    def __init__(self, filepath: str, data_level: str):
         self.filepath = filepath
+        self.data_level = data_level
         self.f: object = None
-        self.header: IASIMetadata = None
+        self.header: Metadata = None
         self.field_df = pd.DataFrame()
 
-      
     def read_binary_file(self):
         # Open binary file
         print("Loading intermediate L1C file:")
         self.f = open(self.filepath, 'rb')
         
         # Get structure of file header and data record
-        self.header = IASIMetadata(self.f)
+        self.header = Metadata(self.f)
         self.header.get_iasi_common_header()
+        self.header.close_file()
+        return
 
-
-    def read_record_fields(self) -> None:
+    def read_record_fields(self, data_level: str) -> pd.DataFrame:
         """
         Reads the data of each field from the binary file and store it in the field_data dictionary.
 
         This function only extracts the first 8 fields and the ones listed in the targets attribute.
         """
         # Read in binary field table
-        fields = self.header.get_iasi_l1c_record_fields()
+        if self.data_level == "l1c":
+            fields = self.header.get_iasi_l1c_record_fields()
+        elif self.data_level == "l2":
+            fields = self.header.get_iasi_l2_record_fields()
 
         # Iterate over each field
         cumsize = 0
@@ -224,71 +232,8 @@ class L1CProcessor:
 
             # Store the data in the DataFrame
             self.field_df[field] = data
-        print(self.field_df.head())
+        return self.field_df
 
     def close_binary_file(self):
         self.f.close()
-
-class L2Processor:
-    """
-    Processor for the intermediate binary file of IASI L2 products output by OBR script.
-
-    Attributes:
-    filepath (str): Path to the binary file.
-    targets (List[str]): List of target variables to extract.
-    """
-    def __init__(self, filepath: str):
-        self.filepath = filepath
-        self.f: object = None
-        self.header: IASIMetadata = None
-        self.field_df = pd.DataFrame
-
-      
-    def read_binary_file(self):
-        # Open binary file
-        print("Loading intermediate L2 file:")
-        self.f = open(self.filepath, 'rb')
-        
-        # Get structure of file header and data record
-        self.header = IASIMetadata(self.f)
-        self.header.get_iasi_common_header()
-
-
-    def read_record_fields(self) -> None:
-        """
-        Reads the data of each field from the binary file and store it in the field_data dictionary.
-
-        This function only extracts the first 8 fields and the ones listed in the targets attribute.
-        """
-        # Read in binary field table
-        fields = self.header.get_iasi_l2_record_fields()
-
-        # Iterate over each field
-        for field, dtype, dtype_size in fields:
-            print(f"Extracting: {field}")
-            
-            # Start counting number of bytes passed
-            cumsize += dtype_size
-
-            # Move the file pointer to the starting position of the current field
-            field_start = self.header.header_size + 12 + cumsize
-            self.f.seek(field_start, 0)
-
-            # Calculate the byte offset to the next measurement
-            byte_offset = self.header.record_size + 8 - dtype_size
-
-            # Prepare an empty array to store the data of the current field
-            data = np.empty(self.header.number_of_measurements)
-            
-            # Read the data of each measurement
-            for measurement in range(self.header.number_of_measurements):
-                value = np.fromfile(self.f, dtype=dtype, count=1, sep='', offset=byte_offset)
-                data[measurement] = np.nan if len(value) == 0 else value[0]
-
-            # Store the data in the DataFrame
-            self.field_df[field] = data
-        print(self.field_df.head())
-
-
-    def close_binary_file(self):
-        self.f.close()
+        return
