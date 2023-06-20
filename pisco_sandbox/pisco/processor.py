@@ -35,7 +35,7 @@ class L1CProcessor:
         # Get structure of file header and data record
         self.header_size, self.number_of_channels, self.channel_IDs = self._read_header()
         self.record_size = self._read_record_size()
-        self.skip_measurements = 1000
+        self.skip_measurements = 100
         self.number_of_measurements = self._count_measurements() // self.skip_measurements
         self._print_metadata()
 
@@ -202,7 +202,7 @@ class L1CProcessor:
 
                 # Store the data in the DataFrame
                 self.field_df[field] = data
-
+        print(self.field_df.head())
         # Create 'Datetime' column
         self.field_df['Datetime'] = self.field_df['year'].astype(str) + \
                                     self.field_df['month'].apply(lambda x: f'{int(x):02d}') + \
@@ -210,6 +210,7 @@ class L1CProcessor:
                                     self.field_df['hour'].apply(lambda x: f'{int(x):02d}') + \
                                     self.field_df['minute'].apply(lambda x: f'{int(x):02d}') + \
                                     self.field_df['millisecond'].apply(lambda x: f'{int(x/10000):02d}')        
+
 
     def _calculate_local_time(self) -> np.ndarray:
         """
@@ -247,7 +248,8 @@ class L1CProcessor:
 
         # Take the modulus again to ensure the time is within the 0 to 23 hours range
         return np.mod(time_shifted, 24)
-    
+
+
     def _store_space_time_coordinates(self) -> None:
         """
         Stores the local time Boolean indicating whether the current time is day or night.
@@ -261,6 +263,7 @@ class L1CProcessor:
         # Drop original time element columns
         self.field_df = self.field_df.drop(columns=['year', 'month', 'day', 'hour', 'minute', 'millisecond'])
         return
+
 
     def _store_spectral_radiance(self) -> np.ndarray:
         """
@@ -290,24 +293,20 @@ class L1CProcessor:
             value = np.fromfile(self.f, dtype='float32', count=self.number_of_channels, sep='', offset=byte_offset)
             data[:, measurement] = np.nan if len(value) == 0 else value
 
-        # Create Channel columns in DataFrame
-        for i, id in enumerate(self.channel_IDs):
-            self.field_df[f'Channel {id}'] = data[i, :]  # assuming id is 1-indexed and data is 0-indexed
-
         # Assign channel IDs and values to DataFrame
-        # print(self.channel_IDs, np.shape(data))
-        # self.field_df[[f'Channel {id}' for id in self.channel_IDs]] = data
+        for i, id in enumerate(self.channel_IDs):
+            self.field_df[f'Channel {id}'] = data[i, :]
         return
 
-    def _store_datetime_components(self) -> List:
-        """
-        Stores the datetime components from the datetime field data.
+    # def _store_datetime_components(self) -> List:
+    #     """
+    #     Stores the datetime components from the datetime field data.
 
-        Returns:
-            np.Array: An array of the datetime components from the transposed field data (formatted like the outputs of the L2 reader)
-        """
-        self.field_df["Datetime"] = np.array([f"{d[0]}{d[1]:02d}{d[2]:02d}.{d[3]:02d}{d[4]:02d}{d[5]:02d}" for d in list(zip(*self.field_df["datetime"]))])
-        return    
+    #     Returns:
+    #         np.Array: An array of the datetime components from the transposed field data (formatted like the outputs of the L2 reader)
+    #     """
+    #     self.field_df["Datetime"] = np.array([f"{d[0]}{d[1]:02d}{d[2]:02d}.{d[3]:02d}{d[4]:02d}{d[5]:02d}" for d in list(zip(*self.field_df["datetime"]))])
+    #     return    
 
     def extract_data(self) -> pd.DataFrame:
         """
