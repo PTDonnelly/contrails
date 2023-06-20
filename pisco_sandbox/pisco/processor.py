@@ -209,21 +209,7 @@ class L1CProcessor:
                                     self.field_df['day'].apply(lambda x: f'{int(x):02d}') + '.' + \
                                     self.field_df['hour'].apply(lambda x: f'{int(x):02d}') + \
                                     self.field_df['minute'].apply(lambda x: f'{int(x):02d}') + \
-                                    self.field_df['millisecond'].apply(lambda x: f'{int(x/10000):02d}')
-
-        # Drop original columns
-        self.field_df = self.field_df.drop(columns=['year', 'month', 'day', 'hour', 'minute', 'millisecond'])
-
-
-
-        # # Store datetime components field at the end of dictionary for later construction
-        # self.field_data["datetime"] = [np.asarray(self.field_data['year'], dtype=int),
-        #                                 np.asarray(self.field_data['month'], dtype=int),
-        #                                 np.asarray(self.field_data['day'], dtype=int),
-        #                                 np.asarray(self.field_data['hour'], dtype=int),
-        #                                 np.asarray(self.field_data['minute'], dtype=int),
-        #                                 np.asarray(self.field_data['millisecond']/10000, dtype=int)]
-        
+                                    self.field_df['millisecond'].apply(lambda x: f'{int(x/10000):02d}')        
 
     def _calculate_local_time(self) -> np.ndarray:
         """
@@ -262,20 +248,6 @@ class L1CProcessor:
         # Take the modulus again to ensure the time is within the 0 to 23 hours range
         return np.mod(time_shifted, 24)
     
-
-    # def _store_space_time_coordinates(self) -> List:
-    #     """
-    #     Stores the space-time coordinates and a Boolean indicating whether the current time is day or night.
-
-    #     Returns:
-    #         List: A list containing longitude, latitude and a Boolean indicating day or night. 
-    #     """
-    #     # Calculate the local time
-    #     local_time = self._calculate_local_time()
-
-    #     # Return the longitude, latitude, and a Boolean indicating day (True) or night (False)
-    #     return self.field_df['latitude'], self.field_df['longitude'], (6 < local_time) & (local_time < 18)
-
     def _store_space_time_coordinates(self) -> None:
         """
         Stores the local time Boolean indicating whether the current time is day or night.
@@ -284,7 +256,10 @@ class L1CProcessor:
         local_time = self._calculate_local_time()
 
         # Store the Boolean indicating day (True) or night (False) in the DataFrame
-        self.field_df['daytime'] = (6 < local_time) & (local_time < 18)
+        self.field_df['Local Time'] = (6 < local_time) & (local_time < 18)
+
+        # Drop original columns
+        self.field_df = self.field_df.drop(columns=['year', 'month', 'day', 'hour', 'minute', 'millisecond'])
         return
 
     def _store_spectral_radiance(self) -> np.ndarray:
@@ -316,23 +291,9 @@ class L1CProcessor:
             data[:, measurement] = np.nan if len(value) == 0 else value
 
         # Assign to DataFrame instead of returning
-        self.field_df[[f'Channel {i}' for i in range(self.number_of_channels)]] = np.transpose(data)
+    
+        self.field_df[[self.channel_IDs]] = np.transpose(data)
         return
-
-    # def _store_target_parameters(self) -> List:
-    #     """
-    #     Stores the target parameters from the field data.
-
-    #     Returns:
-    #         List: A list of the target parameter names and the transposed parameters from the field data.
-    #     """
-    #     target_parameter_names = [field for field, _ in self.field_data.items() if (field in self.targets)]
-    #     target_parameters =  [data for field, data in self.field_data.items() if (field in self.targets)]
-        
-    #     # # Update the DataFrame directly
-    #     # self.field_df[self.targets] = self.field_df[self.targets]
-    #     return target_parameter_names, list(map(list, zip(*target_parameters)))
-
 
     def _store_datetime_components(self) -> List:
         """
