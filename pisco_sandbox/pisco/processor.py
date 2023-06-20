@@ -52,6 +52,15 @@ class IASIMetadata:
         """
         Verifies the header size by comparing it with the header size at the end of the header.
         """
+        # Reset file pointer to the beginning
+        self.f.seek(0)
+
+        # Skip first int32 value
+        np.fromfile(self.f, dtype='uint32', count=1)
+
+        # Skip header content
+        np.fromfile(self.f, dtype='uint8', count=self.header_size)
+
         # Read header size at the end of the header
         header_size_check = np.fromfile(self.f, dtype='uint32', count=1)[0]
 
