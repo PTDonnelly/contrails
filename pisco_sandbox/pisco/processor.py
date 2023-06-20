@@ -29,25 +29,6 @@ class IASIMetadata:
         self.record_size: int = None
         self.number_of_measurements: int = None
 
-    def count_measurements(self) -> int:
-        """
-        Calculate the number of measurements in the binary file based on its size, 
-        header size and record size.
-
-        Returns:
-        int: The number of measurements.
-        """
-        # Get the total size of the file
-        file_size = self.f.seek(0, 2)
-        print(file_size, self.header_size, self.record_size)
-        # Calculate the number of measurements
-        return (file_size - self.header_size - 8) // (self.record_size + 8)
-
-    def read_record_size(self) -> Union[int, None]:
-        self.f.seek(self.header_size + 8, 0)
-        record_size = np.fromfile(self.f, dtype='uint32', count=1)[0]
-        return None if record_size == 0 else record_size
-
     def _verify_header(self) -> None:
         """
         Verifies the header size by comparing it with the header size at the end of the header.
@@ -87,11 +68,33 @@ class IASIMetadata:
         # Read header size at the end of the header, check for a match
         self._verify_header()       
         return
+
+    def read_record_size(self) -> Union[int, None]:
+        self.f.seek(self.header_size + 8, 0)
+        self.record_size = np.fromfile(self.f, dtype='uint32', count=1)[0]
+        return
+
+    def count_measurements(self) -> int:
+        """
+        Calculate the number of measurements in the binary file based on its size, 
+        header size and record size.
+
+        Returns:
+        int: The number of measurements.
+        """
+        # Get the total size of the file
+        file_size = self.f.seek(0, 2)
+        print(file_size, self.header_size, self.record_size)
+        # Calculate the number of measurements
+        self.number_of_measurements = (file_size - self.header_size - 8) // (self.record_size + 8)
+        return
     
     def get_iasi_common_header(self):
         self.read_iasi_common_header_metadata()
         self.read_record_size()
         self.count_measurements()
+        return
+
 
     def get_iasi_common_record_fields(self) -> List[tuple]:
         # Format of fields in binary file (field_name, data_type, data_size, cumulative_data_size)
