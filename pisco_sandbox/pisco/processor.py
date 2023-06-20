@@ -197,7 +197,7 @@ class L1CProcessor:
                 # Read the data of each measurement
                 for measurement in range(self.number_of_measurements):
                     # Move the file pointer to the starting position of the current field
-                    self.f.seek(header_start * self.skip_measurements * measurement, 0)
+                    self.f.seek(header_start + self.skip_measurements * measurement, 0)
                     
                     # Read bytes
                     value = np.fromfile(self.f, dtype=dtype, count=1, sep='', offset=byte_offset)
@@ -328,72 +328,62 @@ class L1CProcessor:
         # print the DataFrame
         print(self.field_df.head())
         exit()
-        return self.field_df
+        return
 
 
-    def filter_bad_observations(self, data: np.array, date: object) -> np.array:
+    def filter_bad_observations(self, date: object) -> pd.DataFrame:
         """
         Filters bad observations based on IASI L1 data quality flags and date.
         
         Args:
-            data (np.ndarray): A numpy array containing the observation data.
+            data (pd.DataFrame): A DataFrame containing the observation data.
             date (object): The date for filtering the observations.
             
         Returns:
-            np.ndarray: A filtered numpy array containing the good observations.
+            pd.DataFrame: A filtered DataFrame containing the good observations.
         """
         print("Filtering spectra:")
+
         if date <= datetime(2012, 2, 8):
-            check_quality_flag = data[-3, :] == 0
-            check_data = np.sum(data[2:-4, :], axis=1) > 0
-            good_flag = np.logical_and(check_quality_flag, check_data)
+            check_quality_flag = self.field_df['quality_flag'] == 0
+            check_data = self.field_df.drop(['quality_flag', 'date_column'], axis=1).sum(axis=1) > 0
+            good_flag = check_quality_flag & check_data
         else:
-            check_quality_flags = np.logical_and(self.field_data['quality_flag_1'][:] == 0,
-                                                self.field_data['quality_flag_2'][:] == 0,
-                                                self.field_data['quality_flag_3'][:] == 0)
-            # check_quality_flags = np.logical_and(data[-11, :] == 0, data[-10, :] == 0, data[-9, :] == 0)
-            # check_data = np.sum(data[0:-6, :], axis=1) > 0
-        good_flag = check_quality_flags #np.logical_and(check_quality_flags)#, check_data)
-        
-        good_data = data[good_flag, :]
-        print(f"{np.round((good_data.shape[0] / data.shape[0]) * 100, 2)} % good data of {data.shape[0]} observations")
-        return good_data
+            check_quality_flags = (self.field_df['quality_flag_1'] == 0) & (self.field_df['quality_flag_2'] == 0) & (self.field_df['quality_flag_3'] == 0)
+            good_flag = check_quality_flags
+
+        # Throw away bad data, return the good
+        good_df = self.field_df[good_flag]
+        print(f"{np.round((len(good_df) / len(self.field_df)) * 100, 2)} % good data of {len(self.field_df)} observations")
+        return good_df
 
     @staticmethod
-    def save_observations(datapath_out: str, datafile_out: str, header: list, data: np.array) -> None:
+    def save_observations(datapath_out: str, datafile_out: str, good_df: pd.DataFrame) -> None:
         """
         Saves the observation data to a file.
         
         Args:
             datapath_out (str): The path to save the file.
             datafile_out (str): The name of the output file.
-            header (list): A list of integers to be written as the first line.
-            data (np.ndarray): A numpy array containing the observation data.
-            
-        Returns:
-            None
+            good_data (pd.DataFrame): A pandas DataFrame containing the observation data.
         """        
-        # Create a DataFrame with the transposed data
-        df = pd.DataFrame(data, columns=header)
-
         # Save the DataFrame to a file in HDF5 format
         outfile = f"{datapath_out}{datafile_out}".split(".")[0]
-        # df.to_hdf(f"{datapath_out}{datafile_out}.h5", key='df', mode='w')
-        df.to_csv(f"{outfile}.csv", columns=header, index=False, mode='w')
+        # good_df.to_hdf(f"{datapath_out}{datafile_out}.h5", key='df', mode='w')
+        good_df.to_csv(f"{outfile}.csv", index=False, mode='w')
         return
 
     
     def extract_spectra(self, datapath_out: str, datafile_out: str, year: str, month: str, day: str):
         # Extract and process binary data
-        header, all_data = self.extract_data()
+        self.extract_data()
         
         # Check observation quality and filter out bad observations
         date = datetime(int(year), int(month), int(day))
-        good_data = self.filter_bad_observations(all_data, date=date)
+        good_df = self.filter_bad_observations(date=date)
 
         # Define the output filename and save outputs
-        # datafile_out = f"IASI_L1C_{year}_{month}_{day}"
-        self.save_observations(datapath_out, datafile_out, header, good_data)
+        self.save_observations(datapath_out, datafile_out, good_df)
 
 
 class L2Processor:
