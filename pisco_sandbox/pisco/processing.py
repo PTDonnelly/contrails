@@ -229,6 +229,12 @@ class Preprocessor:
             self.field_df[field] = data
         return
 
+
+
+
+    def _read_radiance(self):
+        pass
+
     def _calculate_local_time(self) -> np.ndarray:
         """
         Calculate the local time (in hours, UTC) that determines whether it is day or night at a specific longitude.
@@ -268,6 +274,8 @@ class Preprocessor:
 
     def filter_observations(self):
         pass
+
+
 
 
     def close_binary_file(self):
