@@ -185,7 +185,8 @@ class L1CProcessor:
             if (i < 8) or (field in self.targets):
                 print(f"Extracting: {field}")
 
-                self.f.seek((self.header_size + 12 + cumsize), 0)
+                header_start = self.header_size + 12 + cumsize
+                self.f.seek(header_start, 0)
 
                 # Calculate the byte offset to the next measurement
                 byte_offset = self.record_size + 8 - dtype_size
@@ -196,7 +197,7 @@ class L1CProcessor:
                 # Read the data of each measurement
                 for measurement in range(self.number_of_measurements):
                     # Move the file pointer to the starting position of the current field
-                    # self.f.seek((self.header_size + 12 + cumsize) * self.skip_measurements * measurement, 0)
+                    # self.f.seek(header_start * self.skip_measurements * measurement, 0)
                     
                     # Read bytes
                     value = np.fromfile(self.f, dtype=dtype, count=1, sep='', offset=byte_offset)
@@ -206,7 +207,7 @@ class L1CProcessor:
                 self.field_df[field] = data
         print(self.field_df.head())
         # Create 'Datetime' column
-        self.field_df['Datetime'] = self.field_df['year'].astype(str) + \
+        self.field_df['Datetime'] = self.field_df['year'].apply(lambda x: f'{int(x):04d}') + \
                                     self.field_df['month'].apply(lambda x: f'{int(x):02d}') + \
                                     self.field_df['day'].apply(lambda x: f'{int(x):02d}') + '.' + \
                                     self.field_df['hour'].apply(lambda x: f'{int(x):02d}') + \
@@ -280,8 +281,9 @@ class L1CProcessor:
         last_field_end = self.fields[-1][-1] # End of the surface_type field
 
         # Go to spectral radiance data (skip header and previous record data, "12"s are related to reading )
-        start_read_position = self.header_size + 12 + last_field_end + (4 * self.number_of_channels) 
-        self.f.seek(start_read_position, 0)
+        spectrum_start = self.header_size + 12 + last_field_end + (4 * self.number_of_channels) 
+        self.f.seek(spectrum_start, 0)
+
         # Calculate the offset to skip to the next measurement
         byte_offset = self.record_size + 8 - (4 * self.number_of_channels)
         
@@ -291,7 +293,7 @@ class L1CProcessor:
         # Iterate over each measurement and extract the spectral radiance data
         for measurement in range(self.number_of_measurements):
             # Move the file pointer to the starting position of the current field
-            # self.f.seek(start_read_position * self.skip_measurements * measurement, 0)
+            # self.f.seek(spectrum_start * self.skip_measurements * measurement, 0)
             value = np.fromfile(self.f, dtype='float32', count=self.number_of_channels, sep='', offset=byte_offset)
             data[:, measurement] = np.nan if len(value) == 0 else value
 
