@@ -203,6 +203,7 @@ class L1CProcessor:
                     # Read bytes
                     value = np.fromfile(self.f, dtype=dtype, count=1, sep='', offset=byte_offset)
                     data[measurement] = np.nan if len(value) == 0 else value[0]
+                input()
 
                 # Store the data in the DataFrame
                 self.field_df[field] = data
