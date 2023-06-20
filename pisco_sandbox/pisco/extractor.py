@@ -90,12 +90,14 @@ class Extractor:
         # Define the parameters for the command
         if (self.data_level == 'l1c'):
             list_of_parameters = [
+                f"-d {self.datapath_in}",
                 f"-fd {self.year}-{self.month}-{self.day} -ld {self.year}-{self.month}-{self.day}",  # first and last day
                 f"-c {self.config.channels[0]}-{self.config.channels[-1]}",  # spectral channels
                 f"-of bin"  # output file format
             ]
         elif (self.data_level == 'l2'):
             list_of_parameters = [
+                f"-d2 {self.datapath_in}",
                 f"-fd {self.year}-{self.month}-{self.day} -ld {self.year}-{self.month}-{self.day}",
                 f"–t2 clp",
                 f"-of bin"  # output file format
@@ -119,7 +121,7 @@ class Extractor:
             # Get the command parameters
             parameters = self._build_parameters()
             # Return the complete command
-            return f"{runpath} -d {self.datapath_in} {parameters} -out {self.datapath_out}{self.datafile_out}"
+            return f"{runpath} {parameters} -out {self.datapath_out}{self.datafile_out}"
         else:
             # If the data level is not 'l1c' or 'l2', raise an error
             raise ValueError("Invalid data path type. Accepts 'l1c' or 'l2'.")
