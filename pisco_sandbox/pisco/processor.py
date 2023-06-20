@@ -44,7 +44,7 @@ class IASIMetadata:
         return (file_size - self.header_size - 8) // (self.record_size + 8)
 
     def read_record_size(self) -> Union[int, None]:
-        self.f.seek(self.header_size + 8)
+        self.f.seek(self.header_size + 8, 0)
         record_size = np.fromfile(self.f, dtype='uint32', count=1)[0]
         return None if record_size == 0 else record_size
 
