@@ -39,7 +39,7 @@ class IASIMetadata:
         """
         # Get the total size of the file
         file_size = self.f.seek(0, 2)
-
+        print(file_size, self.header_size, self.record_size)
         # Calculate the number of measurements
         return (file_size - self.header_size - 8) // (self.record_size + 8)
 
