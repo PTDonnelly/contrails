@@ -34,7 +34,7 @@ class Processor:
         
         """
         # Open csv files
-        print("Loading L1C spectra and L2 cloud products:")
+        print("\nLoading L1C spectra and L2 cloud products:")
         self._get_intermediate_analysis_data_paths()
         self.df_l1c, self.df_l2 = pd.read_csv(self.datafile_l1c), pd.read_csv(self.datafile_l2)
         return

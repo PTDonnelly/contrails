@@ -60,7 +60,7 @@ class Metadata:
         # Get the total size of the file
         file_size = self.f.seek(0, 2)
         # Calculate the number of measurements (minus 1 to avoid erroneous reads at the end of the byte structure)
-        self.number_of_measurements = 100 #((file_size - self.header_size - 8) // (self.record_size + 8)) - 1
+        self.number_of_measurements = 10000 #((file_size - self.header_size - 8) // (self.record_size + 8)) - 1
         return
     
     def _read_record_size(self) -> int:
@@ -119,57 +119,57 @@ class Metadata:
     def _get_iasi_common_record_fields(self) -> List[tuple]:
         # Format of fields in binary file (field_name, data_type, data_size, cumulative_data_size)
         common_fields = [
-                        ('year', 'uint16', 2, 2),
-                        ('month', 'uint8', 1, 3),
-                        ('day', 'uint8', 1, 4),
-                        ('hour', 'uint8', 1, 5),
-                        ('minute', 'uint8', 1, 6),
-                        ('millisecond', 'uint32', 4, 10),
-                        ('latitude', 'float32', 4, 14),
-                        ('longitude', 'float32', 4, 18),
-                        ('satellite_zenith_angle', 'float32', 4, 22),
-                        ('bearing', 'float32', 4, 26),
-                        ('solar_zentih_angle', 'float32', 4, 30),
-                        ('solar_azimuth', 'float32', 4, 34),
-                        ('field_of_view_number', 'uint32', 4, 38),
-                        ('orbit_number', 'uint32', 4, 42),
-                        ('scan_line_number', 'uint32', 4, 46),
-                        ('height_of_station', 'float32', 4, 50)]
+                        ('Year', 'uint16', 2, 2),
+                        ('Month', 'uint8', 1, 3),
+                        ('Day', 'uint8', 1, 4),
+                        ('Hour', 'uint8', 1, 5),
+                        ('Minute', 'uint8', 1, 6),
+                        ('Millisecond', 'uint32', 4, 10),
+                        ('Latitude', 'float32', 4, 14),
+                        ('Longitude', 'float32', 4, 18),
+                        ('Satellite Zenith Angle', 'float32', 4, 22),
+                        ('Bearing', 'float32', 4, 26),
+                        ('Solar Zentih Angle', 'float32', 4, 30),
+                        ('Solar Azimuth', 'float32', 4, 34),
+                        ('Field of View Number', 'uint32', 4, 38),
+                        ('Orbit Number', 'uint32', 4, 42),
+                        ('Scan Line Number', 'uint32', 4, 46),
+                        ('Height of Station', 'float32', 4, 50)]
         return common_fields
     
     def _get_iasi_l1c_record_fields(self) -> List[tuple]:
         # Format of L1C-specific fields in binary file (field_name, data_type, data_size, cumulative_data_size),
         # cumulative total continues from the fourth digit of the last tuple in common_fields.
         l1c_fields = [
-                    ('day_version', 'uint16', 2, 52),
-                    ('start_channel_1', 'uint32', 4, 56),
-                    ('end_channel_1', 'uint32', 4, 60),
-                    ('quality_flag_1', 'uint32', 4, 64),
-                    ('start_channel_2', 'uint32', 4, 68),
-                    ('end_channel_2', 'uint32', 4, 72),
-                    ('quality_flag_2', 'uint32', 4, 76),
-                    ('start_channel_3', 'uint32', 4, 80),
-                    ('end_channel_3', 'uint32', 4, 84),
-                    ('quality_flag_3', 'uint32', 4, 88),
-                    ('cloud_fraction', 'uint32', 4, 92),
-                    ('surface_type', 'uint8', 1, 93)]
+                    ('Day version', 'uint16', 2, 52),
+                    ('Start Channel 1', 'uint32', 4, 56),
+                    ('End Channel 1', 'uint32', 4, 60),
+                    ('Quality flag 1', 'uint32', 4, 64),
+                    ('Start Channel 2', 'uint32', 4, 68),
+                    ('End Channel 2', 'uint32', 4, 72),
+                    ('Quality flag 2', 'uint32', 4, 76),
+                    ('Start Channel 3', 'uint32', 4, 80),
+                    ('End Channel 3', 'uint32', 4, 84),
+                    ('Quality flag 3', 'uint32', 4, 88),
+                    ('Cloud Draction', 'uint32', 4, 92),
+                    ('Surface Type', 'uint8', 1, 93)]
         return l1c_fields
     
     def _get_iasi_l2_record_fields(self) -> List[tuple]:
         # Format of L2-specific fields in binary file (field_name, data_type, data_size, cumulative_data_size),
         # cumulative total continues from the fourth digit of the last tuple in common_fields.
         l2_fields = [
-                    ('superadiabatic_indicator', 'uint8', 1, 51),
-                    ('land_sea_qualifier', 'uint8', 1, 52),
-                    ('day_nght_qualifier', 'uint8', 1, 53),
-                    ('processing_technique', 'uint32', 4, 57),
-                    ('sun_glint_indicator', 'uint8', 1, 58),
-                    ('cloud_formation_and_height_assignment', 'uint32', 4, 62),
-                    ('instrument_detecting_clouds', 'uint32', 4, 66),
-                    ('validation_flag_for_IASI_L1_product', 'uint32', 4, 70),
-                    ('quality_completeness_of_retrieval', 'uint32', 4, 74),
-                    ('retrieval_choice_indicator', 'uint32', 4, 78),
-                    ('satellite_manoeuvre_indicator', 'uint32', 4, 82)]
+                    ('Superadiabatic Indicator', 'uint8', 1, 51),
+                    ('Land Sea Qualifier', 'uint8', 1, 52),
+                    ('Day Night Qualifier', 'uint8', 1, 53),
+                    ('Processing Technique', 'uint32', 4, 57),
+                    ('Sun Glint Indicator', 'uint8', 1, 58),
+                    ('Cloud Formation and Height Assignment', 'uint32', 4, 62),
+                    ('Instrument Detecting Clouds', 'uint32', 4, 66),
+                    ('Validation Flag for IASI L1 Product', 'uint32', 4, 70),
+                    ('Quality Completeness of Retrieval', 'uint32', 4, 74),
+                    ('Retrieval Choice Indicator', 'uint32', 4, 78),
+                    ('Satellite Manoeuvre Indicator', 'uint32', 4, 82)]
         return l2_fields
     
     def _get_ozo_record_fields(self):
@@ -458,15 +458,14 @@ class Preprocessor:
             
             # Remove observations (DataFrame rows) based on IASI quality_flags
             self.filter_bad_spectra(datetime(int(year), int(month), int(day)))
-
-        elif self.data_level == "l2":
+        
+        if self.data_level == "l2":
             # Read L2-specific record fields and add to DataFrame
             print("\nL2 Record Fields:")
             self.read_record_fields(self.header._get_iasi_l2_record_fields())
-
+            
             # # Remove observations (DataFrame rows) based on IASI cloud_phase
             # self.filter_unwanted_cloud_phase()
-
         self.close_binary_file()
 
         # Construct Local Time column
