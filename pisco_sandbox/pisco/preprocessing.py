@@ -442,7 +442,6 @@ class Preprocessor:
     
 
     def preprocess_files(self, year: str, month: str, day: str) -> None:
-        
         # Open binary file and extract metadata
         self.open_binary_file()
         

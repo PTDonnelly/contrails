@@ -26,7 +26,7 @@ class Processor:
         elif not os.path.exists(self.datafile_l1c):
             raise ValueError('L1C data files do not exist. Cannot correlate.')
         elif not os.path.exists(self.datafile_l2):
-            raise ValueError('2 data files do not exist. Cannot correlate.')
+            raise ValueError('L2 data files do not exist. Cannot correlate.')
         
     def load_data(self) -> None:
         """
