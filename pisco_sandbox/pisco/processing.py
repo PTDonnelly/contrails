@@ -47,7 +47,7 @@ class Metadata:
         # Get the total size of the file
         file_size = self.f.seek(0, 2)
         # Calculate the number of measurements
-        self.number_of_measurements = (file_size - self.header_size - 8) // (self.record_size + 8)
+        self.number_of_measurements = ((file_size - self.header_size - 8) // (self.record_size + 8)) - 1
         return
     
     def _read_record_size(self) -> Union[int, None]:
