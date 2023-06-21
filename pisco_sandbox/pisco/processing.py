@@ -110,8 +110,8 @@ class Processor:
             
             # Save the DataFrame to a file in csv format, split by local time
             # df.to_hdf(f"{datapath_out}{datafile_out}.h5", key='df', mode='w')
-            self.merged_df_day.to_csv(f"{self.datapath_out}day_extracted_spectra.csv", index=False, mode='w')
-            self.merged_df_night.to_csv(f"{self.datapath_out}night_extracted_spectra.csv", index=False, mode='w')
+            self.merged_df_day.to_csv(f"{self.datapath_l1c}day_extracted_spectra.csv", index=False, mode='w')
+            self.merged_df_night.to_csv(f"{self.datapath_l1c}night_extracted_spectra.csv", index=False, mode='w')
         
         # # Delete original csv files
         # self._delete_intermediate_analysis_data()
