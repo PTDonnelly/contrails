@@ -193,8 +193,7 @@ class Preprocessor:
 
     def open_binary_file(self) -> None:
         # Open binary file
-        print("")
-        print("Loading intermediate L1C file:")
+        print("\nLoading intermediate L1C file...")
         self.f = open(self.intermediate_file, 'rb')
         
         # Get structure of file header and data record
@@ -366,7 +365,7 @@ class Preprocessor:
         """  
         # Create output file name
         outfile = self.intermediate_file.split(".")[0]
-        print("\nSaving DataFrame to: {outfile}")    
+        print(f"\nSaving DataFrame to: {outfile}")    
 
         # Save the DataFrame to a file in HDF5 format
         # self.data_record_df.to_hdf(f"{datapath_out}{datafile_out}.h5", key='df', mode='w')
