@@ -298,28 +298,47 @@ class Preprocessor:
 
         # # Iterate over each measurement and extract the spectral radiance data
         # for measurement in range(self.header.number_of_measurements):
-        #     value = np.fromfile(self.f, dtype='float32', count=self.header.number_of_channels, sep='', offset=byte_offset)
-        #     data[:, measurement] = np.nan if len(value) == 0 else value
+        #     spectrum = np.fromfile(self.f, dtype='float32', count=self.header.number_of_channels, sep='', offset=byte_offset)
+        #     data[:, measurement] = np.nan if len(spectrum) == 0 else spectrum
 
-        # # Assign channel IDs and values to DataFrame
+        # # Assign channel IDs and spectra to DataFrame
         # for i, id in enumerate(self.header.channel_IDs):
         #     self.data_record_df[f'Channel {id}'] = data[i, :]
         # #######
 
-        # Prepare empty arrays in the DataFrame
-        for id in self.header.channel_IDs:
-            self.data_record_df[f'Channel {id}'] = np.empty(self.header.number_of_measurements)
+        # ########
+        # # Prepare empty arrays in the DataFrame
+        # for id in self.header.channel_IDs:
+        #     self.data_record_df[f'Channel {id}'] = np.empty(self.header.number_of_measurements)
         
+        # # Iterate over each measurement and extract the spectral radiance data
+        # for measurement in range(self.header.number_of_measurements):
+        #     spectrum = np.fromfile(self.f, dtype='float32', count=self.header.number_of_channels, sep='', offset=byte_offset)
+            
+        #     if len(spectrum) == 0:
+        #         spectrum = np.full(self.header.number_of_channels, np.nan)
+            
+        #     for i, id in enumerate(self.header.channel_IDs):
+        #         self.data_record_df.loc[measurement, f'Channel {id}'] = spectrum[i]
+        # ########
+
+        ########
+        # Prepare empty arrays for each channel
+        channel_data = {f'Channel {id}': np.empty(self.header.number_of_measurements) for id in self.header.channel_IDs}
+
         # Iterate over each measurement and extract the spectral radiance data
         for measurement in range(self.header.number_of_measurements):
             spectrum = np.fromfile(self.f, dtype='float32', count=self.header.number_of_channels, sep='', offset=byte_offset)
-            
             if len(spectrum) == 0:
                 spectrum = np.full(self.header.number_of_channels, np.nan)
-            
+
             for i, id in enumerate(self.header.channel_IDs):
-                self.data_record_df.loc[measurement, f'Channel {id}'] = spectrum[i]
-         
+                channel_data[f'Channel {id}'][measurement] = spectrum[i]
+
+        # Assign the data to the DataFrame
+        for id in self.header.channel_IDs:
+            self.data_record_df[f'Channel {id}'] = channel_data[f'Channel {id}']
+        ########
         return
 
 
