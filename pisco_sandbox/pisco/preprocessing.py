@@ -271,19 +271,16 @@ class Preprocessor:
             # Calculate the byte offset to the next measurement
             byte_offset = self.header.record_size + 8 - dtype_size
 
-            # # Prepare an empty array to store the data of the current field
-            # data = np.empty(self.header.number_of_measurements)
+            # Prepare an empty array to store the data of the current field
+            data = np.empty(self.header.number_of_measurements)
             
-            # # Read the data of each measurement
-            # for measurement in range(self.header.number_of_measurements):
-            #     value = np.fromfile(self.f, dtype=dtype, count=1, sep='', offset=byte_offset)
-            #     data[measurement] = np.nan if len(value) == 0 else value[0]
+            # Read the data of each measurement
+            for measurement in range(self.header.number_of_measurements):
+                value = np.fromfile(self.f, dtype=dtype, count=1, sep='', offset=byte_offset)
+                data[measurement] = np.nan if len(value) == 0 else value[0]
 
-            # # Store the data in the DataFrame
-            # self.data_record_df[field] = data
-
-            # Read the data of all measurements at once and store in DataFrame
-            self.data_record_df[field] = np.fromfile(self.f, dtype=dtype, count=self.header.number_of_measurements, sep='', offset=byte_offset)
+            # Store the data in the DataFrame
+            self.data_record_df[field] = data
         return
 
 
