@@ -259,8 +259,6 @@ class Preprocessor:
 
             # Store the data in the DataFrame
             self.data_record_df[field] = data
-                
-        print(self.data_record_df.head())
         return
 
 
@@ -326,6 +324,7 @@ class Preprocessor:
             fields = self.header._get_iasi_l1c_record_fields()
             self.read_record_fields(fields)
             self.read_spectral_radiance(fields)
+            print(self.data_record_df[["Channel 1", "Channel 2"]])
         elif self.data_level == "l2":
             self.read_record_fields(self.header._get_iasi_l2_record_fields())
         
