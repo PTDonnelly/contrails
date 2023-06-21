@@ -106,55 +106,60 @@ class Metadata:
     def _get_iasi_common_record_fields(self) -> List[tuple]:
         # Format of fields in binary file (field_name, data_type, data_size, cumulative_data_size)
         common_fields = [
-            ('year', 'uint16', 2),
-            ('month', 'uint8', 1),
-            ('day', 'uint8', 1),
-            ('hour', 'uint8', 1),
-            ('minute', 'uint8', 1),
-            ('millisecond', 'uint32', 4,),
-            ('latitude', 'float32', 4,),
-            ('longitude', 'float32', 4,),
-            ('satellite_zenith_angle', 'float32', 4,),
-            ('bearing', 'float32', 4,),
-            ('solar_zentih_angle', 'float32', 4,),
-            ('solar_azimuth', 'float32', 4,),
-            ('field_of_view_number', 'uint32', 4,),
-            ('orbit_number', 'uint32', 4,),
-            ('scan_line_number', 'uint32', 4,),
-            ('height_of_station', 'float32', 4,)]
+                        ('year', 'uint16', 2, 2),
+                        ('month', 'uint8', 1, 3),
+                        ('day', 'uint8', 1, 4),
+                        ('hour', 'uint8', 1, 5),
+                        ('minute', 'uint8', 1, 6),
+                        ('millisecond', 'uint32', 4, 10),
+                        ('latitude', 'float32', 4, 14),
+                        ('longitude', 'float32', 4, 18),
+                        ('satellite_zenith_angle', 'float32', 4, 22),
+                        ('bearing', 'float32', 4, 26),
+                        ('solar_zentih_angle', 'float32', 4, 30),
+                        ('solar_azimuth', 'float32', 4, 34),
+                        ('field_of_view_number', 'uint32', 4, 38),
+                        ('orbit_number', 'uint32', 4, 42),
+                        ('scan_line_number', 'uint32', 4, 46),
+                        ('height_of_station', 'float32', 4, 50)
+                        ]
         return common_fields
     
     def _get_iasi_l1c_record_fields(self) -> List[tuple]:
         # Format of fields in binary file (field_name, data_type, data_size, cumulative_data_size)
         l1c_fields = [
-            ('day_version', 'uint16', 2),
-            ('start_channel_1', 'uint32', 4),
-            ('end_channel_1', 'uint32', 4),
-            ('quality_flag_1', 'uint32', 4),
-            ('start_channel_2', 'uint32', 4),
-            ('end_channel_2', 'uint32', 4),
-            ('quality_flag_2', 'uint32', 4),
-            ('start_channel_3', 'uint32', 4),
-            ('end_channel_3', 'uint32', 4),
-            ('quality_flag_3', 'uint32', 4),
-            ('cloud_fraction', 'uint32', 4),
-            ('surface_type', 'uint8', 1)]
+                    ('day_version', 'uint16', 2, 2),
+                    ('start_channel_1', 'uint32', 4, 6),
+                    ('end_channel_1', 'uint32', 4, 10),
+                    ('quality_flag_1', 'uint32', 4, 14),
+                    ('start_channel_2', 'uint32', 4, 18),
+                    ('end_channel_2', 'uint32', 4, 22),
+                    ('quality_flag_2', 'uint32', 4, 26),
+                    ('start_channel_3', 'uint32', 4, 30),
+                    ('end_channel_3', 'uint32', 4, 34),
+                    ('quality_flag_3', 'uint32', 4, 38),
+                    ('cloud_fraction', 'uint32', 4, 42),
+                    ('surface_type', 'uint8', 1, 43)
+                    ]
+
         return l1c_fields
     
     def _get_iasi_l2_record_fields(self) -> List[tuple]:
         # Format of fields in binary file (field_name, data_type, data_size, cumulative_data_size)
         l2_fields = [
-            ('superadiabatic_indicator', 'uint8', 1),
-            ('land_sea_qualifier', 'uint8', 1),
-            ('day_nght_qualifier', 'uint8', 1),
-            ('processing_technique', 'uint32', 4),
-            ('sun_glint_indicator', 'uint8', 1),
-            ('cloud_formation_and_height_assignment', 'uint32', 4),
-            ('instrument_detecting_clouds', 'uint32', 4),
-            ('validation_flag_for_IASI_L1_product', 'uint32', 4),
-            ('quality_completeness_of_retrieval', 'uint32', 4),
-            ('retrieval_choice_indicator', 'uint32', 4),
-            ('satellite_maoeuvre_indicator', 'uint32', 4),]
+                    ('superadiabatic_indicator', 'uint8', 1, 1),
+                    ('land_sea_qualifier', 'uint8', 1, 2),
+                    ('day_nght_qualifier', 'uint8', 1, 3),
+                    ('processing_technique', 'uint32', 4, 7),
+                    ('sun_glint_indicator', 'uint8', 1, 8),
+                    ('cloud_formation_and_height_assignment', 'uint32', 4, 12),
+                    ('instrument_detecting_clouds', 'uint32', 4, 16),
+                    ('validation_flag_for_IASI_L1_product', 'uint32', 4, 20),
+                    ('quality_completeness_of_retrieval', 'uint32', 4, 24),
+                    ('retrieval_choice_indicator', 'uint32', 4, 28),
+                    ('satellite_manoeuvre_indicator', 'uint32', 4, 32),
+                    ]
+
         return l2_fields
     
     def _get_ozo_record_fields(self):
@@ -198,7 +203,38 @@ class Preprocessor:
         self.header = Metadata(self.f)
         self.header.get_iasi_common_header()
         return
-    
+        
+    def read_record_fields(self, fields: List[tuple]) -> None:
+        """
+        Reads the data of each field from the binary file and store it in the field_df dictionary.
+
+        This function only extracts the first 8 fields and the ones listed in the targets attribute.
+        """
+        # Iterate over each field
+        self.f.tell()
+        for field, dtype, dtype_size, cumsize in fields:
+            print(f"Extracting: {field}")
+
+            # Move the file pointer to the starting position of the current field
+            field_start = self.header.header_size + 12 + cumsize
+            self.f.seek(field_start, 0)
+            self.f.tell()
+
+            # Calculate the byte offset to the next measurement
+            byte_offset = self.header.record_size + 8 - dtype_size
+
+            # Prepare an empty array to store the data of the current field
+            data = np.empty(self.header.number_of_measurements)
+            
+            # Read the data of each measurement
+            for measurement in range(self.header.number_of_measurements):
+                value = np.fromfile(self.f, dtype=dtype, count=1, sep='', offset=byte_offset)
+                data[measurement] = np.nan if len(value) == 0 else value[0]
+
+            # Store the data in the DataFrame
+            self.data_record_df[field] = data
+        return
+
     def read_spectral_radiance(self, fields: List[tuple]) -> None:
         """
         Extracts and stores the spectral radiance measurements from the binary file.
@@ -209,6 +245,7 @@ class Preprocessor:
         last_field_end = fields[-1][-1] # End of the surface_type field
 
         # Go to spectral radiance data (skip header and previous record data, "12"s are related to reading )
+        self.f.tell()
         start_read_position = self.header.header_size + 12 + last_field_end + (4 * self.header.number_of_channels) #12
         self.f.seek(start_read_position, 0)
         
@@ -227,40 +264,6 @@ class Preprocessor:
         for i, id in enumerate(self.header.channel_IDs):
             self.data_record_df[f'Channel {id}'] = data[i, :]
         return
-    
-    def read_record_fields(self, fields) -> None:
-        """
-        Reads the data of each field from the binary file and store it in the field_df dictionary.
-
-        This function only extracts the first 8 fields and the ones listed in the targets attribute.
-        """
-        # Iterate over each field
-        cumsize = 0
-        for field, dtype, dtype_size in fields:
-            print(f"Extracting: {field}")
-            
-            # Start counting number of bytes passed
-            cumsize += dtype_size
-
-            # Move the file pointer to the starting position of the current field
-            field_start = self.header.header_size + 12 + cumsize
-            self.f.seek(field_start, 0)
-
-            # Calculate the byte offset to the next measurement
-            byte_offset = self.header.record_size + 8 - dtype_size
-
-            # Prepare an empty array to store the data of the current field
-            data = np.empty(self.header.number_of_measurements)
-            
-            # Read the data of each measurement
-            for measurement in range(self.header.number_of_measurements):
-                value = np.fromfile(self.f, dtype=dtype, count=1, sep='', offset=byte_offset)
-                data[measurement] = np.nan if len(value) == 0 else value[0]
-
-            # Store the data in the DataFrame
-            self.data_record_df[field] = data
-        return
-
 
 
     def _calculate_local_time(self) -> None:
