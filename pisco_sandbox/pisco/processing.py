@@ -105,6 +105,7 @@ class Metadata:
 
     def _get_iasi_common_record_fields(self) -> List[tuple]:
         # Format of fields in binary file (field_name, data_type, data_size, cumulative_data_size)
+        print("")
         print("Common Record Fields:")
         common_fields = [
                         ('year', 'uint16', 2, 2),
@@ -128,6 +129,7 @@ class Metadata:
     def _get_iasi_l1c_record_fields(self) -> List[tuple]:
         # Format of L1C-specific fields in binary file (field_name, data_type, data_size, cumulative_data_size),
         # cumulative total continues from the fourth digit of the last tuple in common_fields
+        print("")
         print("L1C Record Fields:")
         l1c_fields = [
                     ('day_version', 'uint16', 2, 52),
@@ -147,6 +149,7 @@ class Metadata:
     def _get_iasi_l2_record_fields(self) -> List[tuple]:
         # Format of L2-specific fields in binary file (field_name, data_type, data_size, cumulative_data_size),
         # cumulative total continues from the fourth digit of the last tuple in common_fields
+        print("")
         print("L2 Record Fields:")
         l2_fields = [
                     ('superadiabatic_indicator', 'uint8', 1, 51),
@@ -195,6 +198,7 @@ class Preprocessor:
 
     def open_binary_file(self) -> None:
         # Open binary file
+        print("")
         print("Loading intermediate L1C file:")
         self.f = open(self.filepath, 'rb')
         
@@ -207,7 +211,7 @@ class Preprocessor:
         self.f.close()
         return
     
-    
+
     def read_record_fields(self, fields: List[tuple]) -> None:
         """
         Reads the data of each field from the binary file and store it in the field_df dictionary.
