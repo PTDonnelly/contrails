@@ -13,47 +13,6 @@ class Processor:
         self.merged_df: object = None
         self.merged_datafile: str = None
 
-    def gather_files(self) -> None:
-        """
-        Gather all CSV files from a specified directory, combine them into a single dataframe, 
-        and save this combined dataframe as a new CSV file in the same directory.
-
-        This function scans through all files in the directory specified by `datapath_out`,
-        reads each CSV file into a dataframe, concatenates these dataframes into a single dataframe,
-        and saves this combined dataframe as a new CSV file ('cloud_products.csv') in the same directory.
-
-        Args:
-        ----------
-        datapath_out : str
-            The path of the directory that contains the CSV files to gather.
-
-        Notes
-        -----
-        The CSV files in `datapath_out` must all have the same columns for the concatenation to work.
-        The combined dataframe will have a new index, not preserving the original indices from separate dataframes.
-        The row indices are not included in the saved CSV file.
-        """
-        print("Combining L2 cloud products into single file")
-        # Create an empty list to hold dataframes
-        df_list = []
-        for datafile_out in os.scandir(self.datapath_l2):
-            # Check that entry is a file
-            if datafile_out.is_file():
-                # Open csv as data frame and append
-                df = pd.read_csv(datafile_out.path)
-                df_list.append(df)
-
-        # Concatenate all dataframes in the list
-        combined_df = pd.concat(df_list, ignore_index=True)
-
-        # Delete all original csv files in data_path_out
-        [os.remove(file) for file in glob.glob(os.path.join(self.datapath_l2, '*.csv'))]
-
-        # Save as single csv
-        combined_df.to_csv(os.path.join(self.datapath_l2, 'cloud_products.csv'), index=False)
-        return
-
-
     def _get_intermediate_analysis_data_paths(self) -> None:
         """
         Defines the paths to the intermediate analysis data files.
@@ -64,7 +23,11 @@ class Processor:
        # Check if L1C and/or L2 data files exist
         if not os.path.exists(self.datafile_l1c) and not os.path.exists(self.datafile_l2):
             raise ValueError('Neither L1C nor L2 data files exist. Nothing to correlate.')
-    
+        elif not os.path.exists(self.datafile_l1c):
+            raise ValueError('L1C data files do not exist. Cannot correlate.')
+        elif not os.path.exists(self.datafile_l2):
+            raise ValueError('2 data files do not exist. Cannot correlate.')
+        
     def load_data(self) -> None:
         """
         Opens two DataFrames loaded from the intermediate analysis data files.
@@ -93,7 +56,7 @@ class Processor:
         self._check_headers()
 
         # Latitude and longitude values are rounded to 2 decimal places.
-        decimal_places = 1
+        decimal_places = 4
         self.df_l1c[['Latitude', 'Longitude']] = self.df_l1c[['Latitude', 'Longitude']].round(decimal_places)
         self.df_l2[['Latitude', 'Longitude']] = self.df_l2[['Latitude', 'Longitude']].round(decimal_places)
         
@@ -124,8 +87,8 @@ class Processor:
         """
         Delete the intermediate analysis data files used for correlating spectra and clouds.
         """
-        os.remove(self.datafile_l1c)
-        os.remove(self.datafile_l2)
+        # os.remove(self.datafile_l1c)
+        # os.remove(self.datafile_l2)
 
     def _get_cloud_phase(self) -> Optional[str]:
         """
@@ -156,16 +119,16 @@ class Processor:
             # merged_df_night.to_csv(f"{datapath_out}night_extracted_spectra.csv", index=False, mode='w')
         
         # Delete original csv files
-        # self._delete_intermediate_analysis_data()
+        self._delete_intermediate_analysis_data()
         return
-    
 
-    def preview_merged_data(self) -> None:
-        # Load the CSV file
-        df = pd.read_csv(self.merged_datafile)
 
-        # Get the number of rows (records) and columns in the DataFrame
-        num_rows, num_cols = df.shape
-
-        print(f"The dataframe has {num_rows} rows and {num_cols} columns.")
-        return
+    def correlate_spectra_with_cloud_products(self):
+        # Load IASI spectra and cloud products
+        self.load_data()      
+        
+        # Correlates measurements, keep matching locations and times of observation
+        self.correlate_measurements()
+        
+        # Saves the merged data, and deletes the original data.
+        self.save_merged_data()

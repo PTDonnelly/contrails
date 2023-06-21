@@ -2,7 +2,7 @@ from .extraction import Extractor
 from .preprocessing import Preprocessor
 from .processing import Processor
 
-def process_iasi(ex: Extractor, data_level: str):
+def preprocess_iasi(ex: Extractor, data_level: str):
     """
     This function is used to process IASI (Infrared Atmospheric Sounding Interferometer) data 
     by extracting raw binary files and preprocessing them into pandas DataFrames.
@@ -35,8 +35,7 @@ def process_iasi(ex: Extractor, data_level: str):
     return
 
 
-
-def correlate_l1c_l2(ex: Extractor):
+def process_iasi(ex: Extractor):
     """
     Correlate level 1C spectra and level 2 cloud products.
 
@@ -50,18 +49,5 @@ def correlate_l1c_l2(ex: Extractor):
         A CSV file containing all spectra at those locations and times.
     """  
     p = Processor(ex.config.datapath_out, ex.year, ex.month, ex.day, ex.config.cloud_phase)
-
-    # Concatenate all L2 CSV files into a single coud products file
-    p.gather_files()
-    
-    # Load IASI spectra and cloud products
-    p.load_data()      
-    
-    # Correlates measurements, keep matching locations and times of observation
-    p.correlate_measurements()
-    
-    # Saves the merged data, and deletes the original data.
-    p.save_merged_data()
-
-    p.preview_merged_data()
+    p.correlate_spectra_with_cloud_products()
     return

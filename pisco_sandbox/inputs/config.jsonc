@@ -5,8 +5,8 @@
     // L2: bool, Specifies whether Level 2 data should be processed
     "L2": false,
 
-    // correlate: bool, Specifies whether Level 1C and Level 2 data should be correlated for filtering spectra
-    "correlate": false,
+    // process: bool, Specifies whether Level 1C and Level 2 data should be correlated for filtering spectra
+    "process": false,
 
     // year_list: List[int], List of years for extraction
     "year_list": [2022],
