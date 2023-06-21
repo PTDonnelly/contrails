@@ -1,35 +1,39 @@
-import os
-
 from .extraction import Extractor
 from .processing import Preprocessor
 from .correlation import L1C_L2_Correlator
 
 def process_iasi(ex: Extractor, data_level: str):
     """
-    Process IASI data.
+    This function is used to process IASI (Infrared Atmospheric Sounding Interferometer) data 
+    by extracting raw binary files and preprocessing them into pandas DataFrames.
 
-    Extracts and processes IASI spectral data from intermediate binary files,
-    applies quality control and saves the output.
+    It first uses an Extractor object to fetch the raw data files for a specific data level, 
+    and then performs extraction. 
 
-    Args:
-        Instance of the Extractor class 
-    Result:
-        A HDF5 file containing all good spectra from this intermediate file.
+    If the extraction is successful, the function creates a Preprocessor object using the path 
+    to the extracted intermediate file and the data level. This Preprocessor object preprocesses 
+    the files to create a DataFrame for the given date.
+
+    Parameters:
+    ex (Extractor): An Extractor object which contains methods and attributes for data extraction.
+    data_level (str): The data level string, which determines the level of data to be extracted 
+                      and preprocessed.
+
+    Returns:
+    None: The function performs extraction and preprocessing operations but does not return a value.
     """
-    # Preprocess IASI Level 1C data
+    # Use OBR to extract IASI data from raw binary files
     ex.data_level = data_level
     ex.get_datapaths()
     ex.extract_files()
-    ex.rename_files()
 
-    # If IASI data was successfully extracted from raw binary files    
+    # If IASI data was successfully extracted
     if ex.intermediate_file_check:
         # Preprocess the data into pandas DataFrames
-        pre = Preprocessor(ex.intermediate_file, ex.data_level)
-        pre.preprocess_files(ex.year, ex.month, ex.day)
-
-        # Process IASI data
+        p = Preprocessor(ex.intermediate_file, ex.data_level)
+        p.preprocess_files(ex.year, ex.month, ex.day)
     return
+
 
 
 def correlate_l1c_l2(ex: Extractor):

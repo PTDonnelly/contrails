@@ -2,7 +2,7 @@ from datetime import datetime
 import os
 import numpy as np
 import pandas as pd
-from typing import Tuple, List, Union
+from typing import List, BinaryIO
 
 import numpy as np
 
@@ -11,25 +11,41 @@ from .extraction import Extractor as ex
 
 class Metadata:
     """
+    Metadata class provides the structure and methods to read and process
+    metadata of binary files.
+
+    Attributes:
+        f (BinaryIO): The binary file object.
+        header_size (int): The size of the header in bytes.
+        byte_order (int): The byte order of the binary data.
+        format_version (int): The version of the data format.
+        satellite_identifier (int): The identifier of the satellite.
+        record_header_size (int): The size of the record header.
+        brightness_temperature_brilliance (bool): The brightness temperature brilliance.
+        number_of_channels (int): The number of channels.
+        channel_IDs (np.array): The IDs of the channels.
+        AVHRR_brilliance (bool): The AVHRR brilliance.
+        number_of_L2_sections (int): The number of Level 2 sections.
+        record_size (int): The size of each record in bytes.
+        number_of_measurements (int): The number of measurements.
     """
-    def __init__(self, file: object):
-        self.f: object = file
+    def __init__(self, file: BinaryIO):
+        self.f: BinaryIO = file
         self.header_size: int = None
-        self.header_size : int = None 
-        self.byte_order : int = None 
-        self.format_version : int = None 
-        self.satellite_identifier : int = None 
-        self.record_header_size : int = None 
-        self.brightness_temperature_brilliance : int = None 
-        self.number_of_channels : int = None 
-        self.channel_IDs : int = None
-        self.AVHRR_brilliance : int = None 
-        self.number_of_L2_sections : int = None 
-        self.table_of_L2_sections : int = None
+        self.byte_order: int = None
+        self.format_version: int = None
+        self.satellite_identifier: int = None
+        self.record_header_size: int = None
+        self.brightness_temperature_brilliance: bool = None
+        self.number_of_channels: int = None
+        self.channel_IDs: np.array = None
+        self.AVHRR_brilliance: bool = None
+        self.number_of_L2_sections: int = None
+        self.table_of_L2_sections: int = None
         self.record_size: int = None
         self.number_of_measurements: int = None
     
-    def _print_metadata(self):
+    def _print_metadata(self) -> None:
         print(f"Header  : {self.header_size} bytes")
         print(f"Record  : {self.record_size} bytes")
         print(f"Spectrum: {self.number_of_channels} channels")
@@ -50,7 +66,7 @@ class Metadata:
         self.number_of_measurements = ((file_size - self.header_size - 8) // (self.record_size + 8)) - 1
         return
     
-    def _read_record_size(self) -> Union[int, None]:
+    def _read_record_size(self) -> int:
         self.f.seek(self.header_size + 8, 0)
         self.record_size = np.fromfile(self.f, dtype='uint32', count=1)[0]
         return
@@ -74,7 +90,7 @@ class Metadata:
         # Check if header sizes match
         assert self.header_size == header_size_check, "Header size mismatch"
 
-    def _read_iasi_common_header_metadata(self) -> Tuple[int, int]:
+    def _read_iasi_common_header_metadata(self) -> None:
         """
         Reads the header of the binary file to obtain the header size and number of channels.
         """
@@ -95,7 +111,7 @@ class Metadata:
         self._verify_header()       
         return
     
-    def get_iasi_common_header(self):
+    def get_iasi_common_header(self) -> None:
         self._read_iasi_common_header_metadata()
         self._read_record_size()
         self._count_measurements()
@@ -177,16 +193,50 @@ class Metadata:
 
 class Preprocessor:
     """
-    Processor for the intermediate binary file of IASI L2 products output by OBR script.
+    A class used to handle the preprocessing of IASI data.
+
+    This class is responsible for opening the binary files that contain the raw data,
+    reading and structuring the data into a pandas DataFrame, and then doing a number
+    of transformations on this data to prepare it for further analysis.
 
     Attributes:
-    filepath (str): Path to the binary file.
-    targets (List[str]): List of target variables to extract.
+    ----------
+    intermediate_file : str
+        The path to the binary file to be processed.
+    data_level : str
+        The level of the data to be processed ("l1c" or "l2").
+    f : BinaryIO
+        The binary file that is currently being processed.
+    header : Metadata
+        The metadata of the binary file that is currently being processed.
+    data_record_df : pd.DataFrame
+        The pandas DataFrame that stores the data extracted from the binary file.
+
+    Methods:
+    -------
+    open_binary_file()
+        Opens the binary file and extracts the header data.
+    close_binary_file()
+        Closes the currently open binary file.
+    read_record_fields(fields: List[tuple])
+        Reads the specified fields from the binary file and stores them in the DataFrame.
+    read_spectral_radiance(fields: List[tuple])
+        Reads the spectral radiance data from the binary file and stores them in the DataFrame.
+    build_local_time()
+        Calculates and stores the local time at each point in the DataFrame.
+    build_datetime()
+        Combines the date and time fields into a single datetime field in the DataFrame.
+    filter_bad_spectra(date: datetime)
+        Filters out bad data based on IASI quality flags and overwrites the existing DataFrame.
+    save_observations()
+        Saves the observations in the DataFrame to a CSV file and deletes the intermediate binary file.
+    preprocess_files(year: str, month: str, day: str)
+        Runs the entire preprocessing pipeline on the binary file.
     """
     def __init__(self, intermediate_file: str, data_level: str):
         self.intermediate_file = intermediate_file
         self.data_level = data_level
-        self.f: object = None
+        self.f: BinaryIO = None
         self.header: Metadata = None
         self.data_record_df = pd.DataFrame()
 
@@ -406,5 +456,5 @@ class Preprocessor:
         # Save filtered DataFrame to CSV/HDF5
         self.save_observations()
         
-        # print the DataFrame
+        # Print the DataFrame
         print(self.data_record_df)

@@ -132,7 +132,7 @@ class Extractor:
         """
         # Build the command string to execute the binary script
         command = self._get_command()
-        print(command)
+        print(f"\n{command}")
         try:
             # Run the command in a bash shell and capture the output
             result = subprocess.run(command, shell=True, capture_output=True, text=True, check=True)
@@ -178,22 +178,3 @@ class Extractor:
         result = self.run_command()
         # Check if files are produced. If not, skip processing.
         self.intermediate_file_check = self.check_extracted_files(result)
-                        
-
-    def _get_suffix(self):
-        old_suffix=".bin"
-        if self.data_level == 'l1c':
-            new_suffix=".bin"
-        elif self.data_level == 'l2':
-            new_suffix=".out"
-        else:
-            raise ValueError("Invalid data path type. Accepts 'l1c' or 'l2'.")
-        return old_suffix, new_suffix
-
-    def rename_files(self):
-        old_suffix, new_suffix = self._get_suffix()
-        if os.path.isdir(self.datapath_out):
-            for filename in os.scandir(self.datapath_out):
-                if filename.name.endswith(old_suffix):
-                    new_filename = f"{filename.name[:-len(old_suffix)]}{new_suffix}"
-                    os.rename(filename.path, os.path.join(self.datapath_out, new_filename))
