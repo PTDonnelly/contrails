@@ -63,7 +63,6 @@ class Processor:
         # Merge two DataFrames based on latitude, longitude and datetime,
         # rows from df_l1c that do not have a corresponding row in df_l2 are dropped.
         self.merged_df = pd.merge(self.df_l1c, self.df_l2, on=['Latitude', 'Longitude', 'Datetime', 'Local Time'], how='inner')
-        print(self.merged_df.head())
 
         # Convert the DataFrame 'Local Time' column (np.array) to boolean values
         self.merged_df['Local Time'] = self.merged_df['Local Time'].astype(bool)
