@@ -259,11 +259,7 @@ class Preprocessor:
 
             # Store the data in the DataFrame
             self.data_record_df[field] = data
-        
-        # Read channel radiances for Level 1C data
-        if self.data_level == "l1c":
-            self.read_spectral_radiance(fields)
-        
+                
         print(self.data_record_df.head())
         return
 
@@ -327,7 +323,9 @@ class Preprocessor:
         
         # Read L1C or L2 data record fields and store to pandas DataFrame
         if self.data_level == "l1c":
-            self.read_record_fields(self.header._get_iasi_l1c_record_fields())
+            fields = self.header._get_iasi_l1c_record_fields()
+            self.read_record_fields(fields)
+            self.read_spectral_radiance(fields)
         elif self.data_level == "l2":
             self.read_record_fields(self.header._get_iasi_l2_record_fields())
         
