@@ -121,45 +121,40 @@ class Metadata:
                         ('field_of_view_number', 'uint32', 4, 38),
                         ('orbit_number', 'uint32', 4, 42),
                         ('scan_line_number', 'uint32', 4, 46),
-                        ('height_of_station', 'float32', 4, 50)
-                        ]
+                        ('height_of_station', 'float32', 4, 50)]
         return common_fields
     
     def _get_iasi_l1c_record_fields(self) -> List[tuple]:
         # Format of fields in binary file (field_name, data_type, data_size, cumulative_data_size)
         l1c_fields = [
-                    ('day_version', 'uint16', 2, 2),
-                    ('start_channel_1', 'uint32', 4, 6),
-                    ('end_channel_1', 'uint32', 4, 10),
-                    ('quality_flag_1', 'uint32', 4, 14),
-                    ('start_channel_2', 'uint32', 4, 18),
-                    ('end_channel_2', 'uint32', 4, 22),
-                    ('quality_flag_2', 'uint32', 4, 26),
-                    ('start_channel_3', 'uint32', 4, 30),
-                    ('end_channel_3', 'uint32', 4, 34),
-                    ('quality_flag_3', 'uint32', 4, 38),
-                    ('cloud_fraction', 'uint32', 4, 42),
-                    ('surface_type', 'uint8', 1, 43)
-                    ]
-
+                    ('day_version', 'uint16', 2, 52),
+                    ('start_channel_1', 'uint32', 4, 56),
+                    ('end_channel_1', 'uint32', 4, 60),
+                    ('quality_flag_1', 'uint32', 4, 64),
+                    ('start_channel_2', 'uint32', 4, 68),
+                    ('end_channel_2', 'uint32', 4, 72),
+                    ('quality_flag_2', 'uint32', 4, 76),
+                    ('start_channel_3', 'uint32', 4, 80),
+                    ('end_channel_3', 'uint32', 4, 84),
+                    ('quality_flag_3', 'uint32', 4, 88),
+                    ('cloud_fraction', 'uint32', 4, 92),
+                    ('surface_type', 'uint8', 1, 93)]
         return l1c_fields
     
     def _get_iasi_l2_record_fields(self) -> List[tuple]:
         # Format of fields in binary file (field_name, data_type, data_size, cumulative_data_size)
         l2_fields = [
-                    ('superadiabatic_indicator', 'uint8', 1, 1),
-                    ('land_sea_qualifier', 'uint8', 1, 2),
-                    ('day_nght_qualifier', 'uint8', 1, 3),
-                    ('processing_technique', 'uint32', 4, 7),
-                    ('sun_glint_indicator', 'uint8', 1, 8),
-                    ('cloud_formation_and_height_assignment', 'uint32', 4, 12),
-                    ('instrument_detecting_clouds', 'uint32', 4, 16),
-                    ('validation_flag_for_IASI_L1_product', 'uint32', 4, 20),
-                    ('quality_completeness_of_retrieval', 'uint32', 4, 24),
-                    ('retrieval_choice_indicator', 'uint32', 4, 28),
-                    ('satellite_manoeuvre_indicator', 'uint32', 4, 32),
-                    ]
-
+                    ('superadiabatic_indicator', 'uint8', 1, 51),
+                    ('land_sea_qualifier', 'uint8', 1, 52),
+                    ('day_nght_qualifier', 'uint8', 1, 53),
+                    ('processing_technique', 'uint32', 4, 57),
+                    ('sun_glint_indicator', 'uint8', 1, 58),
+                    ('cloud_formation_and_height_assignment', 'uint32', 4, 62),
+                    ('instrument_detecting_clouds', 'uint32', 4, 66),
+                    ('validation_flag_for_IASI_L1_product', 'uint32', 4, 70),
+                    ('quality_completeness_of_retrieval', 'uint32', 4, 74),
+                    ('retrieval_choice_indicator', 'uint32', 4, 78),
+                    ('satellite_manoeuvre_indicator', 'uint32', 4, 82)]
         return l2_fields
     
     def _get_ozo_record_fields(self):
@@ -191,7 +186,6 @@ class Preprocessor:
         self.data_level = data_level
         self.f: object = None
         self.header: Metadata = None
-        self.common_record_df: pd.DataFrame()
         self.data_record_df = pd.DataFrame()
 
     def open_binary_file(self) -> None:
@@ -321,7 +315,7 @@ class Preprocessor:
         
         # Read common IASI record fields
         fields = self.header._get_iasi_common_record_fields()
-        self.common_record_df = self.read_record_fields(fields)
+        self.read_record_fields(fields)
         
         # Read L1C or L2 data record fields and store to pandas DataFrame
         if self.data_level == "l1c":
