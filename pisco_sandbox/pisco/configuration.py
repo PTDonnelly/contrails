@@ -11,7 +11,7 @@ class Configurer:
             self.__dict__ = commentjson.load(file)
             
         # Perform any necessary post-processing before executing
-        self.channels: List[int] = self.set_channels(n=1000)
+        self.channels: List[int] = self.set_channels(n=10)
     
     @staticmethod
     def set_channels(n=8461):
