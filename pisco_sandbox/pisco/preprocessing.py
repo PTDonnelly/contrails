@@ -260,11 +260,11 @@ class Preprocessor:
 
         This function only extracts the first 8 fields and the ones listed in the targets attribute.
         """
-        # # Move the file pointer to the start of the records
-        # self.f.seek(self.header.header_size + 12, 0)
+        # Move the file pointer to the start of the records
+        self.f.seek(self.header.header_size + 12, 0)
 
-        # # Read the whole file into a buffer
-        # buffer = self.f.read()
+        # Read the whole file into a buffer
+        buffer = self.f.read()
 
         # Iterate over each field
         for field, dtype, dtype_size, cumsize in fields:
@@ -285,13 +285,13 @@ class Preprocessor:
             #     value = np.fromfile(self.f, dtype=dtype, count=1, sep='', offset=byte_offset)
             #     data[measurement] = np.nan if len(value) == 0 else value[0]
 
-            # Read the data of all measurements at once
-            data = np.fromfile(self.f, dtype=dtype, count=self.header.number_of_measurements, sep='', offset=byte_offset)
+            # # Read the data of all measurements at once
+            # data = np.fromfile(self.f, dtype=dtype, count=self.header.number_of_measurements, sep='', offset=byte_offset)
 
-            # # Read the data of each measurement from the buffer
-            # for measurement in range(self.header.number_of_measurements):
-            #     start = measurement * byte_offset
-            #     data[measurement] = np.frombuffer(buffer, dtype=dtype, count=1, offset=start)[0]
+            # Read the data of each measurement from the buffer
+            for measurement in range(self.header.number_of_measurements):
+                start = measurement * byte_offset
+                data[measurement] = np.frombuffer(buffer, dtype=dtype, count=1, offset=start)[0]
 
             # Store the data in the DataFrame
             self.data_record_df[field] = data
