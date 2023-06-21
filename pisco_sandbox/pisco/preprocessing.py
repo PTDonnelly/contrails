@@ -60,7 +60,7 @@ class Metadata:
         # Get the total size of the file
         file_size = self.f.seek(0, 2)
         # Calculate the number of measurements (minus 1 to avoid erroneous reads at the end of the byte structure)
-        self.number_of_measurements = ((file_size - self.header_size - 8) // (self.record_size + 8)) - 1
+        self.number_of_measurements = 10000 #((file_size - self.header_size - 8) // (self.record_size + 8)) - 1
         return
     
     def _read_record_size(self) -> int:
@@ -292,19 +292,19 @@ class Preprocessor:
         # Calculate the offset to skip to the next measurement
         byte_offset = self.header.record_size + 8 - (4 * self.header.number_of_channels)
         
-        # ########
-        # # Initialize an empty numpy array to store the spectral radiance data
-        # data = np.empty((self.header.number_of_channels, self.header.number_of_measurements))
+        ########
+        # Initialize an empty numpy array to store the spectral radiance data
+        data = np.empty((self.header.number_of_channels, self.header.number_of_measurements))
 
-        # # Iterate over each measurement and extract the spectral radiance data
-        # for measurement in range(self.header.number_of_measurements):
-        #     spectrum = np.fromfile(self.f, dtype='float32', count=self.header.number_of_channels, sep='', offset=byte_offset)
-        #     data[:, measurement] = np.nan if len(spectrum) == 0 else spectrum
+        # Iterate over each measurement and extract the spectral radiance data
+        for measurement in range(self.header.number_of_measurements):
+            spectrum = np.fromfile(self.f, dtype='float32', count=self.header.number_of_channels, sep='', offset=byte_offset)
+            data[:, measurement] = np.nan if len(spectrum) == 0 else spectrum
 
-        # # Assign channel IDs and spectra to DataFrame
-        # for i, id in enumerate(self.header.channel_IDs):
-        #     self.data_record_df[f'Channel {id}'] = data[i, :]
-        # #######
+        # Assign channel IDs and spectra to DataFrame
+        for i, id in enumerate(self.header.channel_IDs):
+            self.data_record_df[f'Channel {id}'] = data[i, :]
+        #######
 
         # ########
         # # Prepare empty arrays in the DataFrame
@@ -322,23 +322,23 @@ class Preprocessor:
         #         self.data_record_df.loc[measurement, f'Channel {id}'] = spectrum[i]
         # ########
 
-        ########
-        # Prepare empty arrays for each channel
-        channel_data = {f'Channel {id}': np.empty(self.header.number_of_measurements) for id in self.header.channel_IDs}
+        # ########
+        # # Prepare empty arrays for each channel
+        # channel_data = {f'Channel {id}': np.empty(self.header.number_of_measurements) for id in self.header.channel_IDs}
 
-        # Iterate over each measurement and extract the spectral radiance data
-        for measurement in range(self.header.number_of_measurements):
-            spectrum = np.fromfile(self.f, dtype='float32', count=self.header.number_of_channels, sep='', offset=byte_offset)
-            if len(spectrum) == 0:
-                spectrum = np.full(self.header.number_of_channels, np.nan)
+        # # Iterate over each measurement and extract the spectral radiance data
+        # for measurement in range(self.header.number_of_measurements):
+        #     spectrum = np.fromfile(self.f, dtype='float32', count=self.header.number_of_channels, sep='', offset=byte_offset)
+        #     if len(spectrum) == 0:
+        #         spectrum = np.full(self.header.number_of_channels, np.nan)
 
-            for i, id in enumerate(self.header.channel_IDs):
-                channel_data[f'Channel {id}'][measurement] = spectrum[i]
+        #     for i, id in enumerate(self.header.channel_IDs):
+        #         channel_data[f'Channel {id}'][measurement] = spectrum[i]
 
-        # Assign the data to the DataFrame
-        for id in self.header.channel_IDs:
-            self.data_record_df[f'Channel {id}'] = channel_data[f'Channel {id}']
-        ########
+        # # Assign the data to the DataFrame
+        # for id in self.header.channel_IDs:
+        #     self.data_record_df[f'Channel {id}'] = channel_data[f'Channel {id}']
+        # ########
         return
 
 
