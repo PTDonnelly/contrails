@@ -1,6 +1,6 @@
 from .extraction import Extractor
-from .processing import Preprocessor
-from .correlation import L1C_L2_Correlator
+from .preprocessing import Preprocessor
+from .processing import Processor
 
 def process_iasi(ex: Extractor, data_level: str):
     """
@@ -49,19 +49,19 @@ def correlate_l1c_l2(ex: Extractor):
     Result:
         A CSV file containing all spectra at those locations and times.
     """  
-    co = L1C_L2_Correlator(ex.config.datapath_out, ex.year, ex.month, ex.day, ex.config.cloud_phase)
+    p = Processor(ex.config.datapath_out, ex.year, ex.month, ex.day, ex.config.cloud_phase)
 
     # Concatenate all L2 CSV files into a single coud products file
-    co.gather_files()
+    p.gather_files()
     
     # Load IASI spectra and cloud products
-    co.load_data()      
+    p.load_data()      
     
     # Correlates measurements, keep matching locations and times of observation
-    co.correlate_measurements()
+    p.correlate_measurements()
     
     # Saves the merged data, and deletes the original data.
-    co.save_merged_data()
+    p.save_merged_data()
 
-    co.preview_merged_data()
+    p.preview_merged_data()
     return

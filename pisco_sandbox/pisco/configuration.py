@@ -15,5 +15,5 @@ class Configurer:
     
     def set_channels(self):
         # Set the list of IASI channel indices
-        n = 2
+        n = 8461
         return [(i + 1) for i in range(n)]
