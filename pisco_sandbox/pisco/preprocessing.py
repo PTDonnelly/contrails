@@ -60,7 +60,7 @@ class Metadata:
         # Get the total size of the file
         file_size = self.f.seek(0, 2)
         # Calculate the number of measurements (minus 1 to avoid erroneous reads at the end of the byte structure)
-        self.number_of_measurements = ((file_size - self.header_size - 8) // (self.record_size + 8)) - 1
+        self.number_of_measurements = 100 #((file_size - self.header_size - 8) // (self.record_size + 8)) - 1
         return
     
     def _read_record_size(self) -> int:
@@ -449,23 +449,30 @@ class Preprocessor:
         # Read common IASI record fields and store to pandas DataFrame
         print("\nCommon Record Fields:")
         self.read_record_fields(self.header._get_iasi_common_record_fields())
+        
         if self.data_level == "l1c":
             # Read L1C-specific record fields and add to DataFrame
             print("\nL1C Record Fields:")
             self.read_record_fields(self.header._get_iasi_l1c_record_fields())
             self.read_spectral_radiance(self.header._get_iasi_l1c_record_fields())
+            
+            # Remove observations (DataFrame rows) based on IASI quality_flags
+            self.filter_bad_spectra(datetime(int(year), int(month), int(day)))
+
         elif self.data_level == "l2":
             # Read L2-specific record fields and add to DataFrame
             print("\nL2 Record Fields:")
             self.read_record_fields(self.header._get_iasi_l2_record_fields())
+
+            # # Remove observations (DataFrame rows) based on IASI cloud_phase
+            # self.filter_unwanted_cloud_phase()
+
         self.close_binary_file()
 
         # Construct Local Time column
         self.build_local_time()
         # Construct Datetime column and remove individual time elements
         self.build_datetime()
-        # Remove observations (DataFrame rows) based on IASI quality flags
-        self.filter_bad_spectra(datetime(int(year), int(month), int(day)))
         # Save filtered DataFrame to CSV/HDF5
         self.save_observations()
         

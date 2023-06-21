@@ -1,9 +1,9 @@
 {
     // L1C: bool, Specifies whether Level 1C data should be processed
-    "L1C": true,
+    "L1C": false,
 
     // L2: bool, Specifies whether Level 2 data should be processed
-    "L2": false,
+    "L2": true,
 
     // process: bool, Specifies whether Level 1C and Level 2 data should be correlated for filtering spectra
     "process": false,
@@ -29,12 +29,12 @@
     // products: str, string containing desired IASI L2 products, separated by comma only (e.g. "clp,ozo,twt")
     "products": "clp",
 
+    // cloud_phase: int, The desired cloud phase from the L2 products
+    "cloud_phase": 2,
+
     // latitude_range: List[int], The spatial range for binning latitudes
     "latitude_range": [-90, 90],
 
     // longitude_range: List[int], The spatial range for binning longitudes
-    "longitude_range": [-180, 180],
-
-    // cloud_phase: int, The desired cloud phase from the L2 products
-    "cloud_phase": 2
+    "longitude_range": [-180, 180]
 }
