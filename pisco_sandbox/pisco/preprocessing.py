@@ -260,12 +260,6 @@ class Preprocessor:
 
         This function only extracts the first 8 fields and the ones listed in the targets attribute.
         """
-        # Move the file pointer to the start of the records
-        self.f.seek(self.header.header_size + 12, 0)
-
-        # Read the whole file into a buffer
-        buffer = self.f.read()
-
         # Iterate over each field
         for field, dtype, dtype_size, cumsize in fields:
             print(f"Extracting: {field}")
@@ -276,25 +270,9 @@ class Preprocessor:
 
             # Calculate the byte offset to the next measurement
             byte_offset = self.header.record_size + 8 - dtype_size
-
-            # Prepare an empty array to store the data of the current field
-            data = np.empty(self.header.number_of_measurements)
-            
-            # # Read the data of each measurement
-            # for measurement in range(self.header.number_of_measurements):
-            #     value = np.fromfile(self.f, dtype=dtype, count=1, sep='', offset=byte_offset)
-            #     data[measurement] = np.nan if len(value) == 0 else value[0]
-
-            # # Read the data of all measurements at once
-            # data = np.fromfile(self.f, dtype=dtype, count=self.header.number_of_measurements, sep='', offset=byte_offset)
-
-            # Read the data of each measurement from the buffer
-            for measurement in range(self.header.number_of_measurements):
-                start = measurement * byte_offset
-                data[measurement] = np.frombuffer(buffer, dtype=dtype, count=1, offset=start)[0]
-
-            # Store the data in the DataFrame
-            self.data_record_df[field] = data
+          
+            # Read the data of all measurements at once and store in DataFrame
+            self.data_record_df[field] = np.fromfile(self.f, dtype=dtype, count=self.header.number_of_measurements, sep='', offset=byte_offset)
         return
 
 
@@ -308,23 +286,43 @@ class Preprocessor:
         last_field_end = fields[-1][-1] # End of the surface_type field
 
         # Go to spectral radiance data (skip header and previous record data, "12"s are related to reading )
-        start_read_position = self.header.header_size + 12 + last_field_end + (4 * self.header.number_of_channels) #12
+        start_read_position = self.header.header_size + 12 + last_field_end + (4 * self.header.number_of_channels)
         self.f.seek(start_read_position, 0)
         
         # Calculate the offset to skip to the next measurement
         byte_offset = self.header.record_size + 8 - (4 * self.header.number_of_channels)
         
-        # Initialize an empty numpy array to store the spectral radiance data
-        data = np.empty((self.header.number_of_channels, self.header.number_of_measurements))
+        # ########
+        # # Initialize an empty numpy array to store the spectral radiance data
+        # data = np.empty((self.header.number_of_channels, self.header.number_of_measurements))
 
+        # # Iterate over each measurement and extract the spectral radiance data
+        # for measurement in range(self.header.number_of_measurements):
+        #     value = np.fromfile(self.f, dtype='float32', count=self.header.number_of_channels, sep='', offset=byte_offset)
+        #     data[:, measurement] = np.nan if len(value) == 0 else value
+
+        # # Assign channel IDs and values to DataFrame
+        # for i, id in enumerate(self.header.channel_IDs):
+        #     self.data_record_df[f'Channel {id}'] = data[i, :]
+        # #######
+
+        # Prepare empty arrays in the DataFrame
+        for id in self.header.channel_IDs:
+            self.data_record_df[f'Channel {id}'] = np.empty(self.header.number_of_measurements)
+        
         # Iterate over each measurement and extract the spectral radiance data
         for measurement in range(self.header.number_of_measurements):
-            value = np.fromfile(self.f, dtype='float32', count=self.header.number_of_channels, sep='', offset=byte_offset)
-            data[:, measurement] = np.nan if len(value) == 0 else value
-
-        # Assign channel IDs and values to DataFrame
-        for i, id in enumerate(self.header.channel_IDs):
-            self.data_record_df[f'Channel {id}'] = data[i, :]
+            spectrum = np.fromfile(self.f, dtype='float32', count=self.header.number_of_channels, sep='', offset=byte_offset)
+            
+            if len(spectrum) == 0:
+                spectrum = np.full(self.header.number_of_channels, np.nan)
+            
+            for i, id in enumerate(self.header.channel_IDs):
+                self.data_record_df.loc[measurement, f'Channel {id}'] = spectrum[i]
+        
+        
+        
+        
         return
 
 
