@@ -46,7 +46,7 @@ class Metadata:
         """
         # Get the total size of the file
         file_size = self.f.seek(0, 2)
-        # Calculate the number of measurements
+        # Calculate the number of measurements (minus 1 to avoid erroneous reads at the end of the byte structure)
         self.number_of_measurements = ((file_size - self.header_size - 8) // (self.record_size + 8)) - 1
         return
     
@@ -348,10 +348,12 @@ class Preprocessor:
         else:
             check_quality_flags = (self.data_record_df['quality_flag_1'] == 0) & (self.data_record_df['quality_flag_2'] == 0) & (self.data_record_df['quality_flag_3'] == 0)
             good_flag = check_quality_flags
-
+        
+        # Print the fraction of good measurements
+        print(f"{np.round((len(self.data_record_df[good_flag]) / len(self.data_record_df)) * 100, 2)} % good data of {len(self.data_record_df)} spectra")
+        
         # Throw away bad data, keep the good, re-assigning and over-writing the existing class attribute
         self.data_record_df = self.data_record_df[good_flag]
-        print(f"{np.round((len(self.data_record_df) / len(self.data_record_df)) * 100, 2)} % good data of {len(self.data_record_df)} spectra")
         return
 
 
@@ -398,7 +400,6 @@ class Preprocessor:
         # Construct Local Time column
         self.build_local_time()
         # Construct Datetime column and remove individual time elements
-        print(self.data_record_df['year'])
         self.build_datetime()
         # Remove observations (DataFrame rows) based on IASI quality flags
         self.filter_bad_spectra(datetime(int(year), int(month), int(day)))
@@ -406,4 +407,4 @@ class Preprocessor:
         self.save_observations()
         
         # print the DataFrame
-        # print(self.data_record_df)
+        print(self.data_record_df)
