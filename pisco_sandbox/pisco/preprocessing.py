@@ -319,10 +319,7 @@ class Preprocessor:
             
             for i, id in enumerate(self.header.channel_IDs):
                 self.data_record_df.loc[measurement, f'Channel {id}'] = spectrum[i]
-        
-        
-        
-        
+         
         return
 
 
