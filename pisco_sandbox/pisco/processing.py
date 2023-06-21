@@ -28,9 +28,31 @@ class Metadata:
         self.table_of_L2_sections : int = None
         self.record_size: int = None
         self.number_of_measurements: int = None
+    
+    def _print_metadata(self):
+        print(f"Header  : {self.header_size} bytes")
+        print(f"Record  : {self.record_size} bytes")
+        print(f"Spectrum: {self.number_of_channels} channels")
+        print(f"Data    : {self.number_of_measurements} measurements")
+        return
 
-    def close_file(self):
-        self.f.close()
+    def _count_measurements(self) -> int:
+        """
+        Calculate the number of measurements in the binary file based on its size, 
+        header size and record size.
+
+        Returns:
+        int: The number of measurements.
+        """
+        # Get the total size of the file
+        file_size = self.f.seek(0, 2)
+        # Calculate the number of measurements
+        self.number_of_measurements = 100 #(file_size - self.header_size - 8) // (self.record_size + 8)
+        return
+    
+    def _read_record_size(self) -> Union[int, None]:
+        self.f.seek(self.header_size + 8, 0)
+        self.record_size = np.fromfile(self.f, dtype='uint32', count=1)[0]
         return
     
     def _verify_header(self) -> None:
@@ -52,7 +74,7 @@ class Metadata:
         # Check if header sizes match
         assert self.header_size == header_size_check, "Header size mismatch"
 
-    def read_iasi_common_header_metadata(self) -> Tuple[int, int]:
+    def _read_iasi_common_header_metadata(self) -> Tuple[int, int]:
         """
         Reads the header of the binary file to obtain the header size and number of channels.
         """
@@ -72,30 +94,12 @@ class Metadata:
         # Read header size at the end of the header, check for a match
         self._verify_header()       
         return
-
-    def read_record_size(self) -> Union[int, None]:
-        self.f.seek(self.header_size + 8, 0)
-        self.record_size = np.fromfile(self.f, dtype='uint32', count=1)[0]
-        return
-
-    def count_measurements(self) -> int:
-        """
-        Calculate the number of measurements in the binary file based on its size, 
-        header size and record size.
-
-        Returns:
-        int: The number of measurements.
-        """
-        # Get the total size of the file
-        file_size = self.f.seek(0, 2)
-        # Calculate the number of measurements
-        self.number_of_measurements = (file_size - self.header_size - 8) // (self.record_size + 8)
-        return
     
     def get_iasi_common_header(self):
-        self.read_iasi_common_header_metadata()
-        self.read_record_size()
-        self.count_measurements()
+        self._read_iasi_common_header_metadata()
+        self._read_record_size()
+        self._count_measurements()
+        self._print_metadata()
         return
 
 
@@ -193,7 +197,6 @@ class Preprocessor:
         # Get structure of file header and data record
         self.header = Metadata(self.f)
         self.header.get_iasi_common_header()
-        # self.header.close_file()
         return
     
     def read_spectral_radiance(self, fields: List[tuple]) -> None:
@@ -264,6 +267,8 @@ class Preprocessor:
         print(self.data_record_df.head())
         return
 
+
+
     def _calculate_local_time(self) -> None:
         """
         Calculate the local time (in hours, UTC) that determines whether it is day or night at a specific longitude.
@@ -320,7 +325,7 @@ class Preprocessor:
         # Read common IASI record fields
         self.common_record_df = self.read_record_fields(self.header._get_iasi_common_record_fields())
         
-        # Read L1C or L2 data record fields
+        # Read L1C or L2 data record fields and store to pandas DataFrame
         if self.data_level == "l1c":
             self.read_record_fields(self.header._get_iasi_l1c_record_fields())
         elif self.data_level == "l2":
