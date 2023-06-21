@@ -41,7 +41,7 @@ class Processor:
     
 
     def _check_headers(self):
-        required_headers = ['Latitude', 'Longitude', 'Datetime']#, 'Local Time']
+        required_headers = ['Latitude', 'Longitude', 'Datetime', 'Local Time']
         missing_headers_l1c = [header for header in required_headers if header not in self.df_l1c.columns]
         missing_headers_l2 = [header for header in required_headers if header not in self.df_l2.columns]
         if missing_headers_l1c or missing_headers_l2:
@@ -60,27 +60,22 @@ class Processor:
         self.df_l1c[['Latitude', 'Longitude']] = self.df_l1c[['Latitude', 'Longitude']].round(decimal_places)
         self.df_l2[['Latitude', 'Longitude']] = self.df_l2[['Latitude', 'Longitude']].round(decimal_places)
         
-        print(self.df_l1c)
-        print("")
-        print(self.df_l2)
-        print("")
-        
         # Merge two DataFrames based on latitude, longitude and datetime,
         # rows from df_l1c that do not have a corresponding row in df_l2 are dropped.
         self.merged_df = pd.merge(self.df_l1c, self.df_l2, on=['Latitude', 'Longitude', 'Datetime'], how='inner')
-        print(self.merged_df)
-        print("")
-        # # Convert the DataFrame 'Local Time' column (np.array) to boolean values
-        # merged_df['Local Time'] = merged_df['Local Time'].astype(bool)
-        # # Split the DataFrame into two based on 'Local Time' column
-        # merged_df_day = merged_df[merged_df['Local Time'] == True]
-        # merged_df_night = merged_df[merged_df['Local Time'] == False]
-        # # # Drop the 'Local Time' column from both DataFrames
-        # merged_df_day = merged_df_day.drop(columns=['Local Time'])
-        # merged_df_night = merged_df_night.drop(columns=['Local Time'])
-        # # Remove 'Local Time' from the header list
-        # header.remove('Local Time')
-        return #merged_df_day.dropna(), merged_df_night.dropna()
+        print(self.merged_df.head())
+
+        # Convert the DataFrame 'Local Time' column (np.array) to boolean values
+        self.merged_df['Local Time'] = self.merged_df['Local Time'].astype(bool)
+        
+        # Split the DataFrame into two based on 'Local Time' column
+        self.merged_df_day = self.merged_df[self.merged_df['Local Time'] == True]
+        self.merged_df_night = self.merged_df[self.merged_df['Local Time'] == False]
+        
+        # Drop the 'Local Time' column from both DataFrames
+        self.merged_df_day = self.merged_df_day.drop(columns=['Local Time'])
+        self.merged_df_night = self.merged_df_night.drop(columns=['Local Time'])
+        return
     
 
     def _delete_intermediate_analysis_data(self) -> None:
@@ -110,13 +105,13 @@ class Processor:
             print("Cloud_phase is unknown or uncertain, skipping data.")
         else:
             print(f"Saving {cloud_phase} spectra to {self.datapath_l1c}")
-            self.merged_datafile = f"{self.datapath_l1c}extracted_spectra_{cloud_phase}.csv"
-            self.merged_df.to_csv(self.merged_datafile, index=False, mode='w')
+            # self.merged_datafile = f"{self.datapath_l1c}extracted_spectra_{cloud_phase}.csv"
+            # self.merged_df.to_csv(self.merged_datafile, index=False, mode='w')
             
-            # # # Save the DataFrame to a file in csv format, split by local time
-            # # df.to_hdf(f"{datapath_out}{datafile_out}.h5", key='df', mode='w')
-            # merged_df_day.to_csv(f"{datapath_out}day_extracted_spectra.csv", index=False, mode='w')
-            # merged_df_night.to_csv(f"{datapath_out}night_extracted_spectra.csv", index=False, mode='w')
+            # Save the DataFrame to a file in csv format, split by local time
+            # df.to_hdf(f"{datapath_out}{datafile_out}.h5", key='df', mode='w')
+            self.merged_df_day.to_csv(f"{self.datapath_out}day_extracted_spectra.csv", index=False, mode='w')
+            self.merged_df_night.to_csv(f"{self.datapath_out}night_extracted_spectra.csv", index=False, mode='w')
         
         # # Delete original csv files
         # self._delete_intermediate_analysis_data()
