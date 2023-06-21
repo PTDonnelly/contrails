@@ -398,6 +398,7 @@ class Preprocessor:
         # Construct Local Time column
         self.build_local_time()
         # Construct Datetime column and remove individual time elements
+        print(self.data_record_df['year'])
         self.build_datetime()
         # Remove observations (DataFrame rows) based on IASI quality flags
         self.filter_bad_spectra(datetime(int(year), int(month), int(day)))
@@ -405,4 +406,4 @@ class Preprocessor:
         self.save_observations()
         
         # print the DataFrame
-        print(self.data_record_df)
+        # print(self.data_record_df)
