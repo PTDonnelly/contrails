@@ -105,8 +105,6 @@ class Metadata:
 
     def _get_iasi_common_record_fields(self) -> List[tuple]:
         # Format of fields in binary file (field_name, data_type, data_size, cumulative_data_size)
-        print("")
-        print("Common Record Fields:")
         common_fields = [
                         ('year', 'uint16', 2, 2),
                         ('month', 'uint8', 1, 3),
@@ -128,9 +126,7 @@ class Metadata:
     
     def _get_iasi_l1c_record_fields(self) -> List[tuple]:
         # Format of L1C-specific fields in binary file (field_name, data_type, data_size, cumulative_data_size),
-        # cumulative total continues from the fourth digit of the last tuple in common_fields
-        print("")
-        print("L1C Record Fields:")
+        # cumulative total continues from the fourth digit of the last tuple in common_fields.
         l1c_fields = [
                     ('day_version', 'uint16', 2, 52),
                     ('start_channel_1', 'uint32', 4, 56),
@@ -148,9 +144,7 @@ class Metadata:
     
     def _get_iasi_l2_record_fields(self) -> List[tuple]:
         # Format of L2-specific fields in binary file (field_name, data_type, data_size, cumulative_data_size),
-        # cumulative total continues from the fourth digit of the last tuple in common_fields
-        print("")
-        print("L2 Record Fields:")
+        # cumulative total continues from the fourth digit of the last tuple in common_fields.
         l2_fields = [
                     ('superadiabatic_indicator', 'uint8', 1, 51),
                     ('land_sea_qualifier', 'uint8', 1, 52),
@@ -364,13 +358,16 @@ class Preprocessor:
         self.open_binary_file()
         
         # Read common IASI record fields and store to pandas DataFrame
+        print("\nCommon Record Fields:")
         self.read_record_fields(self.header._get_iasi_common_record_fields())
         if self.data_level == "l1c":
             # Read L1C-specific record fields and add to DataFrame
+            print("\nL1C Record Fields:")
             self.read_record_fields(self.header._get_iasi_l1c_record_fields())
             self.read_spectral_radiance(self.header._get_iasi_l1c_record_fields())
         elif self.data_level == "l2":
             # Read L2-specific record fields and add to DataFrame
+            print("\nL2 Record Fields:")
             self.read_record_fields(self.header._get_iasi_l2_record_fields())
         self.close_binary_file()
 
