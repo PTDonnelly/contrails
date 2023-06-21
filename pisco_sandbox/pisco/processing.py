@@ -10,8 +10,8 @@ class Processor:
         self.datapath_l2 = f"{datapath_out}l2/{year}/{month}/{day}/"
         self.df_l1c: object = None
         self.df_l2: object = None
-        self.merged_df: object = None
-        self.merged_datafile: str = None
+        self.merged_df_day: object = None
+        self.merged_df_night: object = None
 
     def _get_intermediate_analysis_data_paths(self) -> None:
         """
@@ -62,14 +62,14 @@ class Processor:
         
         # Merge two DataFrames based on latitude, longitude and datetime,
         # rows from df_l1c that do not have a corresponding row in df_l2 are dropped.
-        self.merged_df = pd.merge(self.df_l1c, self.df_l2, on=['Latitude', 'Longitude', 'Datetime', 'Local Time'], how='inner')
+        merged_df = pd.merge(self.df_l1c, self.df_l2, on=['Latitude', 'Longitude', 'Datetime', 'Local Time'], how='inner')
 
         # Convert the DataFrame 'Local Time' column (np.array) to boolean values
-        self.merged_df['Local Time'] = self.merged_df['Local Time'].astype(bool)
+        merged_df['Local Time'] = merged_df['Local Time'].astype(bool)
         
         # Split the DataFrame into two based on 'Local Time' column
-        self.merged_df_day = self.merged_df[self.merged_df['Local Time'] == True]
-        self.merged_df_night = self.merged_df[self.merged_df['Local Time'] == False]
+        self.merged_df_day = merged_df[merged_df['Local Time'] == True]
+        self.merged_df_night = merged_df[merged_df['Local Time'] == False]
         
         # Drop the 'Local Time' column from both DataFrames
         self.merged_df_day = self.merged_df_day.drop(columns=['Local Time'])
