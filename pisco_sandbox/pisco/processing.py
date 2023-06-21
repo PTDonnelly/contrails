@@ -125,7 +125,8 @@ class Metadata:
         return common_fields
     
     def _get_iasi_l1c_record_fields(self) -> List[tuple]:
-        # Format of fields in binary file (field_name, data_type, data_size, cumulative_data_size)
+        # Format of L1C-specific fields in binary file (field_name, data_type, data_size, cumulative_data_size),
+        # cumulative total continues from the fourth digit of the last tuple in common_fields
         l1c_fields = [
                     ('day_version', 'uint16', 2, 52),
                     ('start_channel_1', 'uint32', 4, 56),
@@ -142,7 +143,8 @@ class Metadata:
         return l1c_fields
     
     def _get_iasi_l2_record_fields(self) -> List[tuple]:
-        # Format of fields in binary file (field_name, data_type, data_size, cumulative_data_size)
+        # Format of L2-specific fields in binary file (field_name, data_type, data_size, cumulative_data_size),
+        # cumulative total continues from the fourth digit of the last tuple in common_fields
         l2_fields = [
                     ('superadiabatic_indicator', 'uint8', 1, 51),
                     ('land_sea_qualifier', 'uint8', 1, 52),
@@ -197,7 +199,8 @@ class Preprocessor:
         self.header = Metadata(self.f)
         self.header.get_iasi_common_header()
         return
-        
+
+       
     def read_record_fields(self, fields: List[tuple]) -> None:
         """
         Reads the data of each field from the binary file and store it in the field_df dictionary.
@@ -205,14 +208,12 @@ class Preprocessor:
         This function only extracts the first 8 fields and the ones listed in the targets attribute.
         """
         # Iterate over each field
-        print(self.f.tell())
         for field, dtype, dtype_size, cumsize in fields:
             print(f"Extracting: {field}")
 
             # Move the file pointer to the starting position of the current field
             field_start = self.header.header_size + 12 + cumsize
             self.f.seek(field_start, 0)
-            print(self.f.tell())
 
             # Calculate the byte offset to the next measurement
             byte_offset = self.header.record_size + 8 - dtype_size
@@ -229,6 +230,7 @@ class Preprocessor:
             self.data_record_df[field] = data
         return
 
+
     def read_spectral_radiance(self, fields: List[tuple]) -> None:
         """
         Extracts and stores the spectral radiance measurements from the binary file.
@@ -239,7 +241,6 @@ class Preprocessor:
         last_field_end = fields[-1][-1] # End of the surface_type field
 
         # Go to spectral radiance data (skip header and previous record data, "12"s are related to reading )
-        print(f"Radiance: {self.f.tell()}")
         start_read_position = self.header.header_size + 12 + last_field_end + (4 * self.header.number_of_channels) #12
         self.f.seek(start_read_position, 0)
         
@@ -297,8 +298,53 @@ class Preprocessor:
         # Take the modulus again to ensure the time is within the 0 to 23 hours range
         return np.mod(time_shifted, 24)
 
-    def filter_observations(self) -> None:
-        pass
+    def build_local_time(self) -> List:
+        """
+        Stores the local time Boolean indicating whether the current time is day or night.
+        """
+        # Calculate the local time
+        local_time = self._calculate_local_time()
+
+        # Store the Boolean indicating day (True) or night (False) in the DataFrame
+        self.field_df['Local Time'] = (6 < local_time) & (local_time < 18)
+        return
+
+
+    def build_datetime(self) -> List:
+        """
+        Stores the datetime components to a single column and drops the elements.
+        """
+        # Create 'Datetime' column
+        self.data_record_df['Datetime'] = self.field_df['year'].apply(lambda x: f'{int(x):04d}') + \
+                                    self.field_df['month'].apply(lambda x: f'{int(x):02d}') + \
+                                    self.field_df['day'].apply(lambda x: f'{int(x):02d}') + '.' + \
+                                    self.field_df['hour'].apply(lambda x: f'{int(x):02d}') + \
+                                    self.field_df['minute'].apply(lambda x: f'{int(x):02d}') + \
+                                    self.field_df['millisecond'].apply(lambda x: f'{int(x/10000):02d}')
+
+        # Drop original time element columns
+        self.field_df = self.field_df.drop(columns=['year', 'month', 'day', 'hour', 'minute', 'millisecond'])
+        return  
+    
+
+    def filter_bad_spectra(self) -> None:
+        """
+        Filters bad spectra based on IASI L1C data quality flags and date.
+        """
+        print("Filtering spectra:")
+        if self.data_record_df['Datetime'] <= "201202208":
+            # Treat data differently if before February 8 2012
+            check_quality_flag = self.data_record_df['quality_flag'] == 0
+            check_data = self.data_record_df.drop(['quality_flag', 'date_column'], axis=1).sum(axis=1) > 0
+            good_flag = check_quality_flag & check_data
+        else:
+            check_quality_flags = (self.data_record_df['quality_flag_1'] == 0) & (self.data_record_df['quality_flag_2'] == 0) & (self.data_record_df['quality_flag_3'] == 0)
+            good_flag = check_quality_flags
+
+        # Throw away bad data, return the good
+        good_df = self.data_record_df[good_flag]
+        print(f"{np.round((len(good_df) / len(self.data_record_df)) * 100, 2)} % good data of {len(self.data_record_df)} spectra")
+        return good_df
 
 
 
@@ -313,17 +359,25 @@ class Preprocessor:
         # Open binary file and extract metadata
         self.open_binary_file()
         
-        # Read common IASI record fields
+        # Read common IASI record fields and store to pandas DataFrame
         fields = self.header._get_iasi_common_record_fields()
         self.read_record_fields(fields)
-        
-        # Read L1C or L2 data record fields and store to pandas DataFrame
         if self.data_level == "l1c":
+            # Read L1C-specific record fields and add to DataFrame
             fields = self.header._get_iasi_l1c_record_fields()
             self.read_record_fields(fields)
             self.read_spectral_radiance(fields)
-            print(self.data_record_df[["Channel 1", "Channel 2"]])
         elif self.data_level == "l2":
+            # Read L2-specific record fields and add to DataFrame
             self.read_record_fields(self.header._get_iasi_l2_record_fields())
-        
         self.close_binary_file()
+
+        # Construct Local Time column
+        self.build_local_time()
+        # Construct Datetime column and remove individual time elements
+        self.build_datetime()
+        # Remove observations (DataFrame rows) based on IASI quality flags
+        self.filter_bad_spectra()
+
+        # print the DataFrame
+        print(self.data_record_df.head())
