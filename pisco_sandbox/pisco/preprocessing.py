@@ -144,13 +144,13 @@ class Metadata:
                     ('Day version', 'uint16', 2, 52),
                     ('Start Channel 1', 'uint32', 4, 56),
                     ('End Channel 1', 'uint32', 4, 60),
-                    ('Quality flag 1', 'uint32', 4, 64),
+                    ('Quality Flag 1', 'uint32', 4, 64),
                     ('Start Channel 2', 'uint32', 4, 68),
                     ('End Channel 2', 'uint32', 4, 72),
-                    ('Quality flag 2', 'uint32', 4, 76),
+                    ('Quality Flag 2', 'uint32', 4, 76),
                     ('Start Channel 3', 'uint32', 4, 80),
                     ('End Channel 3', 'uint32', 4, 84),
-                    ('Quality flag 3', 'uint32', 4, 88),
+                    ('Quality Flag 3', 'uint32', 4, 88),
                     ('Cloud Draction', 'uint32', 4, 92),
                     ('Surface Type', 'uint8', 1, 93)]
         return l1c_fields
