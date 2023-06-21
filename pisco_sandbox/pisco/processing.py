@@ -183,8 +183,8 @@ class Preprocessor:
     filepath (str): Path to the binary file.
     targets (List[str]): List of target variables to extract.
     """
-    def __init__(self, filepath: str, data_level: str):
-        self.filepath = filepath
+    def __init__(self, intermediate_file: str, data_level: str):
+        self.intermediate_file = intermediate_file
         self.data_level = data_level
         self.f: object = None
         self.header: Metadata = None
@@ -195,7 +195,7 @@ class Preprocessor:
         # Open binary file
         print("")
         print("Loading intermediate L1C file:")
-        self.f = open(self.filepath, 'rb')
+        self.f = open(self.intermediate_file, 'rb')
         
         # Get structure of file header and data record
         self.header = Metadata(self.f)
@@ -309,7 +309,7 @@ class Preprocessor:
         """
         Stores the local time Boolean indicating whether the current time is day or night.
         """
-        print("\nBuilding Local Time:")
+        print("\nBuilding Local Time...")
         # Calculate the local time
         local_time = self._calculate_local_time()
 
@@ -322,7 +322,7 @@ class Preprocessor:
         """
         Stores the datetime components to a single column and drops the elements.
         """
-        print("\nBuilding Datetime:")
+        print("\nBuilding Datetime...")
         # Create 'Datetime' column
         self.data_record_df['Datetime'] = self.data_record_df['year'].apply(lambda x: f'{int(x):04d}') + \
                                     self.data_record_df['month'].apply(lambda x: f'{int(x):02d}') + \
@@ -340,7 +340,7 @@ class Preprocessor:
         """
         Filters bad spectra based on IASI L1C data quality flags and date. Overwrites existing DataFrame.
         """
-        print("\nFiltering spectra:")
+        print("\nFiltering spectra...")
         if date <= datetime(2012, 2, 8):
             # Treat data differently if before February 8 2012 (due to a change in IASI data reduction)
             check_quality_flag = self.data_record_df['quality_flag'] == 0
@@ -355,24 +355,29 @@ class Preprocessor:
         print(f"{np.round((len(self.data_record_df) / len(self.data_record_df)) * 100, 2)} % good data of {len(self.data_record_df)} spectra")
         return
 
-    
-    def save_observations(self, datapath_out: str, datafile_out: str) -> None:
+
+    def _delete_intermediate_binary_file(self) -> None:
+        os.remove(self.intermediate_file)
+        return
+
+    def save_observations(self) -> None:
         """
-        Saves the observation data to a file.
-        
-        Args:
-            datapath_out (str): The path to save the file.
-            datafile_out (str): The name of the output file.
+        Saves the observation data to CSV/HDF5 file and deletes OBR output file.
         """  
-        # Save the DataFrame to a file in HDF5 format
-        outfile = f"{datapath_out}{datafile_out}".split(".")[0]
+        # Create output file name
+        outfile = self.intermediate_file.split(".")[0]
         print("\nSaving DataFrame to: {outfile}")    
-        
+
+        # Save the DataFrame to a file in HDF5 format
         # self.data_record_df.to_hdf(f"{datapath_out}{datafile_out}.h5", key='df', mode='w')
         self.data_record_df.to_csv(f"{outfile}.csv", index=False, mode='w')
+        
+        # Delete intermediate OBR output file
+        # self._delete_intermediate_binary_file()
         return
     
-    def preprocess_files(self, datapath_out: str, datafile_out: str, year: str, month: str, day: str) -> None:
+
+    def preprocess_files(self, year: str, month: str, day: str) -> None:
         
         # Open binary file and extract metadata
         self.open_binary_file()
@@ -396,9 +401,9 @@ class Preprocessor:
         # Construct Datetime column and remove individual time elements
         self.build_datetime()
         # Remove observations (DataFrame rows) based on IASI quality flags
-        self.filter_bad_spectra(datetime(year, month, day))
+        self.filter_bad_spectra(datetime(int(year), int(month), int(day)))
         # Save filtered DataFrame to CSV/HDF5
-        self.save_observations(datapath_out, datafile_out)
+        self.save_observations()
         
         # print the DataFrame
         print(self.data_record_df.head())
