@@ -339,7 +339,7 @@ class Preprocessor:
         """
 
         # Retrieve the necessary field data
-        hour, minute, millisecond, longitude = self.data_record_df['hour'], self.data_record_df['minute'], self.data_record_df['millisecond'], self.data_record_df['longitude']
+        hour, minute, millisecond, longitude = self.data_record_df['Hour'], self.data_record_df['Minute'], self.data_record_df['Millisecond'], self.data_record_df['Longitude']
 
         # Calculate the total time in hours, minutes, and milliseconds
         total_time = (hour * 1e4) + (minute * 1e2) + (millisecond / 1e3)
@@ -386,15 +386,15 @@ class Preprocessor:
         """
         print("\nBuilding Datetime...")
         # Create 'Datetime' column
-        self.data_record_df['Datetime'] = self.data_record_df['year'].apply(lambda x: f'{int(x):04d}') + \
-                                    self.data_record_df['month'].apply(lambda x: f'{int(x):02d}') + \
-                                    self.data_record_df['day'].apply(lambda x: f'{int(x):02d}') + '.' + \
-                                    self.data_record_df['hour'].apply(lambda x: f'{int(x):02d}') + \
-                                    self.data_record_df['minute'].apply(lambda x: f'{int(x):02d}') + \
-                                    self.data_record_df['millisecond'].apply(lambda x: f'{int(x/10000):02d}')
+        self.data_record_df['Datetime'] = self.data_record_df['Year'].apply(lambda x: f'{int(x):04d}') + \
+                                    self.data_record_df['Month'].apply(lambda x: f'{int(x):02d}') + \
+                                    self.data_record_df['Day'].apply(lambda x: f'{int(x):02d}') + '.' + \
+                                    self.data_record_df['Hour'].apply(lambda x: f'{int(x):02d}') + \
+                                    self.data_record_df['Minute'].apply(lambda x: f'{int(x):02d}') + \
+                                    self.data_record_df['Millisecond'].apply(lambda x: f'{int(x/10000):02d}')
 
         # Drop original time element columns
-        self.data_record_df = self.data_record_df.drop(columns=['year', 'month', 'day', 'hour', 'minute', 'millisecond'])
+        self.data_record_df = self.data_record_df.drop(columns=['Year', 'Month', 'Day', 'Hour', 'Minute', 'Millisecond'])
         return  
     
 
