@@ -118,8 +118,8 @@ class Processor:
             # merged_df_day.to_csv(f"{datapath_out}day_extracted_spectra.csv", index=False, mode='w')
             # merged_df_night.to_csv(f"{datapath_out}night_extracted_spectra.csv", index=False, mode='w')
         
-        # Delete original csv files
-        self._delete_intermediate_analysis_data()
+        # # Delete original csv files
+        # self._delete_intermediate_analysis_data()
         return
 
 
