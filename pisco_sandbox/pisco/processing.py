@@ -363,9 +363,11 @@ class Preprocessor:
         Args:
             datapath_out (str): The path to save the file.
             datafile_out (str): The name of the output file.
-        """        
+        """  
         # Save the DataFrame to a file in HDF5 format
         outfile = f"{datapath_out}{datafile_out}".split(".")[0]
+        print("\nSaving DataFrame to: {outfile}")    
+        
         # self.data_record_df.to_hdf(f"{datapath_out}{datafile_out}.h5", key='df', mode='w')
         self.data_record_df.to_csv(f"{outfile}.csv", index=False, mode='w')
         return
