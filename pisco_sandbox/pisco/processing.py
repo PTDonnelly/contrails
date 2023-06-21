@@ -211,7 +211,7 @@ class Preprocessor:
         This function only extracts the first 8 fields and the ones listed in the targets attribute.
         """
         # Iterate over each field
-        print(print(self.f.tell()))
+        print(self.f.tell())
         for field, dtype, dtype_size, cumsize in fields:
             print(f"Extracting: {field}")
 
@@ -245,7 +245,7 @@ class Preprocessor:
         last_field_end = fields[-1][-1] # End of the surface_type field
 
         # Go to spectral radiance data (skip header and previous record data, "12"s are related to reading )
-        print(self.f.tell())
+        print(f"Radiance: {self.f.tell()}")
         start_read_position = self.header.header_size + 12 + last_field_end + (4 * self.header.number_of_channels) #12
         self.f.seek(start_read_position, 0)
         
@@ -320,7 +320,8 @@ class Preprocessor:
         self.open_binary_file()
         
         # Read common IASI record fields
-        self.common_record_df = self.read_record_fields(self.header._get_iasi_common_record_fields())
+        fields = self.header._get_iasi_common_record_fields()
+        self.common_record_df = self.read_record_fields(fields)
         
         # Read L1C or L2 data record fields and store to pandas DataFrame
         if self.data_level == "l1c":
