@@ -211,14 +211,14 @@ class Preprocessor:
         This function only extracts the first 8 fields and the ones listed in the targets attribute.
         """
         # Iterate over each field
-        self.f.tell()
+        print(print(self.f.tell()))
         for field, dtype, dtype_size, cumsize in fields:
             print(f"Extracting: {field}")
 
             # Move the file pointer to the starting position of the current field
             field_start = self.header.header_size + 12 + cumsize
             self.f.seek(field_start, 0)
-            self.f.tell()
+            print(self.f.tell())
 
             # Calculate the byte offset to the next measurement
             byte_offset = self.header.record_size + 8 - dtype_size
@@ -245,7 +245,7 @@ class Preprocessor:
         last_field_end = fields[-1][-1] # End of the surface_type field
 
         # Go to spectral radiance data (skip header and previous record data, "12"s are related to reading )
-        self.f.tell()
+        print(self.f.tell())
         start_read_position = self.header.header_size + 12 + last_field_end + (4 * self.header.number_of_channels) #12
         self.f.seek(start_read_position, 0)
         
