@@ -405,11 +405,11 @@ class Preprocessor:
         print("\nFiltering spectra...")
         if date <= datetime(2012, 2, 8):
             # Treat data differently if before February 8 2012 (due to a change in IASI data reduction)
-            check_quality_flag = self.data_record_df['quality_flag'] == 0
-            check_data = self.data_record_df.drop(['quality_flag', 'date_column'], axis=1).sum(axis=1) > 0
+            check_quality_flag = self.data_record_df['Quality Flag'] == 0
+            check_data = self.data_record_df.drop(['Quality Flag', 'Date Column'], axis=1).sum(axis=1) > 0
             good_flag = check_quality_flag & check_data
         else:
-            check_quality_flags = (self.data_record_df['quality_flag_1'] == 0) & (self.data_record_df['quality_flag_2'] == 0) & (self.data_record_df['quality_flag_3'] == 0)
+            check_quality_flags = (self.data_record_df['Quality Flag 1'] == 0) & (self.data_record_df['Quality Flag 2'] == 0) & (self.data_record_df['Quality Flag 3'] == 0)
             good_flag = check_quality_flags
         
         # Print the fraction of good measurements
