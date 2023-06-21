@@ -280,13 +280,13 @@ class Preprocessor:
             # Prepare an empty array to store the data of the current field
             data = np.empty(self.header.number_of_measurements)
             
-            # Read the data of each measurement
-            for measurement in range(self.header.number_of_measurements):
-                value = np.fromfile(self.f, dtype=dtype, count=1, sep='', offset=byte_offset)
-                data[measurement] = np.nan if len(value) == 0 else value[0]
+            # # Read the data of each measurement
+            # for measurement in range(self.header.number_of_measurements):
+            #     value = np.fromfile(self.f, dtype=dtype, count=1, sep='', offset=byte_offset)
+            #     data[measurement] = np.nan if len(value) == 0 else value[0]
 
-            # # # Read the data of all measurements at once
-            # # data = np.fromfile(self.f, dtype=dtype, count=self.header.number_of_measurements, sep='', offset=byte_offset)
+            # Read the data of all measurements at once
+            data = np.fromfile(self.f, dtype=dtype, count=self.header.number_of_measurements, sep='', offset=byte_offset)
 
             # # Read the data of each measurement from the buffer
             # for measurement in range(self.header.number_of_measurements):
