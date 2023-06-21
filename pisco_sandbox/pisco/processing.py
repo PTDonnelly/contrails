@@ -317,7 +317,7 @@ class Preprocessor:
         local_time = self._calculate_local_time()
 
         # Store the Boolean indicating day (True) or night (False) in the DataFrame
-        self.field_df['Local Time'] = (6 < local_time) & (local_time < 18)
+        self.data_record_df['Local Time'] = (6 < local_time) & (local_time < 18)
         return
 
 
@@ -326,15 +326,15 @@ class Preprocessor:
         Stores the datetime components to a single column and drops the elements.
         """
         # Create 'Datetime' column
-        self.data_record_df['Datetime'] = self.field_df['year'].apply(lambda x: f'{int(x):04d}') + \
-                                    self.field_df['month'].apply(lambda x: f'{int(x):02d}') + \
-                                    self.field_df['day'].apply(lambda x: f'{int(x):02d}') + '.' + \
-                                    self.field_df['hour'].apply(lambda x: f'{int(x):02d}') + \
-                                    self.field_df['minute'].apply(lambda x: f'{int(x):02d}') + \
-                                    self.field_df['millisecond'].apply(lambda x: f'{int(x/10000):02d}')
+        self.data_record_df['Datetime'] = self.data_record_df['year'].apply(lambda x: f'{int(x):04d}') + \
+                                    self.data_record_df['month'].apply(lambda x: f'{int(x):02d}') + \
+                                    self.data_record_df['day'].apply(lambda x: f'{int(x):02d}') + '.' + \
+                                    self.data_record_df['hour'].apply(lambda x: f'{int(x):02d}') + \
+                                    self.data_record_df['minute'].apply(lambda x: f'{int(x):02d}') + \
+                                    self.data_record_df['millisecond'].apply(lambda x: f'{int(x/10000):02d}')
 
         # Drop original time element columns
-        self.field_df = self.field_df.drop(columns=['year', 'month', 'day', 'hour', 'minute', 'millisecond'])
+        self.data_record_df = self.data_record_df.drop(columns=['year', 'month', 'day', 'hour', 'minute', 'millisecond'])
         return  
     
 
