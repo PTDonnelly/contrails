@@ -26,7 +26,7 @@ def process_iasi(ex: Extractor, data_level: str):
     if ex.intermediate_file_check:
         # Preprocess the data into pandas DataFrames
         pre = Preprocessor(ex.intermediate_file, ex.data_level)
-        pre.preprocess_files()
+        pre.preprocess_files(ex.year, ex.month, ex.day)
 
         # Process IASI data
     return
