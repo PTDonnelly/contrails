@@ -193,7 +193,7 @@ class Preprocessor:
         # Get structure of file header and data record
         self.header = Metadata(self.f)
         self.header.get_iasi_common_header()
-        self.header.close_file()
+        # self.header.close_file()
         return
     
     def read_spectral_radiance(self, fields: List[tuple]) -> None:
