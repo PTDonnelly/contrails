@@ -99,7 +99,7 @@ class Metadata:
         return
 
 
-    def get_iasi_common_record_fields(self) -> List[tuple]:
+    def _get_iasi_common_record_fields(self) -> List[tuple]:
         # Format of fields in binary file (field_name, data_type, data_size, cumulative_data_size)
         common_fields = [
             ('year', 'uint16', 2),
@@ -120,7 +120,7 @@ class Metadata:
             ('height_of_station', 'float32', 4,)]
         return common_fields
     
-    def get_iasi_l1c_record_fields(self) -> List[tuple]:
+    def _get_iasi_l1c_record_fields(self) -> List[tuple]:
         # Format of fields in binary file (field_name, data_type, data_size, cumulative_data_size)
         l1c_fields = [
             ('day_version', 'uint16', 2),
@@ -137,7 +137,7 @@ class Metadata:
             ('surface_type', 'uint8', 1)]
         return l1c_fields
     
-    def get_iasi_l2_record_fields(self) -> List[tuple]:
+    def _get_iasi_l2_record_fields(self) -> List[tuple]:
         # Format of fields in binary file (field_name, data_type, data_size, cumulative_data_size)
         l2_fields = [
             ('superadiabatic_indicator', 'uint8', 1),
@@ -153,19 +153,19 @@ class Metadata:
             ('satellite_maoeuvre_indicator', 'uint32', 4),]
         return l2_fields
     
-    def get_ozo_record_fields(self):
+    def _get_ozo_record_fields(self):
         pass
 
-    def get_trg_record_fields(self):
+    def _get_trg_record_fields(self):
         pass
     
-    def get_clp_record_fields(self):
+    def _get_clp_record_fields(self):
         pass
 
-    def get_twt_record_fields(self):
+    def _get_twt_record_fields(self):
         pass
 
-    def get_ems_record_fields(self):
+    def _get_ems_record_fields(self):
         pass
 
 
@@ -185,7 +185,7 @@ class Preprocessor:
         self.common_record_df: pd.DataFrame()
         self.data_record_df = pd.DataFrame()
 
-    def open_binary_file(self):
+    def open_binary_file(self) -> None:
         # Open binary file
         print("Loading intermediate L1C file:")
         self.f = open(self.filepath, 'rb')
@@ -196,7 +196,36 @@ class Preprocessor:
         self.header.close_file()
         return
     
-    def read_record_fields(self, fields) -> pd.DataFrame:
+    def read_spectral_radiance(self, fields: List[tuple]) -> None:
+        """
+        Extracts and stores the spectral radiance measurements from the binary file.
+        """
+        print("Extracting: radiance")
+
+        # Determine the position of the anchor point for spectral radiance data in the binary file
+        last_field_end = fields[-1][-1] # End of the surface_type field
+
+        # Go to spectral radiance data (skip header and previous record data, "12"s are related to reading )
+        start_read_position = self.header.header_size + 12 + last_field_end + (4 * self.header.number_of_channels) #12
+        self.f.seek(start_read_position, 0)
+        
+        # Calculate the offset to skip to the next measurement
+        byte_offset = self.header.record_size + 8 - (4 * self.header.number_of_channels)
+        
+        # Initialize an empty numpy array to store the spectral radiance data
+        data = np.empty((self.header.number_of_channels, self.header.number_of_measurements))
+
+        # Iterate over each measurement and extract the spectral radiance data
+        for measurement in range(self.header.number_of_measurements):
+            value = np.fromfile(self.f, dtype='float32', count=self.header.number_of_channels, sep='', offset=byte_offset)
+            data[:, measurement] = np.nan if len(value) == 0 else value
+
+        # Assign channel IDs and values to DataFrame
+        for i, id in enumerate(self.header.channel_IDs):
+            self.data_record_df[f'Channel {id}'] = data[i, :]
+        return
+    
+    def read_record_fields(self, fields) -> None:
         """
         Reads the data of each field from the binary file and store it in the field_df dictionary.
 
@@ -226,16 +255,16 @@ class Preprocessor:
                 data[measurement] = np.nan if len(value) == 0 else value[0]
 
             # Store the data in the DataFrame
-            self.field_df[field] = data
+            self.data_record_df[field] = data
+        
+        # Read channel radiances for Level 1C data
+        if self.data_level == "l1c":
+            self.read_spectral_radiance(fields)
+        
+        print(self.data_record_df.head())
         return
 
-
-
-
-    def _read_radiance(self):
-        pass
-
-    def _calculate_local_time(self) -> np.ndarray:
+    def _calculate_local_time(self) -> None:
         """
         Calculate the local time (in hours, UTC) that determines whether it is day or night at a specific longitude.
 
@@ -244,7 +273,7 @@ class Preprocessor:
         """
 
         # Retrieve the necessary field data
-        hour, minute, millisecond, longitude = self.field_df['hour'], self.field_df['minute'], self.field_df['millisecond'], self.field_df['longitude']
+        hour, minute, millisecond, longitude = self.data_record_df['hour'], self.data_record_df['minute'], self.data_record_df['millisecond'], self.data_record_df['longitude']
 
         # Calculate the total time in hours, minutes, and milliseconds
         total_time = (hour * 1e4) + (minute * 1e2) + (millisecond / 1e3)
@@ -272,7 +301,7 @@ class Preprocessor:
         # Take the modulus again to ensure the time is within the 0 to 23 hours range
         return np.mod(time_shifted, 24)
 
-    def filter_observations(self):
+    def filter_observations(self) -> None:
         pass
 
 
@@ -289,12 +318,12 @@ class Preprocessor:
         self.open_binary_file()
         
         # Read common IASI record fields
-        self.common_record_df = self.read_record_fields(self.header.get_iasi_common_record_fields())
+        self.common_record_df = self.read_record_fields(self.header._get_iasi_common_record_fields())
         
         # Read L1C or L2 data record fields
         if self.data_level == "l1c":
-            self.data_record_df = self.read_record_fields(self.header.get_iasi_l1c_record_fields())
+            self.read_record_fields(self.header._get_iasi_l1c_record_fields())
         elif self.data_level == "l2":
-            self.data_record_df = self.read_record_fields(self.header.get_iasi_l2_record_fields())
+            self.read_record_fields(self.header._get_iasi_l2_record_fields())
         
         self.close_binary_file()
