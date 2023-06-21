@@ -11,9 +11,9 @@ class Configurer:
             self.__dict__ = commentjson.load(file)
             
         # Perform any necessary post-processing before executing
-        self.channels: List[int] = self.set_channels()
+        self.channels: List[int] = self.set_channels(n=1000)
     
-    def set_channels(self):
-        # Set the list of IASI channel indices
-        n = 1000
+    @staticmethod
+    def set_channels(n=8461):
+        # Set the list of IASI channel indices (defaults to maximum of 8461)
         return [(i + 1) for i in range(n)]
