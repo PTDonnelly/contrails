@@ -104,14 +104,11 @@ class Processor:
         if cloud_phase is None:
             print("Cloud_phase is unknown or uncertain, skipping data.")
         else:
-            print(f"Saving {cloud_phase} spectra to {self.datapath_l1c}")
-            # self.merged_datafile = f"{self.datapath_l1c}extracted_spectra_{cloud_phase}.csv"
-            # self.merged_df.to_csv(self.merged_datafile, index=False, mode='w')
-            
+            print(f"Saving {cloud_phase} spectra to {self.datapath_l1c}")            
             # Save the DataFrame to a file in csv format, split by local time
             # df.to_hdf(f"{datapath_out}{datafile_out}.h5", key='df', mode='w')
-            self.merged_df_day.to_csv(f"{self.datapath_l1c}day_extracted_spectra.csv", index=False, mode='w')
-            self.merged_df_night.to_csv(f"{self.datapath_l1c}night_extracted_spectra.csv", index=False, mode='w')
+            self.merged_df_day.to_csv(f"{self.datapath_l1c}day_extracted_spectra_{cloud_phase}.csv", index=False, mode='w')
+            self.merged_df_night.to_csv(f"{self.datapath_l1c}night_extracted_spectra_{cloud_phase}.csv", index=False, mode='w')
         
         # # Delete original csv files
         # self._delete_intermediate_analysis_data()
