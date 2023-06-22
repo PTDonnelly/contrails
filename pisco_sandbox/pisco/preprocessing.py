@@ -60,7 +60,7 @@ class Metadata:
         # Get the total size of the file
         file_size = self.f.seek(0, 2)
         # Calculate the number of measurements (minus 1 to avoid erroneous reads at the end of the byte structure)
-        self.number_of_measurements = 10000 #((file_size - self.header_size - 8) // (self.record_size + 8)) - 1
+        self.number_of_measurements = 1 #((file_size - self.header_size - 8) // (self.record_size + 8)) - 1
         return
     
     def _read_record_size(self) -> int:
@@ -398,7 +398,7 @@ class Preprocessor:
         return  
     
 
-    def filter_bad_spectra(self, date: object) -> None:
+    def filter_good_spectra(self, date: object) -> None:
         """
         Filters bad spectra based on IASI L1C data quality flags and date. Overwrites existing DataFrame.
         """
@@ -456,7 +456,7 @@ class Preprocessor:
             self.read_spectral_radiance(self.header._get_iasi_l1c_record_fields())
             
             # Remove observations (DataFrame rows) based on IASI quality_flags
-            self.filter_bad_spectra(datetime(int(year), int(month), int(day)))
+            self.filter_good_spectra(datetime(int(year), int(month), int(day)))
         
         if self.data_level == "l2":
             # Read L2-specific record fields and add to DataFrame
@@ -464,7 +464,7 @@ class Preprocessor:
             self.read_record_fields(self.header._get_iasi_l2_record_fields())
             
             # # Remove observations (DataFrame rows) based on IASI cloud_phase
-            # self.filter_unwanted_cloud_phase()
+            # self.filter_specified_cloud_phase()
         self.close_binary_file()
 
         # Construct Local Time column

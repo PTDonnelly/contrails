@@ -11,10 +11,16 @@ class Configurer:
             self.__dict__ = commentjson.load(file)
             
         # Perform any necessary post-processing before executing
-        self.channels: List[int] = self.set_channels()
+        self.channels: List[int] = self.set_channels(self.channel_mode)
     
     @staticmethod
-    def set_channels(n=8461):
-        # Set the list of IASI channel indices (defaults to maximum of 8461)
-        n = 1
-        return [(i + 1) for i in range(n)]
+    def set_channels(mode):
+        # Set the list of IASI spectral channel indices
+        if mode == "all":
+            # Defaults to maximum of 8461 channels
+            return [(i + 1) for i in range(8461)]
+        elif mode == "range":
+            n = 10
+            return [(i + 1) for i in range(n)]
+        else:
+            raise ValueError('mode but be "all" or "range" for L1C reduction')
