@@ -204,7 +204,7 @@ class Preprocessor:
         The level of the data to be processed ("l1c" or "l2").
     f : BinaryIO
         The binary file that is currently being processed.
-    header : Metadata
+    metadata : Metadata
         The metadata of the binary file that is currently being processed.
     data_record_df : pd.DataFrame
         The pandas DataFrame that stores the data extracted from the binary file.
@@ -212,7 +212,7 @@ class Preprocessor:
     Methods:
     -------
     open_binary_file()
-        Opens the binary file and extracts the header data.
+        Opens the binary file and extracts the metadata.
     close_binary_file()
         Closes the currently open binary file.
     read_record_fields(fields: List[tuple])
@@ -234,7 +234,7 @@ class Preprocessor:
         self.intermediate_file = intermediate_file
         self.data_level = data_level
         self.f: BinaryIO = None
-        self.header: Metadata = None
+        self.metadata: Metadata = None
         self.data_record_df = pd.DataFrame()
 
 
@@ -244,8 +244,8 @@ class Preprocessor:
         self.f = open(self.intermediate_file, 'rb')
         
         # Get structure of file header and data record
-        self.header = Metadata(self.f)
-        self.header.get_iasi_common_header()
+        self.metadata = Metadata(self.f)
+        self.metadata.get_iasi_common_header()
         return
 
 
@@ -265,17 +265,17 @@ class Preprocessor:
             print(f"Extracting: {field}")
 
             # Move the file pointer to the starting position of the current field
-            field_start = self.header.header_size + 12 + cumsize
+            field_start = self.metadata.header_size + 12 + cumsize
             self.f.seek(field_start, 0)
 
             # Calculate the byte offset to the next measurement
-            byte_offset = self.header.record_size + 8 - dtype_size
+            byte_offset = self.metadata.record_size + 8 - dtype_size
 
             # Prepare an empty array to store the data of the current field
-            data = np.empty(self.header.number_of_measurements)
+            data = np.empty(self.metadata.number_of_measurements)
             
             # Read the data of each measurement
-            for measurement in range(self.header.number_of_measurements):
+            for measurement in range(self.metadata.number_of_measurements):
                 value = np.fromfile(self.f, dtype=dtype, count=1, sep='', offset=byte_offset)
                 data[measurement] = np.nan if len(value) == 0 else value[0]
 
@@ -294,37 +294,37 @@ class Preprocessor:
         last_field_end = fields[-1][-1] # End of the surface_type field
 
         # Go to spectral radiance data (skip header and previous record data, "12"s are related to reading )
-        start_read_position = self.header.header_size + 12 + last_field_end + (4 * self.header.number_of_channels)
+        start_read_position = self.metadata.header_size + 12 + last_field_end + (4 * self.metadata.number_of_channels)
         self.f.seek(start_read_position, 0)
         
         # Calculate the offset to skip to the next measurement
-        byte_offset = self.header.record_size + 8 - (4 * self.header.number_of_channels)
+        byte_offset = self.metadata.record_size + 8 - (4 * self.metadata.number_of_channels)
         
         # Initialize an empty numpy array to store the spectral radiance data
-        data = np.empty((self.header.number_of_channels, self.header.number_of_measurements))
+        data = np.empty((self.metadata.number_of_channels, self.metadata.number_of_measurements))
 
         # Iterate over each measurement and extract the spectral radiance data
-        for measurement in range(self.header.number_of_measurements):
-            spectrum = np.fromfile(self.f, dtype='float32', count=self.header.number_of_channels, sep='', offset=byte_offset)
+        for measurement in range(self.metadata.number_of_measurements):
+            spectrum = np.fromfile(self.f, dtype='float32', count=self.metadata.number_of_channels, sep='', offset=byte_offset)
             data[:, measurement] = np.nan if len(spectrum) == 0 else spectrum
 
         # Assign channel IDs and spectra to DataFrame
-        for i, id in enumerate(self.header.channel_IDs):
+        for i, id in enumerate(self.metadata.channel_IDs):
             self.data_record_df[f'Channel {id}'] = data[i, :]
 
         # ######## Alternate method that avoids temporary arrays
         # # Prepare empty arrays in the DataFrame
-        # for id in self.header.channel_IDs:
-        #     self.data_record_df[f'Channel {id}'] = np.empty(self.header.number_of_measurements)
+        # for id in self.metadata.channel_IDs:
+        #     self.data_record_df[f'Channel {id}'] = np.empty(self.metadata.number_of_measurements)
         
         # # Iterate over each measurement and extract the spectral radiance data
-        # for measurement in range(self.header.number_of_measurements):
-        #     spectrum = np.fromfile(self.f, dtype='float32', count=self.header.number_of_channels, sep='', offset=byte_offset)
+        # for measurement in range(self.metadata.number_of_measurements):
+        #     spectrum = np.fromfile(self.f, dtype='float32', count=self.metadata.number_of_channels, sep='', offset=byte_offset)
             
         #     if len(spectrum) == 0:
-        #         spectrum = np.full(self.header.number_of_channels, np.nan)
+        #         spectrum = np.full(self.metadata.number_of_channels, np.nan)
             
-        #     for i, id in enumerate(self.header.channel_IDs):
+        #     for i, id in enumerate(self.metadata.channel_IDs):
         #         self.data_record_df.loc[measurement, f'Channel {id}'] = spectrum[i]
         # ########
         return
@@ -430,7 +430,7 @@ class Preprocessor:
         """  
         # Create output file name
         outfile = self.intermediate_file.split(".")[0]
-        print(f"\nSaving DataFrame to: {outfile}")    
+        print(f"\nSaving DataFrame to: {outfile}.csv")
 
         # Save the DataFrame to a file in HDF5 format
         # self.data_record_df.to_hdf(f"{datapath_out}{datafile_out}.h5", key='df', mode='w')
@@ -447,13 +447,13 @@ class Preprocessor:
         
         # Read common IASI record fields and store to pandas DataFrame
         print("\nCommon Record Fields:")
-        self.read_record_fields(self.header._get_iasi_common_record_fields())
+        self.read_record_fields(self.metadata._get_iasi_common_record_fields())
         
         if self.data_level == "l1c":
             # Read L1C-specific record fields and add to DataFrame
             print("\nL1C Record Fields:")
-            self.read_record_fields(self.header._get_iasi_l1c_record_fields())
-            self.read_spectral_radiance(self.header._get_iasi_l1c_record_fields())
+            self.read_record_fields(self.metadata._get_iasi_l1c_record_fields())
+            self.read_spectral_radiance(self.metadata._get_iasi_l1c_record_fields())
             
             # Remove observations (DataFrame rows) based on IASI quality_flags
             self.filter_good_spectra(datetime(int(year), int(month), int(day)))
@@ -461,7 +461,7 @@ class Preprocessor:
         if self.data_level == "l2":
             # Read L2-specific record fields and add to DataFrame
             print("\nL2 Record Fields:")
-            self.read_record_fields(self.header._get_iasi_l2_record_fields())
+            self.read_record_fields(self.metadata._get_iasi_l2_record_fields())
             
             # # Remove observations (DataFrame rows) based on IASI cloud_phase
             # self.filter_specified_cloud_phase()
