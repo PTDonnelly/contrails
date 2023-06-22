@@ -51,3 +51,78 @@ def process_iasi(ex: Extractor):
     p = Processor(ex.config.datapath_out, ex.year, ex.month, ex.day, ex.config.cloud_phase)
     p.correlate_spectra_with_cloud_products()
     return
+
+
+def plot_spatial_distribution(datapath: str):
+    import os
+    import pandas as pd
+    import matplotlib.cm as cm
+    import matplotlib.pyplot as plt
+    from mpl_toolkits.basemap import Basemap
+    import numpy as np
+    
+    filepaths = [os.path.join(root, file) for root, dirs, files in os.walk(datapath) for file in files if ".csv" in file]
+
+    # Initialize a new figure for the plot
+    plt.figure(figsize=(8, 8))
+
+    # Create a basemap of the world
+    m = Basemap(projection='cyl')
+
+    # Draw coastlines and country borders
+    m.drawcoastlines()
+    # m.drawcountries()
+
+    # Plotting parameters
+    colors = cm.turbo(np.linspace(0, 1, len(filepaths)))
+    
+    # Walk through the directory
+    for file, color in zip(filepaths, colors):
+        print(file)
+
+        # Load the data from the file into a pandas DataFrame
+        data = pd.read_csv(file)
+        # Plot the observations on the map
+        x, y = m(data['Longitude'].values, data['Latitude'].values)
+        m.scatter(x, y, latlon=True, marker=".", s=1, color=color)
+
+    # Show the plot
+    plt.savefig(f"{datapath}/spatial_distribution.png", dpi=300, bbox_inches='tight')
+
+def plot_spectra(datapath: str):
+    import os
+    import pandas as pd
+    import matplotlib.cm as cm
+    import matplotlib.pyplot as plt
+    import numpy as np
+
+    filepaths = [os.path.join(root, file) for root, dirs, files in os.walk(datapath) for file in files if ".csv" in file]
+
+    # Plotting parameters
+    colors = cm.turbo(np.linspace(0, 1, len(filepaths)))
+    
+    # Initialize a new figure for the plot
+    plt.figure(figsize=(8, 8))
+
+    # Walk through the directory
+    for file, color in zip(filepaths, colors):
+        print(file)
+
+        # Load the data from the file into a pandas DataFrame
+        df = pd.read_csv(file)
+        
+        # Get the spectrum (all columns with "Channel" in the name)
+        spectrum_columns = [col for col in df.columns if "Channel" in col]
+        spectrum = df[spectrum_columns[6:]].mean()
+        
+        channels = np.arange(len(spectrum))
+
+        # Plot the average spectrum
+        plt.plot(channels, spectrum, color=color, lw=0.5)
+    
+    plt.xlabel('Channel')
+    plt.ylabel('Average intensity')
+    # plt.yscale('log') 
+
+    # Show the plot
+    plt.savefig(f"{datapath}/average_spectra.png", dpi=300, bbox_inches='tight')

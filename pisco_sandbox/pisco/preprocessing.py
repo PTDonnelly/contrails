@@ -310,7 +310,7 @@ class Preprocessor:
 
         # Assign channel IDs and spectra to DataFrame
         for i, id in enumerate(self.metadata.channel_IDs):
-            self.data_record_df[f'Channel {id}'] = data[i, :]
+            self.data_record_df[f'Spectrum {id}'] = data[i, :]
 
         # ######## Alternate method that avoids temporary arrays
         # # Prepare empty arrays in the DataFrame
