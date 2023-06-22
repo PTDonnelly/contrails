@@ -437,7 +437,7 @@ class Preprocessor:
         self.data_record_df.to_csv(f"{outfile}.csv", index=False, mode='w')
         
         # Delete intermediate OBR output file
-        # self._delete_intermediate_binary_file()
+        self._delete_intermediate_binary_file()
         return
     
 
