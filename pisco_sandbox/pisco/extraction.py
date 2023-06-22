@@ -135,7 +135,7 @@ class Extractor:
         print(f"\n{command}")
         try:
             # Run the command in a bash shell and capture the output
-            result = subprocess.run(command, shell=True, capture_output=True, text=True, check=True)
+            result = subprocess.run(command, shell=True, text=True, check=True)
         except subprocess.CalledProcessError as e:
             # The subprocess module will raise a CalledProcessError if the process returns a non-zero exit status
             # The standard error of the command is available in e.stderr
