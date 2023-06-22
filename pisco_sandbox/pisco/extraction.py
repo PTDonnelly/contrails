@@ -131,19 +131,40 @@ class Extractor:
         Executes and monitors the command to extract IASI data.
         """
         # Build the command string to execute the binary script
-        command = self._get_command()
-        print(f"\n{command}")
+        executable_command = self._get_command()
+        print(f"\n{executable_command}")
+
         try:
-            # Run the command in a bash shell and capture the output
-            result = subprocess.run(command, shell=True, text=True, check=True)
-        except subprocess.CalledProcessError as e:
-            # The subprocess module will raise a CalledProcessError if the process returns a non-zero exit status
-            # The standard error of the command is available in e.stderr
-            raise RuntimeError(f"{str(e)}, stderr: {e.stderr}")
-        except Exception as e:
-            # Catch any other exceptions
-            raise RuntimeError(f"An unexpected error occurred while running the command '{command}': {str(e)}")
-        return result
+            # Initiate the subprocess with Popen.
+            # shell=True specifies that the command will be run through the shell.
+            # stdout=subprocess.PIPE and stderr=subprocess.PIPE allow us to capture the output.
+            # text=True means the output will be in string format (if not set, the output would be in bytes).
+            subprocess_instance = subprocess.Popen(executable_command, shell=True, stdout=subprocess.PIPE, stderr=subprocess.PIPE, text=True)
+
+            # Loop until the subprocess finishes.
+            # We're using subprocess_instance.poll() to check if the subprocess has finished (it returns None while the subprocess is still running).
+            while True:
+                # Read one line of output. If there's no output, readline() returns an empty string.
+                current_output_line = subprocess_instance.stdout.readline()
+                if subprocess_instance.poll() is not None:
+                    break
+                if current_output_line:
+                    # If there's output, print it.
+                    print(current_output_line.strip())
+
+            # At this point, the subprocess has finished. Check its return code.
+            return_code = subprocess_instance.poll()
+
+            # If the return code is not 0, it usually indicates an error.
+            if return_code != 0:
+                # If there's an error, read the error message and raise an exception.
+                error_message = subprocess_instance.stderr.read()
+                raise RuntimeError(f"Command '{executable_command}' returned non-zero exit status {return_code}, stderr: {error_message}")
+        except Exception as unexpected_error:
+            # Catch any other exceptions that weren't handled above.
+            raise RuntimeError(f"An unexpected error occurred while running the command '{executable_command}': {str(unexpected_error)}")
+
+
 
 
     def create_intermediate_filepath(self) -> None:
