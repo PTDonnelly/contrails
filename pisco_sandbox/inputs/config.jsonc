@@ -9,7 +9,7 @@
     "process": false,
 
     // year_list: List[int], List of years for extraction
-    "year_list": [2020, 2021, 2022, 2023],
+    "year_list": [2020],
 
     // month_list:  List[int] or str, List[int] of specific months or "all" to scan all calendar months in year
     "month_list": "all",
