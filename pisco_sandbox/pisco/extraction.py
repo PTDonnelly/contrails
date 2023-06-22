@@ -131,15 +131,18 @@ class Extractor:
         Executes and monitors the command to extract IASI data.
         """
         # Build the command string to execute the binary script
-        executable_command = self._get_command()
-        print(f"\n{executable_command}")
+        command = self._get_command()
+        print(f"\n{command}")
 
         try:
             # Initiate the subprocess with Popen.
             # shell=True specifies that the command will be run through the shell.
             # stdout=subprocess.PIPE and stderr=subprocess.PIPE allow us to capture the output.
             # text=True means the output will be in string format (if not set, the output would be in bytes).
-            subprocess_instance = subprocess.Popen(executable_command, shell=True, stdout=subprocess.PIPE, stderr=subprocess.PIPE, text=True)
+            subprocess_instance = subprocess.Popen(command, shell=True, stdout=subprocess.PIPE, stderr=subprocess.PIPE, text=True)
+            
+            # Initialize an empty list to store the output lines
+            command_output = []
 
             # Loop until the subprocess finishes.
             # We're using subprocess_instance.poll() to check if the subprocess has finished (it returns None while the subprocess is still running).
@@ -149,8 +152,9 @@ class Extractor:
                 if subprocess_instance.poll() is not None:
                     break
                 if current_output_line:
-                    # If there's output, print it.
+                    # Print the line and also save it to command_output list
                     print(current_output_line.strip())
+                    command_output.append(current_output_line.strip())
 
             # At this point, the subprocess has finished. Check its return code.
             return_code = subprocess_instance.poll()
@@ -159,11 +163,13 @@ class Extractor:
             if return_code != 0:
                 # If there's an error, read the error message and raise an exception.
                 error_message = subprocess_instance.stderr.read()
-                raise RuntimeError(f"Command '{executable_command}' returned non-zero exit status {return_code}, stderr: {error_message}")
+                raise RuntimeError(f"Command '{command}' returned non-zero exit status {return_code}, stderr: {error_message}")
         except Exception as unexpected_error:
             # Catch any other exceptions that weren't handled above.
-            raise RuntimeError(f"An unexpected error occurred while running the command '{executable_command}': {str(unexpected_error)}")
-
+            raise RuntimeError(f"An unexpected error occurred while running the command '{command}': {str(unexpected_error)}")
+        
+        # Create a CompletedProcess object that contains the result of execution
+        return subprocess.CompletedProcess(args=command, returncode=return_code, stdout='\n'.join(command_output), stderr=None)
 
 
 
