@@ -12,7 +12,7 @@
     "year_list": [2020],
 
     // month_list:  List[int] or str, List[int] of specific months or "all" to scan all calendar months in year
-    "month_list": [8, 9, 10, 11, 12],
+    "month_list": [11, 12],
 
     // day_list: List[int] or str, List[int] of specific days, or "all" to scan all calendar days in month
     "day_list": [1, 6, 11, 16, 21, 26],
