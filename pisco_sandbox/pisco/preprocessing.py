@@ -2,7 +2,7 @@ from datetime import datetime
 import os
 import numpy as np
 import pandas as pd
-from typing import List, BinaryIO, Tuple, Set
+from typing import Any, List, BinaryIO, Tuple, Set
 
 import numpy as np
 
@@ -256,6 +256,132 @@ class Preprocessor:
         return
     
 
+    # def _get_valid_indices(self, fields: List[tuple]) -> Set[int]:
+    #     """
+    #     Go through the latitude and longitude fields to find and store indices of measurements 
+    #     where latitude and longitude fall inside the specified range.
+
+    #     Returns a set of indices of measurements to be processed in the main loop.
+    #     """
+    #     valid_indices_lat = set()
+    #     valid_indices_lon = set()
+
+    #     # Find and extract the details of Latitude and Longitude fields
+    #     for field, dtype, dtype_size, cumsize in fields:
+    #         if field not in ['Latitude', 'Longitude']:
+    #             # Skip this tuple in the list of fields
+    #             continue
+
+    #         # Move the file pointer to the start position of the field
+    #         field_start = self.metadata.header_size + 12 + cumsize
+    #         self.f.seek(field_start, 0)
+
+    #         # Calculate the byte offset to the next measurement
+    #         byte_offset = self.metadata.record_size + 8 - dtype_size
+
+    #         # Scan each measurement
+    #         for measurement in range(self.metadata.number_of_measurements):
+    #             value = np.fromfile(self.f, dtype=dtype, count=1, sep='', offset=byte_offset)
+                
+    #             # If the value is inside the allowed range, add the measurement index to the appropriate set
+    #             if field == 'Latitude' and (self.latitude_range[0] <= value[0] <= self.latitude_range[1]):
+    #                 valid_indices_lat.add(measurement)
+    #             elif field == 'Longitude' and (self.longitude_range[0] <= value[0] <= self.longitude_range[1]):
+    #                 valid_indices_lon.add(measurement)
+
+    #     # Only keep the indices that are valid for both latitude and longitude
+    #     return valid_indices_lat & valid_indices_lon
+
+    # def read_record_fields(self, fields: List[tuple]) -> None:
+    #     """
+    #     Reads the data of each field from the binary file and store it in the field_df dictionary.
+
+    #     This function only extracts the first 8 fields and the ones listed in the targets attribute.
+    #     """
+    #     # Get the set of indices to process
+    #     valid_indices = self._get_valid_indices(fields)
+
+    #     # Iterate over each field
+    #     for field, dtype, dtype_size, cumsize in fields:
+    #         print(f"Extracting: {field}")
+
+    #         # Move the file pointer to the starting position of the current field
+    #         field_start = self.metadata.header_size + 12 + cumsize
+    #         self.f.seek(field_start, 0)
+
+    #         # Calculate the byte offset to the next measurement
+    #         byte_offset = self.metadata.record_size + 8 - dtype_size
+
+    #         # Prepare an empty array to store the data of the current field
+    #         data = np.empty(len(valid_indices))
+    #         # Counter for the valid indices in data
+    #         valid_index = 0
+
+    #         # Read the data of each measurement
+    #         for measurement in range(self.metadata.number_of_measurements):
+    #             if measurement in valid_indices:
+    #                 # Store this measurement
+    #                 value = np.fromfile(self.f, dtype=dtype, count=1, sep='', offset=byte_offset)
+    #                 data[valid_index] = np.nan if len(value) == 0 else value[0]
+    #                 valid_index += 1
+    #             else:
+    #                 # Skip this measurement
+    #                 continue
+    #         self.data_record_df[field] = data    
+    #     return
+
+    @staticmethod
+    def _store_data_in_field_df(data_record_df: pd.DataFrame, field: str, data: np.ndarray) -> None:
+        data_record_df[field] = data
+
+    def _read_data(self, valid_indices: Set[int], dtype: Any, byte_offset: int) -> np.ndarray:
+        """
+        Reads the data of each measurement based on the valid indices.
+
+        Args:
+            valid_indices (Set[int]): Set of valid measurement indices.
+            dtype (Any): Data type of the field.
+            byte_offset (int): Byte offset to the next measurement.
+
+        Returns:
+            np.ndarray: Array of field data.
+        """
+        # Prepare an empty array to store the data of the current field
+        data = np.empty(len(valid_indices))
+        
+        # Counter for the valid indices in data
+        valid_index = 0
+
+        for measurement in range(self.metadata.number_of_measurements):
+            if measurement in valid_indices:
+                value = np.fromfile(self.f, dtype=dtype, count=1, sep='', offset=byte_offset)
+                data[valid_index] = np.nan if len(value) == 0 else value[0]
+                valid_index += 1
+            else:
+                continue
+        return data
+    
+    def _read_indices(self, field: str, dtype: Any, byte_offset: int) -> Set[int]:
+        valid_indices = set()
+        
+        for measurement in range(self.metadata.number_of_measurements):
+            value = np.fromfile(self.f, dtype=dtype, count=1, sep='', offset=byte_offset)
+            
+            if field == 'Latitude' and (self.latitude_range[0] <= value[0] <= self.latitude_range[1]):
+                valid_indices.add(measurement)
+            elif field == 'Longitude' and (self.longitude_range[0] <= value[0] <= self.longitude_range[1]):
+                valid_indices.add(measurement)
+        
+        return valid_indices
+    
+    def _calculate_byte_offset(self, dtype_size: int) -> int:
+        return self.metadata.record_size + 8 - dtype_size
+    
+    def _set_field_start_position(self, cumsize: int) -> None:
+        field_start = self.metadata.header_size + 12 + cumsize
+        self.f.seek(field_start, 0)
+        return
+    
     def _get_valid_indices(self, fields: List[tuple]) -> Set[int]:
         """
         Go through the latitude and longitude fields to find and store indices of measurements 
@@ -266,32 +392,20 @@ class Preprocessor:
         valid_indices_lat = set()
         valid_indices_lon = set()
 
-        # Find and extract the details of Latitude and Longitude fields
         for field, dtype, dtype_size, cumsize in fields:
             if field not in ['Latitude', 'Longitude']:
-                # Skip this tuple in the list of fields
                 continue
 
-            # Move the file pointer to the start position of the field
-            field_start = self.metadata.header_size + 12 + cumsize
-            self.f.seek(field_start, 0)
+            self._set_field_start_position(cumsize)
+            byte_offset = self._calculate_byte_offset(dtype_size)
 
-            # Calculate the byte offset to the next measurement
-            byte_offset = self.metadata.record_size + 8 - dtype_size
+            valid_indices = self._read_indices(field, dtype, byte_offset)
+            if field == 'Latitude':
+                valid_indices_lat.add(valid_indices)
+            elif field == 'Longitude':
+                valid_indices_lon.add(valid_indices)
 
-            # Scan each measurement
-            for measurement in range(self.metadata.number_of_measurements):
-                value = np.fromfile(self.f, dtype=dtype, count=1, sep='', offset=byte_offset)
-                
-                # If the value is inside the allowed range, add the measurement index to the appropriate set
-                if field == 'Latitude' and (self.latitude_range[0] <= value[0] <= self.latitude_range[1]):
-                    valid_indices_lat.add(measurement)
-                elif field == 'Longitude' and (self.longitude_range[0] <= value[0] <= self.longitude_range[1]):
-                    valid_indices_lon.add(measurement)
-
-        # Only keep the indices that are valid for both latitude and longitude
         return valid_indices_lat & valid_indices_lon
-
 
     def read_record_fields(self, fields: List[tuple]) -> None:
         """
@@ -299,37 +413,15 @@ class Preprocessor:
 
         This function only extracts the first 8 fields and the ones listed in the targets attribute.
         """
-        # Get the set of indices to process
         valid_indices = self._get_valid_indices(fields)
-
-        # Iterate over each field
+        
         for field, dtype, dtype_size, cumsize in fields:
             print(f"Extracting: {field}")
+            self._set_field_start_position(self.metadata.header_size, cumsize)
+            byte_offset = self._calculate_byte_offset(self.metadata.record_size, dtype_size)
+            data = self._read_data(valid_indices, dtype, byte_offset)
+            self._store_data_in_field_df(field, data)
 
-            # Move the file pointer to the starting position of the current field
-            field_start = self.metadata.header_size + 12 + cumsize
-            self.f.seek(field_start, 0)
-
-            # Calculate the byte offset to the next measurement
-            byte_offset = self.metadata.record_size + 8 - dtype_size
-
-            # Prepare an empty array to store the data of the current field
-            data = np.empty(len(valid_indices))
-            # Counter for the valid indices in data
-            valid_index = 0
-
-            # Read the data of each measurement
-            for measurement in range(self.metadata.number_of_measurements):
-                if measurement in valid_indices:
-                    # Store this measurement
-                    value = np.fromfile(self.f, dtype=dtype, count=1, sep='', offset=byte_offset)
-                    data[valid_index] = np.nan if len(value) == 0 else value[0]
-                    valid_index += 1
-                else:
-                    # Skip this measurement
-                    continue
-            self.data_record_df[field] = data    
-        return
 
 
     def read_spectral_radiance(self, fields: List[tuple]) -> None:
