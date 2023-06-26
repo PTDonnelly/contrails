@@ -2,7 +2,7 @@ from datetime import datetime
 import os
 import numpy as np
 import pandas as pd
-from typing import List, BinaryIO, Tuple
+from typing import List, BinaryIO, Tuple, Set
 
 import numpy as np
 
@@ -256,12 +256,50 @@ class Preprocessor:
         return
     
 
+    def _get_valid_indices(self, fields: List[tuple]) -> Set[int]:
+        """
+        Go through the latitude and longitude fields to find and store indices of measurements 
+        where latitude and longitude fall inside the specified range.
+
+        Returns a set of indices of measurements to be processed in the main loop.
+        """
+        valid_indices_lat = set()
+        valid_indices_lon = set()
+
+        # Loop through lat and lon fields.
+        for field in ['Latitude', 'Longitude']:
+            dtype, dtype_size, cumsize = fields[field]  # assuming fields is a dict
+
+            # Move the file pointer to the start position of the field
+            field_start = self.metadata.header_size + 12 + cumsize
+            self.f.seek(field_start, 0)
+
+            # Calculate the byte offset to the next measurement
+            byte_offset = self.metadata.record_size + 8 - dtype_size
+
+            # Scan each measurement
+            for measurement in range(self.metadata.number_of_measurements):
+                value = np.fromfile(self.f, dtype=dtype, count=1, sep='', offset=byte_offset)
+                
+                # If the value is inside the allowed range, add the measurement index to the appropriate set
+                if field == 'Latitude' and (self.latitude_range[0] <= value[0] <= self.latitude_range[1]):
+                    valid_indices_lat.add(measurement)
+                elif field == 'Longitude' and (self.longitude_range[0] <= value[0] <= self.longitude_range[1]):
+                    valid_indices_lon.add(measurement)
+
+        # Only keep the indices that are valid for both latitude and longitude
+        return valid_indices_lat & valid_indices_lon
+
+
     def read_record_fields(self, fields: List[tuple]) -> None:
         """
         Reads the data of each field from the binary file and store it in the field_df dictionary.
 
         This function only extracts the first 8 fields and the ones listed in the targets attribute.
         """
+        # Get the set of indices to process
+        valid_indices = self._get_valid_indices(fields)
+
         # Iterate over each field
         for field, dtype, dtype_size, cumsize in fields:
             print(f"Extracting: {field}")
@@ -274,39 +312,25 @@ class Preprocessor:
             byte_offset = self.metadata.record_size + 8 - dtype_size
 
             # Prepare an empty array to store the data of the current field
-            data = np.empty(self.metadata.number_of_measurements)
-            
+            data = np.empty(len(valid_indices))
+            # Counter for the valid indices in data
+            valid_index = 0
+
             # Read the data of each measurement
             for measurement in range(self.metadata.number_of_measurements):
-                value = np.fromfile(self.f, dtype=dtype, count=1, sep='', offset=byte_offset)
-                data[measurement] = np.nan if len(value) == 0 else value[0]
-                if len(value) == 0:
-                    # If value is empty
-                    pass
-                elif field == 'Latitude' and not (self.latitude_range[0] < value[0] < self.latitude_range[1]):
-                    # If value is outside latitude range
-                    pass
-                elif field == 'Longitude' and not (self.longitude_range[0] < value[0] < self.longitude_range[1]):
-                    # If value is outside longitude range
-                    pass
+                if measurement in valid_indices:
+                    # Store this measurement
+                    value = np.fromfile(self.f, dtype=dtype, count=1, sep='', offset=byte_offset)
+                    data[valid_index] = np.nan if len(value) == 0 else value[0]
+                    valid_index += 1
                 else:
-                    # Store value
-                    data[measurement] = value[0]
-
-            # Store the data in the DataFrame
-            self.data_record_df[field] = data
-
-        print(self.data_record_df['Start Channel 1'])
+                    # Skip this measurement
+                    continue
+               
+        print(self.data_record_df[['Start Channel 1', 'Start Channel 2', 'Start Channel 3']].head())
         input()
-        print(self.data_record_df['Start Channel 2'])
+        print(self.data_record_df[['End Channel 1', 'End Channel 2', 'End Channel 3']].head())
         input()
-        print(self.data_record_df['Start Channel 3'])
-        input()
-        print(self.data_record_df['End Channel 1'])
-        input()
-        print(self.data_record_df['End Channel 2'])
-        input()
-        print(self.data_record_df['End Channel 3'])
         exit()
         return
 
