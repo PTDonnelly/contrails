@@ -21,7 +21,7 @@ class Configurer:
             # Defaults to maximum of 8461 channels
             return [(i + 1) for i in range(8461)]
         elif mode == "range":
-            n = 10
+            n = 1
             return [(i + 1) for i in range(n)]
         else:
             raise ValueError('mode but be "all" or "range" for L1C reduction')

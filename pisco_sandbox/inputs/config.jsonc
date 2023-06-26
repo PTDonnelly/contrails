@@ -27,7 +27,7 @@
     "datapath_out": "/data/pdonnelly/iasi/metopc/test/",
 
     // channel_mode: str,  "all" to extract all spectral channels, "range" to specify specific range in configuration.py
-    "channel_mode": "all",
+    "channel_mode": "range",
 
     // targets: List[str], List of target IASI L1C products
     "targets": ["satellite_zenith_angle", "quality_flag_1", "quality_flag_2", "quality_flag_3", "cloud_fraction", "surface_type"],
