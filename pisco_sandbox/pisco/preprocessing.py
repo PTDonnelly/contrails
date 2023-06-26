@@ -331,12 +331,12 @@ class Preprocessor:
     def _read_indices(self, field: str, dtype: Any, byte_offset: int) -> Set[int]:
         # Read all values into memory at once to speed up lat-lon checking
         values = np.fromfile(self.f, dtype=dtype, count=self.metadata.number_of_measurements, sep='', offset=byte_offset)
-
+        print(np.shape(values))
         valid_indices = set()
         for measurement, value in enumerate(values):     
-            if field == 'Latitude' and (self.latitude_range[0] <= value[0] <= self.latitude_range[1]):
+            if field == 'Latitude' and (self.latitude_range[0] <= value <= self.latitude_range[1]):
                 valid_indices.add(measurement)
-            elif field == 'Longitude' and (self.longitude_range[0] <= value[0] <= self.longitude_range[1]):
+            elif field == 'Longitude' and (self.longitude_range[0] <= value <= self.longitude_range[1]):
                 valid_indices.add(measurement)
             print(value)
         
