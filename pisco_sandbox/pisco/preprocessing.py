@@ -331,7 +331,9 @@ class Preprocessor:
     #     return
 
     def _store_data_in_df(self, field: str, data: np.ndarray) -> None:
+        print(len(data), self.data_record_df.shape)
         self.data_record_df[field] = data
+        return
 
     def _read_binary_data(self, valid_indices: Set[int], dtype: Any, byte_offset: int) -> np.ndarray:
         """
@@ -387,6 +389,8 @@ class Preprocessor:
 
         Returns a set of indices of measurements to be processed in the main loop.
         """
+        print(f"\nFinding observations inside latitude-longitude range...")
+        
         valid_indices_lat = set()
         valid_indices_lon = set()
 
