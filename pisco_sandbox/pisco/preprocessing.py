@@ -355,6 +355,7 @@ class Preprocessor:
 
         for measurement in range(self.metadata.number_of_measurements):
             if measurement in valid_indices:
+                print(measurement, valid_index)
                 value = np.fromfile(self.f, dtype=dtype, count=1, sep='', offset=byte_offset)
                 data[valid_index] = np.nan if len(value) == 0 else value[0]
                 valid_index += 1
@@ -423,7 +424,6 @@ class Preprocessor:
             data = self._read_binary_data(valid_indices, dtype, byte_offset)
 
             self._store_data_in_df(field, data)
-
 
 
     def read_spectral_radiance(self, fields: List[tuple]) -> None:
@@ -587,10 +587,12 @@ class Preprocessor:
         # Open binary file and extract metadata
         self.open_binary_file()
         
-        # Read common IASI record fields and store to pandas DataFrame
-        print("\nCommon Record Fields:")
+        # Limit observations to specified spatial range
         fields = self.metadata._get_iasi_common_record_fields()
         valid_indices = self._get_valid_indices(fields)
+
+        # Read common IASI record fields and store to pandas DataFrame
+        print("\nCommon Record Fields:")
         self.read_record_fields(fields, valid_indices)
         
         if self.data_level == "l1c":
