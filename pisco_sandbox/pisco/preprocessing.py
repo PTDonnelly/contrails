@@ -409,12 +409,10 @@ class Preprocessor:
 
         return valid_indices_lat & valid_indices_lon
 
-    def read_record_fields(self, fields: List[tuple]) -> None:
+    def read_record_fields(self, fields: List[tuple], valid_indices: Set[int]) -> None:
         """
         Reads the data of each field from the binary file and store it in a pandas DataFrame.
-        """
-        valid_indices = self._get_valid_indices(fields)
-        
+        """        
         for field, dtype, dtype_size, cumsize in fields:
             print(f"Extracting: {field}")
 
@@ -591,18 +589,21 @@ class Preprocessor:
         
         # Read common IASI record fields and store to pandas DataFrame
         print("\nCommon Record Fields:")
-        self.read_record_fields(self.metadata._get_iasi_common_record_fields())
+        fields = self.metadata._get_iasi_common_record_fields()
+        valid_indices = self._get_valid_indices(fields)
+        self.read_record_fields(fields, valid_indices)
         
         if self.data_level == "l1c":
             # Read L1C-specific record fields and add to DataFrame
             print("\nL1C Record Fields:")
-            self.read_record_fields(self.metadata._get_iasi_l1c_record_fields())
+            fields = self.metadata._get_iasi_l1c_record_fields()
+            self.read_record_fields(fields)
             print(self.data_record_df.head())
             # input()
             # print(self.data_record_df[['End Channel 1', 'End Channel 2', 'End Channel 3']].head())
             # input()
             exit()
-            self.read_spectral_radiance(self.metadata._get_iasi_l1c_record_fields())
+            self.read_spectral_radiance(fields)
             
             # Remove observations (DataFrame rows) based on IASI quality_flags
             self.filter_good_spectra(datetime(int(year), int(month), int(day)))
