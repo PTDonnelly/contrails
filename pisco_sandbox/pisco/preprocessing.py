@@ -331,9 +331,11 @@ class Preprocessor:
     #     return
     
     def _read_indices(self, field: str, dtype: Any, byte_offset: int) -> Set[int]:
+        # Read all values into memory at once to speed up lat-lon checking
+        values = np.fromfile(self.f, dtype=dtype, count=self.metadata.number_of_measurements, sep='', offset=byte_offset)
+
         valid_indices = set()
-        
-        for measurement in range(self.metadata.number_of_measurements):
+        for measurement, value in enumerate(values):
             value = np.fromfile(self.f, dtype=dtype, count=1, sep='', offset=byte_offset)
             
             if field == 'Latitude' and (self.latitude_range[0] <= value[0] <= self.latitude_range[1]):
@@ -409,7 +411,6 @@ class Preprocessor:
 
         for measurement in range(self.metadata.number_of_measurements):
             if measurement in valid_indices:
-                print(measurement, valid_index)
                 value = np.fromfile(self.f, dtype=dtype, count=1, sep='', offset=byte_offset)
                 data[valid_index] = np.nan if len(value) == 0 else value[0]
                 valid_index += 1
@@ -433,51 +434,99 @@ class Preprocessor:
             self._store_data_in_df(field, data)
 
 
-    def read_spectral_radiance(self, fields: List[tuple]) -> None:
+    # def read_spectral_radiance(self, fields: List[tuple]) -> None:
+    #     """
+    #     Extracts and stores the spectral radiance measurements from the binary file.
+    #     """
+    #     print("Extracting: radiance")
+
+    #     # Determine the position of the anchor point for spectral radiance data in the binary file
+    #     last_field_end = fields[-1][-1] # End of the surface_type field
+
+    #     # Go to spectral radiance data (skip header and previous record data, "12"s are related to reading )
+    #     start_read_position = self.metadata.header_size + 12 + last_field_end + (4 * self.metadata.number_of_channels)
+    #     self.f.seek(start_read_position, 0)
+        
+    #     # Calculate the offset to skip to the next measurement
+    #     byte_offset = self.metadata.record_size + 8 - (4 * self.metadata.number_of_channels)
+        
+
+    #     # Initialize an empty numpy array to store the spectral radiance data
+    #     data = np.empty((self.metadata.number_of_channels, self.metadata.number_of_measurements))
+
+    #     # Iterate over each measurement and extract the spectral radiance data
+    #     for measurement in range(self.metadata.number_of_measurements):
+    #         spectrum = np.fromfile(self.f, dtype='float32', count=self.metadata.number_of_channels, sep='', offset=byte_offset)
+    #         data[:, measurement] = np.nan if len(spectrum) == 0 else spectrum
+
+    #     # Assign channel IDs and spectra to DataFrame
+    #     for i, id in enumerate(self.metadata.channel_IDs):
+    #         self.data_record_df[f'Spectrum {id}'] = data[i, :]
+
+    #     # ######## Alternate method that avoids temporary arrays
+    #     # # Prepare empty arrays in the DataFrame
+    #     # for id in self.metadata.channel_IDs:
+    #     #     self.data_record_df[f'Channel {id}'] = np.empty(self.metadata.number_of_measurements)
+        
+    #     # # Iterate over each measurement and extract the spectral radiance data
+    #     # for measurement in range(self.metadata.number_of_measurements):
+    #     #     spectrum = np.fromfile(self.f, dtype='float32', count=self.metadata.number_of_channels, sep='', offset=byte_offset)
+            
+    #     #     if len(spectrum) == 0:
+    #     #         spectrum = np.full(self.metadata.number_of_channels, np.nan)
+            
+    #     #     for i, id in enumerate(self.metadata.channel_IDs):
+    #     #         self.data_record_df.loc[measurement, f'Channel {id}'] = spectrum[i]
+    #     # ########
+    #     return
+
+    
+    def _store_spectral_channels_in_df(self, data: np.ndarray) -> None:
+        for i, channel_id in enumerate(self.metadata.channel_IDs):
+            self.data_record_df[f'Spectrum {channel_id}'] = data[i, :]
+        return
+    
+    def _read_spectrum(self, valid_indices: Set[int], byte_offset: int) -> np.ndarray:
+            # Initialize an empty numpy array to store the spectral radiance data
+            data = np.empty((self.metadata.number_of_channels, len(valid_indices)))
+
+            # Counter for the valid indices in data
+            valid_index = 0
+
+            # Iterate over each measurement and extract the spectral radiance data
+            for measurement in range(self.metadata.number_of_measurements):
+                if measurement in valid_indices:
+                    spectrum = np.fromfile(self.f, dtype='float32', count=self.metadata.number_of_channels, sep='', offset=byte_offset)
+                    data[:, measurement] = np.nan if len(spectrum) == 0 else spectrum
+                    valid_index += 1
+                else:
+                    continue
+            return data
+
+    def _calculate_byte_offset_spectral_radiance(self) -> int:
+        return self.metadata.record_size + 8 - (4 * self.metadata.number_of_channels)
+    
+    def _set_start_read_position(self, last_field_end: int) -> None:
+        self.f.seek(self.metadata.header_size + 12 + last_field_end + (4 * self.metadata.number_of_channels), 0)
+        return
+    
+    def read_spectral_radiance(self, fields: List[tuple], valid_indices: Set[int]) -> None:
         """
-        Extracts and stores the spectral radiance measurements from the binary file.
+        Extracts and stores the spectral radiance measurements from the binary file, follows the design of the other class methods.
         """
         print("Extracting: radiance")
 
         # Determine the position of the anchor point for spectral radiance data in the binary file
-        last_field_end = fields[-1][-1] # End of the surface_type field
+        last_field_end = fields[-1][-1]  # End of the surface_type field
 
-        # Go to spectral radiance data (skip header and previous record data, "12"s are related to reading )
-        start_read_position = self.metadata.header_size + 12 + last_field_end + (4 * self.metadata.number_of_channels)
-        self.f.seek(start_read_position, 0)
-        
-        # Calculate the offset to skip to the next measurement
-        byte_offset = self.metadata.record_size + 8 - (4 * self.metadata.number_of_channels)
-        
-        # Initialize an empty numpy array to store the spectral radiance data
-        data = np.empty((self.metadata.number_of_channels, self.metadata.number_of_measurements))
+        self._set_start_read_position(last_field_end)
 
-        # Iterate over each measurement and extract the spectral radiance data
-        for measurement in range(self.metadata.number_of_measurements):
-            spectrum = np.fromfile(self.f, dtype='float32', count=self.metadata.number_of_channels, sep='', offset=byte_offset)
-            data[:, measurement] = np.nan if len(spectrum) == 0 else spectrum
+        byte_offset = self._calculate_byte_offset_spectral_radiance()
 
-        # Assign channel IDs and spectra to DataFrame
-        for i, id in enumerate(self.metadata.channel_IDs):
-            self.data_record_df[f'Spectrum {id}'] = data[i, :]
+        data = self._read_spectrum(valid_indices, byte_offset)
 
-        # ######## Alternate method that avoids temporary arrays
-        # # Prepare empty arrays in the DataFrame
-        # for id in self.metadata.channel_IDs:
-        #     self.data_record_df[f'Channel {id}'] = np.empty(self.metadata.number_of_measurements)
-        
-        # # Iterate over each measurement and extract the spectral radiance data
-        # for measurement in range(self.metadata.number_of_measurements):
-        #     spectrum = np.fromfile(self.f, dtype='float32', count=self.metadata.number_of_channels, sep='', offset=byte_offset)
-            
-        #     if len(spectrum) == 0:
-        #         spectrum = np.full(self.metadata.number_of_channels, np.nan)
-            
-        #     for i, id in enumerate(self.metadata.channel_IDs):
-        #         self.data_record_df.loc[measurement, f'Channel {id}'] = spectrum[i]
-        # ########
-        return
-
+        self._store_spectral_channels_in_df(data)  
+    
 
     def _calculate_local_time(self) -> None:
         """
@@ -607,12 +656,7 @@ class Preprocessor:
             print("\nL1C Record Fields:")
             fields = self.metadata._get_iasi_l1c_record_fields()
             self.read_record_fields(fields, valid_indices)
-            print(self.data_record_df[['Start Channel 1', 'Start Channel 2', 'Start Channel 3']].head())
-            input()
-            print(self.data_record_df[['End Channel 1', 'End Channel 2', 'End Channel 3']].head())
-            input()
-            exit()
-            self.read_spectral_radiance(fields)
+            self.read_spectral_radiance(fields, valid_indices)
             
             # Remove observations (DataFrame rows) based on IASI quality_flags
             self.filter_good_spectra(datetime(int(year), int(month), int(day)))
@@ -620,7 +664,7 @@ class Preprocessor:
         if self.data_level == "l2":
             # Read L2-specific record fields and add to DataFrame
             print("\nL2 Record Fields:")
-            self.read_record_fields(self.metadata._get_iasi_l2_record_fields())
+            # self.read_record_fields(self.metadata._get_iasi_l2_record_fields())
             
             # # Remove observations (DataFrame rows) based on IASI cloud_phase
             # self.filter_specified_cloud_phase()
