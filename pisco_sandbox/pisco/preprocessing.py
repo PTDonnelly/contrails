@@ -330,9 +330,8 @@ class Preprocessor:
     #         self.data_record_df[field] = data    
     #     return
 
-    @staticmethod
-    def _store_data_in_field_df(data_record_df: pd.DataFrame, field: str, data: np.ndarray) -> None:
-        data_record_df[field] = data
+    def _store_data_in_field_df(self, field: str, data: np.ndarray) -> None:
+        self.data_record_df[field] = data
 
     def _read_data(self, valid_indices: Set[int], dtype: Any, byte_offset: int) -> np.ndarray:
         """
@@ -378,8 +377,7 @@ class Preprocessor:
         return self.metadata.record_size + 8 - dtype_size
     
     def _set_field_start_position(self, cumsize: int) -> None:
-        field_start = self.metadata.header_size + 12 + cumsize
-        self.f.seek(field_start, 0)
+        self.f.seek(self.metadata.header_size + 12 + cumsize, 0)
         return
     
     def _get_valid_indices(self, fields: List[tuple]) -> Set[int]:
@@ -401,9 +399,9 @@ class Preprocessor:
 
             valid_indices = self._read_indices(field, dtype, byte_offset)
             if field == 'Latitude':
-                valid_indices_lat.add(valid_indices)
+                valid_indices_lat = valid_indices
             elif field == 'Longitude':
-                valid_indices_lon.add(valid_indices)
+                valid_indices_lon = valid_indices
 
         return valid_indices_lat & valid_indices_lon
 
