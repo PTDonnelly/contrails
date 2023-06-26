@@ -329,6 +329,60 @@ class Preprocessor:
     #                 continue
     #         self.data_record_df[field] = data    
     #     return
+    
+    def _read_indices(self, field: str, dtype: Any, byte_offset: int) -> Set[int]:
+        valid_indices = set()
+        
+        for measurement in range(self.metadata.number_of_measurements):
+            value = np.fromfile(self.f, dtype=dtype, count=1, sep='', offset=byte_offset)
+            
+            if field == 'Latitude' and (self.latitude_range[0] <= value[0] <= self.latitude_range[1]):
+                valid_indices.add(measurement)
+            elif field == 'Longitude' and (self.longitude_range[0] <= value[0] <= self.longitude_range[1]):
+                valid_indices.add(measurement)
+        
+        return valid_indices
+    
+    def _calculate_byte_offset(self, dtype_size: int) -> int:
+        return self.metadata.record_size + 8 - dtype_size
+    
+    def _set_field_start_position(self, cumsize: int) -> None:
+        self.f.seek(self.metadata.header_size + 12 + cumsize, 0)
+        return
+    
+    def _check_spatial_range(self):
+        return True if (self.latitude_range == [-90, 90]) & (self.longitude_range == [-180, 180]) else False
+    
+    def get_valid_indices(self, fields: List[tuple]) -> Set[int]:
+        """
+        Go through the latitude and longitude fields to find and store indices of measurements 
+        where latitude and longitude fall inside the specified range.
+
+        Returns a set of indices of measurements to be processed in the main loop.
+        """
+        full_globe = self._check_spatial_range()
+        if full_globe:
+            return set(range(self.metadata.number_of_measurements))
+        else:
+            print(f"\nFinding observations inside latitude-longitude range...")
+            valid_indices_lat = set()
+            valid_indices_lon = set()
+
+            for field, dtype, dtype_size, cumsize in fields:
+                if field not in ['Latitude', 'Longitude']:
+                    continue
+
+                self._set_field_start_position(cumsize)
+                byte_offset = self._calculate_byte_offset(dtype_size)
+
+                valid_indices = self._read_indices(field, dtype, byte_offset)
+                if field == 'Latitude':
+                    valid_indices_lat = valid_indices
+                elif field == 'Longitude':
+                    valid_indices_lon = valid_indices
+
+            return valid_indices_lat & valid_indices_lon
+            
 
     def _store_data_in_df(self, field: str, data: np.ndarray) -> None:
         print(len(data), self.data_record_df.shape)
@@ -362,54 +416,7 @@ class Preprocessor:
             else:
                 continue
         return data
-    
-    def _read_indices(self, field: str, dtype: Any, byte_offset: int) -> Set[int]:
-        valid_indices = set()
-        
-        for measurement in range(self.metadata.number_of_measurements):
-            value = np.fromfile(self.f, dtype=dtype, count=1, sep='', offset=byte_offset)
             
-            if field == 'Latitude' and (self.latitude_range[0] <= value[0] <= self.latitude_range[1]):
-                valid_indices.add(measurement)
-            elif field == 'Longitude' and (self.longitude_range[0] <= value[0] <= self.longitude_range[1]):
-                valid_indices.add(measurement)
-        
-        return valid_indices
-    
-    def _calculate_byte_offset(self, dtype_size: int) -> int:
-        return self.metadata.record_size + 8 - dtype_size
-    
-    def _set_field_start_position(self, cumsize: int) -> None:
-        self.f.seek(self.metadata.header_size + 12 + cumsize, 0)
-        return
-    
-    def _get_valid_indices(self, fields: List[tuple]) -> Set[int]:
-        """
-        Go through the latitude and longitude fields to find and store indices of measurements 
-        where latitude and longitude fall inside the specified range.
-
-        Returns a set of indices of measurements to be processed in the main loop.
-        """
-        print(f"\nFinding observations inside latitude-longitude range...")
-        
-        valid_indices_lat = set()
-        valid_indices_lon = set()
-
-        for field, dtype, dtype_size, cumsize in fields:
-            if field not in ['Latitude', 'Longitude']:
-                continue
-
-            self._set_field_start_position(cumsize)
-            byte_offset = self._calculate_byte_offset(dtype_size)
-
-            valid_indices = self._read_indices(field, dtype, byte_offset)
-            if field == 'Latitude':
-                valid_indices_lat = valid_indices
-            elif field == 'Longitude':
-                valid_indices_lon = valid_indices
-
-        return valid_indices_lat & valid_indices_lon
-
     def read_record_fields(self, fields: List[tuple], valid_indices: Set[int]) -> None:
         """
         Reads the data of each field from the binary file and store it in a pandas DataFrame.
@@ -589,7 +596,7 @@ class Preprocessor:
         
         # Limit observations to specified spatial range
         fields = self.metadata._get_iasi_common_record_fields()
-        valid_indices = self._get_valid_indices(fields)
+        valid_indices = self.get_valid_indices(fields)
 
         # Read common IASI record fields and store to pandas DataFrame
         print("\nCommon Record Fields:")
@@ -600,10 +607,10 @@ class Preprocessor:
             print("\nL1C Record Fields:")
             fields = self.metadata._get_iasi_l1c_record_fields()
             self.read_record_fields(fields, valid_indices)
-            print(self.data_record_df.head())
-            # input()
-            # print(self.data_record_df[['End Channel 1', 'End Channel 2', 'End Channel 3']].head())
-            # input()
+            print(self.data_record_df[['Start Channel 1', 'Start Channel 2', 'Start Channel 3']].head())
+            input()
+            print(self.data_record_df[['End Channel 1', 'End Channel 2', 'End Channel 3']].head())
+            input()
             exit()
             self.read_spectral_radiance(fields)
             
