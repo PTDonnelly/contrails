@@ -328,6 +328,7 @@ class Preprocessor:
                 else:
                     # Skip this measurement
                     continue
+            self.data_record_df[field] = data    
         return
 
 
