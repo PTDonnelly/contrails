@@ -266,9 +266,11 @@ class Preprocessor:
         valid_indices_lat = set()
         valid_indices_lon = set()
 
-        # Loop through lat and lon fields.
-        for field in ['Latitude', 'Longitude']:
-            dtype, dtype_size, cumsize = fields[field]  # assuming fields is a dict
+        # Find and extract the details of Latitude and Longitude fields
+        for field, dtype, dtype_size, cumsize in fields:
+            if field not in ['Latitude', 'Longitude']:
+                # Skip this tuple in the list of fields
+                continue
 
             # Move the file pointer to the start position of the field
             field_start = self.metadata.header_size + 12 + cumsize
