@@ -599,7 +599,7 @@ class Preprocessor:
             # Read L1C-specific record fields and add to DataFrame
             print("\nL1C Record Fields:")
             fields = self.metadata._get_iasi_l1c_record_fields()
-            self.read_record_fields(fields)
+            self.read_record_fields(fields, valid_indices)
             print(self.data_record_df.head())
             # input()
             # print(self.data_record_df[['End Channel 1', 'End Channel 2', 'End Channel 3']].head())
