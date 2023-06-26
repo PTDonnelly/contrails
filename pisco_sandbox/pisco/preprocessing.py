@@ -2,7 +2,7 @@ from datetime import datetime
 import os
 import numpy as np
 import pandas as pd
-from typing import List, BinaryIO
+from typing import List, BinaryIO, Tuple
 
 import numpy as np
 
@@ -230,9 +230,11 @@ class Preprocessor:
     preprocess_files(year: str, month: str, day: str)
         Runs the entire preprocessing pipeline on the binary file.
     """
-    def __init__(self, intermediate_file: str, data_level: str):
+    def __init__(self, intermediate_file: str, data_level: str, latitude_range: Tuple[float], longitude_range: Tuple[float]):
         self.intermediate_file = intermediate_file
         self.data_level = data_level
+        self.latitude_range = latitude_range
+        self.longitude_range = longitude_range
         self.f: BinaryIO = None
         self.metadata: Metadata = None
         self.data_record_df = pd.DataFrame()
@@ -278,9 +280,34 @@ class Preprocessor:
             for measurement in range(self.metadata.number_of_measurements):
                 value = np.fromfile(self.f, dtype=dtype, count=1, sep='', offset=byte_offset)
                 data[measurement] = np.nan if len(value) == 0 else value[0]
+                if len(value) == 0:
+                    # If value is empty
+                    pass
+                elif field == 'Latitude' and not (self.latitude_range[0] < value[0] < self.latitude_range[1]):
+                    # If value is outside latitude range
+                    pass
+                elif field == 'Longitude' and not (self.longitude_range[0] < value[0] < self.longitude_range[1]):
+                    # If value is outside longitude range
+                    pass
+                else:
+                    # Store value
+                    data[measurement] = value[0]
 
             # Store the data in the DataFrame
             self.data_record_df[field] = data
+
+        print(self.data_record_df['Start Channel 1'])
+        input()
+        print(self.data_record_df['Start Channel 2'])
+        input()
+        print(self.data_record_df['Start Channel 3'])
+        input()
+        print(self.data_record_df['End Channel 1'])
+        input()
+        print(self.data_record_df['End Channel 2'])
+        input()
+        print(self.data_record_df['End Channel 3'])
+        exit()
         return
 
 

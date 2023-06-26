@@ -12,10 +12,10 @@
     "year_list": [2020],
 
     // month_list:  List[int] or str, List[int] of specific months or "all" to scan all calendar months in year
-    "month_list": [12],
+    "month_list": [1],
 
     // day_list: List[int] or str, List[int] of specific days, or "all" to scan all calendar days in month
-    "day_list": [1, 6, 11, 16, 21, 26],
+    "day_list": [1],
 
     // months_in_year: List[int], Calendar months in each year
     "months_in_year": [1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12],
@@ -24,7 +24,7 @@
     "days_in_months": [31, 28, 31, 30, 31, 30, 31, 31, 30, 31, 30, 31],
 
     // datapath_out: str, The user-defined data path for the processed output files
-    "datapath_out": "/data/pdonnelly/iasi/metopc/",
+    "datapath_out": "/data/pdonnelly/iasi/metopc/test/",
 
     // channel_mode: str,  "all" to extract all spectral channels, "range" to specify specific range in configuration.py
     "channel_mode": "all",
@@ -38,9 +38,9 @@
     // cloud_phase: int, The desired cloud phase from the L2 products
     "cloud_phase": 2,
 
-    // latitude_range: List[int], The spatial range for binning latitudes
-    "latitude_range": [-90, 90],
+    // latitude_range: Tuple[int], The spatial range for binning latitudes
+    "latitude_range": [30, 60],
 
-    // longitude_range: List[int], The spatial range for binning longitudes
-    "longitude_range": [-180, 180]
+    // longitude_range: Tuple[int], The spatial range for binning longitudes
+    "longitude_range": [-60, 0]
 }

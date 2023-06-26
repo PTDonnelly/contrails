@@ -1,4 +1,4 @@
-from typing import List
+from typing import List, Tuple
 import commentjson
 
 class Configurer:
@@ -11,6 +11,7 @@ class Configurer:
             self.__dict__ = commentjson.load(file)
             
         # Perform any necessary post-processing before executing
+        self.latitude_range, self.longitude_range = Tuple(self.latitude_range), Tuple(self.longitude_range)
         self.channels: List[int] = self.set_channels(self.channel_mode)
     
     @staticmethod
