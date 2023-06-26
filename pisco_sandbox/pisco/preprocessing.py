@@ -151,7 +151,7 @@ class Metadata:
                     ('Start Channel 3', 'uint32', 4, 80),
                     ('End Channel 3', 'uint32', 4, 84),
                     ('Quality Flag 3', 'uint32', 4, 88),
-                    ('Cloud Draction', 'uint32', 4, 92),
+                    ('Cloud Fraction', 'uint32', 4, 92),
                     ('Surface Type', 'uint8', 1, 93)]
         return l1c_fields
     
@@ -295,8 +295,6 @@ class Preprocessor:
     # def read_record_fields(self, fields: List[tuple]) -> None:
     #     """
     #     Reads the data of each field from the binary file and store it in the field_df dictionary.
-
-    #     This function only extracts the first 8 fields and the ones listed in the targets attribute.
     #     """
     #     # Get the set of indices to process
     #     valid_indices = self._get_valid_indices(fields)
@@ -335,13 +333,12 @@ class Preprocessor:
         values = np.fromfile(self.f, dtype=dtype, count=self.metadata.number_of_measurements, sep='', offset=byte_offset)
 
         valid_indices = set()
-        for measurement, value in enumerate(values):
-            value = np.fromfile(self.f, dtype=dtype, count=1, sep='', offset=byte_offset)
-            
+        for measurement, value in enumerate(values):     
             if field == 'Latitude' and (self.latitude_range[0] <= value[0] <= self.latitude_range[1]):
                 valid_indices.add(measurement)
             elif field == 'Longitude' and (self.longitude_range[0] <= value[0] <= self.longitude_range[1]):
                 valid_indices.add(measurement)
+            print(value)
         
         return valid_indices
     

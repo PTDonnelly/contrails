@@ -29,9 +29,6 @@
     // channel_mode: str,  "all" to extract all spectral channels, "range" to specify specific range in configuration.py
     "channel_mode": "all",
 
-    // targets: List[str], List of target IASI L1C products
-    "targets": ["satellite_zenith_angle", "quality_flag_1", "quality_flag_2", "quality_flag_3", "cloud_fraction", "surface_type"],
-
     // products: str, string containing desired IASI L2 products, separated by comma only (e.g. "clp,ozo,twt")
     "products": "clp",
 
