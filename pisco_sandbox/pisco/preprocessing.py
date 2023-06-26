@@ -330,10 +330,10 @@ class Preprocessor:
     #         self.data_record_df[field] = data    
     #     return
 
-    def _store_data_in_field_df(self, field: str, data: np.ndarray) -> None:
+    def _store_data_in_df(self, field: str, data: np.ndarray) -> None:
         self.data_record_df[field] = data
 
-    def _read_data(self, valid_indices: Set[int], dtype: Any, byte_offset: int) -> np.ndarray:
+    def _read_binary_data(self, valid_indices: Set[int], dtype: Any, byte_offset: int) -> np.ndarray:
         """
         Reads the data of each measurement based on the valid indices.
 
@@ -407,18 +407,20 @@ class Preprocessor:
 
     def read_record_fields(self, fields: List[tuple]) -> None:
         """
-        Reads the data of each field from the binary file and store it in the field_df dictionary.
-
-        This function only extracts the first 8 fields and the ones listed in the targets attribute.
+        Reads the data of each field from the binary file and store it in a pandas DataFrame.
         """
         valid_indices = self._get_valid_indices(fields)
         
         for field, dtype, dtype_size, cumsize in fields:
             print(f"Extracting: {field}")
-            self._set_field_start_position(self.metadata.header_size, cumsize)
-            byte_offset = self._calculate_byte_offset(self.metadata.record_size, dtype_size)
-            data = self._read_data(valid_indices, dtype, byte_offset)
-            self._store_data_in_field_df(field, data)
+
+            self._set_field_start_position(cumsize)
+
+            byte_offset = self._calculate_byte_offset(dtype_size)
+
+            data = self._read_binary_data(valid_indices, dtype, byte_offset)
+
+            self._store_data_in_df(field, data)
 
 
 
