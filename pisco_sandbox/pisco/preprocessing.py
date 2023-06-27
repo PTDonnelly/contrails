@@ -347,10 +347,8 @@ class Preprocessor:
             
             # Check if the value falls within the specified range for latitude or longitude
             if field == 'Latitude' and (self.latitude_range[0] <= value <= self.latitude_range[1]):
-                print(f"{self.latitude_range[0]} <= {value} <= {self.latitude_range[1]}")
                 valid_indices.add(measurement)
             elif field == 'Longitude' and (self.longitude_range[0] <= value <= self.longitude_range[1]):
-                print(f"{self.longitude_range[0]} <= {value} <= {self.longitude_range[1]}")
                 valid_indices.add(measurement)
         
         return valid_indices
@@ -439,7 +437,7 @@ class Preprocessor:
             if measurement in valid_indices:
                 # Read the value for the current measurement
                 value = np.fromfile(self.f, dtype=dtype, count=1, sep='', offset=byte_offset)
-
+                print(measurement, valid_index, value)
                 # Store the value in the data array, handling missing values as NaN
                 data[valid_index] = np.nan if len(value) == 0 else value[0]
 
@@ -448,10 +446,10 @@ class Preprocessor:
             else:
                 # Skip this measurement
                 continue
+            input()
 
         return data
-
-            
+          
     def read_record_fields(self, fields: List[tuple], valid_indices: Set[int]) -> None:
         """
         Reads the data of each field from the binary file and stores it in a pandas DataFrame.
