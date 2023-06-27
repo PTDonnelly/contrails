@@ -411,7 +411,6 @@ class Preprocessor:
             
 
     def _store_data_in_df(self, field: str, data: np.ndarray) -> None:
-        print(len(data), self.data_record_df.shape)
         self.data_record_df[field] = data
         return
 
