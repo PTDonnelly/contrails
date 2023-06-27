@@ -331,16 +331,19 @@ class Preprocessor:
     def _read_indices(self, field: str, dtype: Any, byte_offset: int) -> Set[int]:
         # Read all values into memory at once to speed up lat-lon checking
         values = np.fromfile(self.f, dtype=dtype, count=self.metadata.number_of_measurements, sep='', offset=byte_offset)
-        print(np.shape(values))
+        print(values[0:9])
         valid_indices = set()
-        for measurement, value in enumerate(values):     
-            if field == 'Latitude' and (self.latitude_range[0] <= value <= self.latitude_range[1]):
-                valid_indices.add(measurement)
-            elif field == 'Longitude' and (self.longitude_range[0] <= value <= self.longitude_range[1]):
-                valid_indices.add(measurement)
-            print(value)
-        input()
-        
+        for measurement in range(self.metadata.number_of_measurements):
+            if measurement in valid_indices:
+                value = np.fromfile(self.f, dtype=dtype, count=1, sep='', offset=byte_offset)   
+                if measurement < 10:
+                    print(value)
+                else:
+                    exit()
+                if field == 'Latitude' and (self.latitude_range[0] <= value <= self.latitude_range[1]):
+                    valid_indices.add(measurement)
+                elif field == 'Longitude' and (self.longitude_range[0] <= value <= self.longitude_range[1]):
+                    valid_indices.add(measurement)
         return valid_indices
     
     def _calculate_byte_offset(self, dtype_size: int) -> int:
