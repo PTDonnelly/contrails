@@ -347,8 +347,10 @@ class Preprocessor:
             
             # Check if the value falls within the specified range for latitude or longitude
             if field == 'Latitude' and (self.latitude_range[0] <= value <= self.latitude_range[1]):
+                print(f"{self.latitude_range[0]} <= {value} <= {self.latitude_range[1]}")
                 valid_indices.add(measurement)
             elif field == 'Longitude' and (self.longitude_range[0] <= value <= self.longitude_range[1]):
+                print(f"{self.longitude_range[0]} <= {value} <= {self.longitude_range[1]}")
                 valid_indices.add(measurement)
         
         return valid_indices
