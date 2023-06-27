@@ -339,6 +339,7 @@ class Preprocessor:
             elif field == 'Longitude' and (self.longitude_range[0] <= value <= self.longitude_range[1]):
                 valid_indices.add(measurement)
             print(value)
+        input()
         
         return valid_indices
     
@@ -374,6 +375,8 @@ class Preprocessor:
                 self._set_field_start_position(cumsize)
                 byte_offset = self._calculate_byte_offset(dtype_size)
 
+                print(field, dtype, dtype_size, cumsize, byte_offset)
+                input()
                 valid_indices = self._read_indices(field, dtype, byte_offset)
                 if field == 'Latitude':
                     valid_indices_lat = valid_indices
