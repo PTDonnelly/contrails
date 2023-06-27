@@ -329,16 +329,10 @@ class Preprocessor:
     #     return
     
     def _read_indices(self, field: str, dtype: Any, byte_offset: int) -> Set[int]:
-        # # Read all values into memory at once to speed up lat-lon checking
-        # values = np.fromfile(self.f, dtype=dtype, count=self.metadata.number_of_measurements, sep='', offset=byte_offset)
-        # print(values[0:9])
+        # Read latitude and longitude values
         valid_indices = set()
         for measurement in range(self.metadata.number_of_measurements):
             value = np.fromfile(self.f, dtype=dtype, count=1, sep='', offset=byte_offset)   
-            if measurement < 10:
-                print(value)
-            else:
-                exit()
             if field == 'Latitude' and (self.latitude_range[0] <= value <= self.latitude_range[1]):
                 valid_indices.add(measurement)
             elif field == 'Longitude' and (self.longitude_range[0] <= value <= self.longitude_range[1]):
@@ -372,13 +366,13 @@ class Preprocessor:
 
             for field, dtype, dtype_size, cumsize in fields:
                 if field not in ['Latitude', 'Longitude']:
+                    # Skip all other fields for now
                     continue
 
                 self._set_field_start_position(cumsize)
                 byte_offset = self._calculate_byte_offset(dtype_size)
 
                 print(field, dtype, dtype_size, cumsize, byte_offset)
-                input()
                 valid_indices = self._read_indices(field, dtype, byte_offset)
                 if field == 'Latitude':
                     valid_indices_lat = valid_indices
