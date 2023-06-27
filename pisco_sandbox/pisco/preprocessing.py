@@ -434,9 +434,10 @@ class Preprocessor:
         valid_index = 0
 
         for measurement in range(self.metadata.number_of_measurements):
+            # Read the value for the current measurement
+            value = np.fromfile(self.f, dtype=dtype, count=1, sep='', offset=byte_offset)
+            
             if measurement in valid_indices:
-                # Read the value for the current measurement
-                value = np.fromfile(self.f, dtype=dtype, count=1, sep='', offset=byte_offset)
                 if field in ['Latitude', 'Longitude']:
                     print(measurement, valid_index, value)
                     input()
