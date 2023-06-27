@@ -436,14 +436,9 @@ class Preprocessor:
         for measurement in range(self.metadata.number_of_measurements):
             # Read the value for the current measurement
             value = np.fromfile(self.f, dtype=dtype, count=1, sep='', offset=byte_offset)
-            
             if measurement in valid_indices:
-                if field in ['Latitude', 'Longitude']:
-                    print(measurement, valid_index, value)
-                    input()
                 # Store the value in the data array, handling missing values as NaN
                 data[valid_index] = np.nan if len(value) == 0 else value[0]
-
                 # Increment the valid index counter
                 valid_index += 1
             else:
