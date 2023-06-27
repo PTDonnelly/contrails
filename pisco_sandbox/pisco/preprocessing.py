@@ -329,9 +329,9 @@ class Preprocessor:
     #     return
     
     def _read_indices(self, field: str, dtype: Any, byte_offset: int) -> Set[int]:
-        # Read all values into memory at once to speed up lat-lon checking
-        values = np.fromfile(self.f, dtype=dtype, count=self.metadata.number_of_measurements, sep='', offset=byte_offset)
-        print(values[0:9])
+        # # Read all values into memory at once to speed up lat-lon checking
+        # values = np.fromfile(self.f, dtype=dtype, count=self.metadata.number_of_measurements, sep='', offset=byte_offset)
+        # print(values[0:9])
         valid_indices = set()
         for measurement in range(self.metadata.number_of_measurements):
             value = np.fromfile(self.f, dtype=dtype, count=1, sep='', offset=byte_offset)   
