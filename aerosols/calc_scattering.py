@@ -123,7 +123,7 @@ def main():
                 for radius in particle["radii"]:
 
                     # Open a file to save the scattering properties
-                    outfile = f"{shape}_T_{temperature}_AR_{axis_ratio}_radius_{radius}.txt"
+                    outfile = f"{shape}_T_{temperature}_AR_{axis_ratio}_radius_{radius}.dat"
                     outpath = os.path.join(scattering_dir, outfile)
                     print(outpath)
                     with open(outpath, "w") as f:
