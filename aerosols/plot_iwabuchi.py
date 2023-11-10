@@ -22,7 +22,7 @@ def plot_iwabuchi():
     filename = 'iwabuchi_optical_properties'
     wavelengths, real, imaginary = get_iwabuchi(optical_dir, filename)
     xmin, xmax = 7.0, 15.0
-    colors = cm.seismic(np.linspace(0, 1, real.shape[0]))
+    colors = cm.cividis(np.linspace(0, 1, real.shape[0]))
 
     _, (ax1, ax2) = plt.subplots(2, 1, sharex=True, figsize=(8, 4), dpi=300)
 

@@ -2,6 +2,8 @@ import os
 import numpy as np
 import matplotlib.pyplot as plt
 import matplotlib.gridspec as gridspec
+import logging
+import json
 
 def read_dat_file(filepath, end_line=None):
     data = []
@@ -23,7 +25,9 @@ def read_dat_file(filepath, end_line=None):
 
 def read_baum_data(filename):
     """Function to read the Baum data from .dat file, cut off phase matrices beyond line 78"""
-    return read_dat_file(filename, end_line=78)
+    data = read_dat_file(filename, end_line=78)
+    data[0, :] = np.divide(1e4, data[0, :]) # Convert to wavenumbers
+    return data
 
 def read_ice_data(base_path, temperature_range, radius_range):
     # Number of temperatures and radii
@@ -42,6 +46,7 @@ def read_ice_data(base_path, temperature_range, radius_range):
             try:
                 # Read the file into a 2D array
                 data = read_dat_file(filepath)
+                data[0, :] = np.divide(1e4, data[0, :]) # Convert to wavenumbers
                 
                 # Check if the file has the expected shape
                 if data.shape == (num_columns, num_rows):
@@ -56,17 +61,26 @@ def read_ice_data(base_path, temperature_range, radius_range):
 
     return ice_data_4d
 
+# Constants
+CONFIG_FILE = "aerosol_config.json"
 
-# Path where the data files are stored
-base_path = 'c:\\Users\\padra\\Documents\\Research\\projects\\contrails\\4aop\\datscat\\'
+# Setup logging
+logging.basicConfig(level=logging.INFO, format='%(asctime)s - %(levelname)s - %(message)s')
+
+def get_config():
+    """Load configuration from a JSON file."""
+    with open(CONFIG_FILE, 'r') as f:
+        return json.load(f)
+
+config = get_config()
 
 # Read the Baum data
-baum_data = read_baum_data(f"{base_path}aerosols_baum00.dat")
+baum_data = read_baum_data(f"{config.get('aerosol_scattering_directory')}aerosols_baum00.dat")
 
 # Read custom ice data
 temperature_range = range(160, 271, 10)
 radius_range = [1, 2, 5]#, 10]
-ice_data = read_ice_data(base_path, temperature_range, radius_range)
+ice_data = read_ice_data(config.get('aerosol_scattering_directory'), temperature_range, radius_range)
 n_temperatures, n_radii = ice_data.shape[2], ice_data.shape[3]
 
 # Plotting setup
@@ -80,14 +94,14 @@ cmap = plt.cm.cividis
 temperature_color_values = [cmap(x) for x in np.linspace(0, 1, n_temperatures)]
 
 # Define y-axis labels
-labels = ['wavelength', r'$\sigma_{e}$',  r'$\sigma_{s}$',  r'$\sigma_{a}$',  r'$ssa$',  r'$g$',  r'$\sigma_{e,n}$',  r'$n$',  r'$k$']  
+labels = [r'Wavenumnber (cm$^{-1}$)', r'$\sigma_{e}$',  r'$\sigma_{s}$',  r'$\sigma_{a}$',  r'$ssa$',  r'$g$',  r'$\sigma_{e,n}$',  r'$n$',  r'$k$']  
 
 # Loop through and plot each property
 for i in range(6):
     ax = plt.subplot(gs[i])
 
     # Baum data
-    ax.plot(baum_data[0, :], baum_data[i+1, :], color='k')
+    ax.plot(baum_data[0, :], baum_data[i+1, :], color='r')
 
     # Loop through the ice data and plot
     for temperature in range(n_temperatures):
@@ -102,10 +116,13 @@ for i in range(6):
         ax.tick_params(labelbottom=False, bottom=False, top=False)  # Also hides the ticks themselves
     elif i == 5:
         ax.set_xlabel(labels[0])
+        # plt.xticks(np.arange(7, 13.1, 1))
  
     ax.set_ylabel(labels[i+1])
-    ax.set_xlim(7, 13)
+    ax.set_xlim(1200, 800)
 
 plt.subplots_adjust(hspace=0)
 plt.tight_layout()
-plt.show()
+
+# Save figure
+plt.savefig(f"{config.get('aerosol_scattering_directory')}xsc_comparison.png", dpi=300, bbox_inches='tight')

@@ -1,7 +1,7 @@
 {
     "shapes": ["sphere"],
     "shape_ids": ["SHAPE_SPHEROID"],
-    "radii": [1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 15, 20, 30, 40, 50],
+    "radii": [1, 2, 5, 10],
     "temperatures": [160, 170, 180, 190, 200, 210, 220, 230, 240, 250, 260, 270],
     "axis_ratios": [1.0],
     "model_grid_path": "C:\\Users\\padra\\Documents\\Research\\projects\\contrails\\4aop\\datscat\\4aop_spectral_grid.txt",
