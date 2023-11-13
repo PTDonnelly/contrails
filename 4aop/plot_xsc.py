@@ -78,8 +78,8 @@ config = get_config()
 baum_data = read_baum_data(f"{config.get('aerosol_scattering_directory')}aerosols_baum00.dat")
 
 # Read custom ice data
-temperature_range = range(160, 271, 10)
-radius_range = [1, 2, 5]#, 10]
+temperature_range = [160]#range(160, 271, 10)
+radius_range = [1, 2]#, 5]#, 10]
 ice_data = read_ice_data(config.get('aerosol_scattering_directory'), temperature_range, radius_range)
 n_temperatures, n_radii = ice_data.shape[2], ice_data.shape[3]
 

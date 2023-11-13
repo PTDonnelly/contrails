@@ -4,6 +4,8 @@ import numpy as np
 import pandas as pd
 from pytmatrix.tmatrix import Scatterer
 import pytmatrix.scatter as scatter
+from pytmatrix.psd import PSDIntegrator
+from pytmatrix.psd import GammaPSD
 import logging
 import json
 
@@ -84,9 +86,11 @@ class ScatteringModel:
         self.config = config
         self.wavelengths = spectral_grid.wavelengths
         self.refractive_indices = optical_data.interpolate(self.wavelengths)
-    
+
+
     def get_refractive_indices(self, temperature):
         return self.refractive_indices[self.config.get('temperatures').index(temperature)]
+
 
     def get_column_formats(self):
         """Function to get column formats of .dsf file"""
@@ -101,12 +105,14 @@ class ScatteringModel:
             7: "{}".format          # String, as is
         }
 
+
     def format_dataframe(self, df, column_formats):
         """Function to format dataframe"""
         formatted_df = df.copy()
         for col, fmt in column_formats.items():
             formatted_df[col] = df[col].apply(fmt)
         return formatted_df
+
 
     def make_aerfile(self, xsc_filename):
 
@@ -133,6 +139,7 @@ class ScatteringModel:
             f.write(header + '\n')
         formatted_df.to_csv(new_aerfile, mode='a', sep=' ', index=False, header=False)
 
+
     def set_aerosol_header(self, f, radius, temperature):
         # Read the template .xsc file
         reference_xscfile = os.path.join(self.config.get('aerosol_scattering_directory'), 'aerosols_baum00.dat')
@@ -145,6 +152,7 @@ class ScatteringModel:
             f.write(line)
         
         return header
+
 
     def get_scattering_properties(self, scatterer, refractive_index):
         # Do T-Matrix calculation
@@ -167,27 +175,52 @@ class ScatteringModel:
         
         # Return the formatted string
         return properties
-    
+
+
     def format_properties(self, wavelength, properties):
         """Function to format properties into a string"""
         formatted_properties = " ".join(f"{prop:9.3E}" for prop in properties)
         return f"# {wavelength:10.3E} {formatted_properties}\n"
-    
+
+
+    def create_particle_distribution(self):
+        psd_function = GammaPSD(D0=1, Nw=1, mu=0)
+
+        # Initialise integrator
+        psd_integrator = PSDIntegrator(D_max=psd_function.D_max)
+        psd_integrator.num_points = 10
+        return psd_function, psd_integrator
+
+
     def calculate_and_write_properties(self, shape, shape_id, radius, temperature, axis_ratio):
+        #
         refractive_indices_at_T = self.get_refractive_indices(temperature)
         xsc_filename = f"aerosols_con_{temperature:03}_{radius:02}.dat"
         xsc_filepath = os.path.join(self.config.get('aerosol_scattering_directory'), xsc_filename)
 
+        #
         self.make_aerfile(xsc_filename)
 
         with open(xsc_filepath, "w") as f:
             self.set_aerosol_header(f, radius, temperature)
             
+            # # Initialise particle distribution integrator
+            # psd_function, psd_integrator = self.create_particle_distribution()
+            
             for wavelength, refractive_index in zip(self.wavelengths, refractive_indices_at_T):
-                # print(wavelength, refractive_index)
-                scatterer = Scatterer(radius=radius, wavelength=wavelength, m=refractive_index, axis_ratio=axis_ratio, shape=getattr(Scatterer, shape_id))
+
+                # Initialise the scattering calculations
+                scatterer = Scatterer(radius=radius, wavelength=wavelength, m=refractive_index, axis_ratio=axis_ratio, shape=getattr(Scatterer, shape_id))#, psd_integrator=psd_integrator)
+                # scatterer.psd = psd_function
+
+                # # Calculate scattering matrix
+                # psd_integrator.init_scatter_table(tm=scatterer, angular_integration=True, verbose=False)
+                
+                #
                 properties = self.get_scattering_properties(scatterer, refractive_index)
                 f.write(self.format_properties(wavelength, properties))
+
+                print(wavelength, properties)
 
         logging.info(f"Completed: {xsc_filepath}\n")
 
@@ -213,14 +246,14 @@ def main():
     # Prepare the parameters of particle distributions to be iterated over
     config = get_config()
     
-    # 
+    # Read in the reference optical data for water ice
     optical_data = OpticalDataLoader(config.get('optical_data_path'))
     
-    #
+    # Generate the spectral grid (default: 4A/OP optimised scattering grid, otherwise: custom)
     spectral_grid = SpectralGrid()
     spectral_grid.set_model_grid(config.get('model_grid_path'))
     
-
+    # PyTmatrix with these inputs
     model = ScatteringModel(config, spectral_grid, optical_data)
     model.run()
 
