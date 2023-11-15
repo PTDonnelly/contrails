@@ -79,13 +79,13 @@ baum_data = read_baum_data(f"{config.get('aerosol_scattering_directory')}aerosol
 
 # Read custom ice data
 temperature_range = [160]#range(160, 271, 10)
-radius_range = [1, 2]#, 5]#, 10]
+radius_range = [1, 3, 5, 10]
 ice_data = read_ice_data(config.get('aerosol_scattering_directory'), temperature_range, radius_range)
 n_temperatures, n_radii = ice_data.shape[2], ice_data.shape[3]
 
 # Plotting setup
 fig = plt.figure(figsize=(3, 7))
-gs = gridspec.GridSpec(6, 1, height_ratios=[1]*6)
+gs = gridspec.GridSpec(5, 1, height_ratios=[1]*5)
 
 # Create a colormap object
 cmap = plt.cm.cividis
@@ -97,7 +97,7 @@ temperature_color_values = [cmap(x) for x in np.linspace(0, 1, n_temperatures)]
 labels = [r'Wavenumnber (cm$^{-1}$)', r'$\sigma_{e}$',  r'$\sigma_{s}$',  r'$\sigma_{a}$',  r'$ssa$',  r'$g$',  r'$\sigma_{e,n}$',  r'$n$',  r'$k$']  
 
 # Loop through and plot each property
-for i in range(6):
+for i in range(5):
     ax = plt.subplot(gs[i])
 
     # Baum data
@@ -112,9 +112,9 @@ for i in range(6):
             ax.plot(ice_data[0, :, temperature, radius], ice_data[i+1, :, temperature, radius], color=color, alpha=0.75)
 
     # Hide x-axis labels and ticks for all but the bottom subplot
-    if i < 5:
+    if i < 4:
         ax.tick_params(labelbottom=False, bottom=False, top=False)  # Also hides the ticks themselves
-    elif i == 5:
+    elif i == 4:
         ax.set_xlabel(labels[0])
         # plt.xticks(np.arange(7, 13.1, 1))
  

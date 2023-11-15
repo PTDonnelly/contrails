@@ -18,7 +18,7 @@ def main():
 
     # Initialise integrator
     psd_integrator = PSDIntegrator(D_max=psd_function.D_max)
-    psd_integrator.num_points = 10
+    psd_integrator.num_points = 5
     
     wavelengths = [7]
     for wl in wavelengths:

@@ -5,9 +5,10 @@ import pandas as pd
 from pytmatrix.tmatrix import Scatterer
 import pytmatrix.scatter as scatter
 from pytmatrix.psd import PSDIntegrator
-from pytmatrix.psd import GammaPSD
+from pytmatrix.psd import LognormalPSD
 import logging
 import json
+import snoop
 
 # Constants
 CONFIG_FILE = "aerosol_config.json"
@@ -183,16 +184,18 @@ class ScatteringModel:
         return f"# {wavelength:10.3E} {formatted_properties}\n"
 
 
-    def create_particle_distribution(self):
-        psd_function = GammaPSD(D0=1, Nw=1, mu=0)
+    def create_particle_distribution(self, median, sigma, D_max):
+        # Initialise the function
+        psd_function = LognormalPSD(median, sigma, D_max)
+        # psd_function = Gamm
 
         # Initialise integrator
         psd_integrator = PSDIntegrator(D_max=psd_function.D_max)
-        psd_integrator.num_points = 10
+        psd_integrator.num_points = 5
         return psd_function, psd_integrator
 
-
-    def calculate_and_write_properties(self, shape, shape_id, radius, temperature, axis_ratio):
+    # @snoop
+    def calculate_and_write_properties(self, shape_id, radius, temperature, axis_ratio, geometric_std_dev):
         #
         refractive_indices_at_T = self.get_refractive_indices(temperature)
         xsc_filename = f"aerosols_con_{temperature:03}_{radius:02}.dat"
@@ -204,19 +207,21 @@ class ScatteringModel:
         with open(xsc_filepath, "w") as f:
             self.set_aerosol_header(f, radius, temperature)
             
-            # # Initialise particle distribution integrator
-            # psd_function, psd_integrator = self.create_particle_distribution()
+            # Initialise particle distribution integrator
+            D_max = 11  # Maximum diameter in microns
+            psd_function, psd_integrator = self.create_particle_distribution(radius, geometric_std_dev, D_max)
             
             for wavelength, refractive_index in zip(self.wavelengths, refractive_indices_at_T):
 
                 # Initialise the scattering calculations
-                scatterer = Scatterer(radius=radius, wavelength=wavelength, m=refractive_index, axis_ratio=axis_ratio, shape=getattr(Scatterer, shape_id))#, psd_integrator=psd_integrator)
-                # scatterer.psd = psd_function
+                scatterer = Scatterer(radius=radius, wavelength=wavelength, m=refractive_index, axis_ratio=axis_ratio, shape=getattr(Scatterer, shape_id))
+                scatterer.psd_integrator = psd_integrator
+                scatterer.psd = psd_function
 
-                # # Calculate scattering matrix
-                # psd_integrator.init_scatter_table(tm=scatterer, angular_integration=True, verbose=False)
+                # Calculate scattering matrix
+                psd_integrator.init_scatter_table(tm=scatterer, angular_integration=True, verbose=True)
                 
-                #
+                # Extract scattering properties from matrix
                 properties = self.get_scattering_properties(scatterer, refractive_index)
                 f.write(self.format_properties(wavelength, properties))
 
@@ -226,17 +231,18 @@ class ScatteringModel:
 
     def set_parameter_combinations(self):
         """Return an iterator based on the configuration"""
-        return itertools.product(self.config.get('shapes'),
-                                self.config.get('shape_ids'),
+        return itertools.product(self.config.get('shape_ids'),
                                 self.config.get('radii'),
                                 self.config.get('temperatures'),
-                                self.config.get('axis_ratios'))
+                                self.config.get('axis_ratios'),
+                                self.config.get('geometric_standard_deviations')
+                                )
         
     def run(self):
-        for shape, shape_id, radius, temperature, axis_ratio in self.set_parameter_combinations():
-            logging.info(f"Processing: Shape ID: {shape_id}, Radius: {radius}, Temperature: {temperature}, Axis Ratio: {axis_ratio}")
+        for shape_id, radius, temperature, axis_ratio, geometric_std_dev in self.set_parameter_combinations():
+            logging.info(f"Processing: Shape ID: {shape_id}, Radius: {radius}, Temperature: {temperature}, Axis Ratio: {axis_ratio}, Standard Deviation: {geometric_std_dev}")
             try:
-                self.calculate_and_write_properties(shape, shape_id, radius, temperature, axis_ratio)
+                self.calculate_and_write_properties(shape_id, radius, temperature, axis_ratio, geometric_std_dev)
             except Exception as e:
                 logging.error(f"Error processing {shape_id} at {temperature}K and {radius}um: {e}")
     
