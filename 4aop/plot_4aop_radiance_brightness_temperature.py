@@ -11,7 +11,7 @@ INPUT_FILES = [
 OUTPUT_FILE = f"{DATA_DIR}ice_vs_noice.png"  # Add your output directory here
 
 COLUMNS = [
-    (1, 'Radiance (W $m^{-2} sr^{-1} cm^{-1}$)', 'log', 'black'),
+    (1, 'Radiance (W $m^{-2} sr^{-1} (cm^{-1})^{-1}$)', 'log', 'black'),
     (2, 'Brightness Temperature (K)', 'linear', 'red'),
 ]
 FIG_SIZE = (12, 6)
