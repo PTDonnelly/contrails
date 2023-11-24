@@ -6,6 +6,7 @@ from pytmatrix.tmatrix import Scatterer
 import pytmatrix.scatter as scatter
 from pytmatrix.psd import PSDIntegrator
 from pytmatrix.psd import LognormalPSD
+import multiprocessing
 import logging
 import json
 import snoop
@@ -186,7 +187,7 @@ class ScatteringModel:
         return f"# {wavelength:10.3E} {formatted_properties}\n"
 
 
-    def create_particle_distribution(self, D0, s, D_max):
+    def create_particle_distribution(self, D0, s, D_max, num_points):
         """
         s = Standard deviation of the lognormal distribution
         D0 Median diameter in microns (naming consistent with PyTmatrix)
@@ -195,7 +196,7 @@ class ScatteringModel:
         psd_function = LognormalPSD(D0, s, D_max)
 
         # Initialise integrator
-        psd_integrator = PSDIntegrator(D_max=psd_function.D_max, num_points=50)
+        psd_integrator = PSDIntegrator(D_max=psd_function.D_max, num_points=num_points)
         return psd_function, psd_integrator
 
 
@@ -243,65 +244,87 @@ class ScatteringModel:
         self.refractive_indices = self.optical_data.interpolate(self.wavelengths)
         refractive_indices_at_T = self.get_refractive_indices(temperature)
 
-        xsc_filename = f"aerosols_con_{temperature:03}_w{wavelength:02}.dat"
+        xsc_filename = f"aerosols_con_{temperature:03}_{shape_id}_AR_{axis_ratio}.dat"
         xsc_filepath = os.path.join(self.config.get('aerosol_scattering_directory'), xsc_filename)
 
-        # Make corresponding aerosol input file for 4A/OP
-        self.make_aerfile(xsc_filename)
+        # # Make corresponding aerosol input file for 4A/OP
+        # self.make_aerfile(xsc_filename)
 
         with open(xsc_filepath, "w") as f:
-            self.set_aerosol_header(f, wavelength, temperature)
+            self.set_aerosol_header(f, shape_id, temperature)
 
-            radii = np.arange(1, 11, 0.5)
+            # radii = np.arange(1, 12, 1) #np.logspace(0, 1, 20)
+            radii = np.asarray((1, 2, 5, 10, 20, 50))
             for radius in radii:
-
                 # Initialise particle distribution integrator
-                # D_max = 11  # Maximum diameter in microns
-                # psd_function, psd_integrator = self.create_particle_distribution(radius, geometric_std_dev, D_max)
+                D_max = 2*radius  # Maximum particle diameter in microns
+                num_points = 20 # Number of integration points (particle size bins)
+                psd_function, psd_integrator = self.create_particle_distribution(radius, geometric_std_dev, D_max, num_points)
 
                 # Initialise the scattering calculations
                 scatterer = Scatterer(radius=radius, wavelength=wavelength, m=refractive_indices_at_T, axis_ratio=axis_ratio, shape=getattr(Scatterer, shape_id))
-                # scatterer.psd_integrator = psd_integrator
-                # scatterer.psd = psd_function
+                scatterer.psd_integrator = psd_integrator
+                scatterer.psd = psd_function
 
-                # # Calculate scattering matrix
-                # psd_integrator.init_scatter_table(tm=scatterer, angular_integration=True, verbose=False)
-                
+                # Calculate scattering matrix
+                psd_integrator.init_scatter_table(tm=scatterer, angular_integration=True, verbose=True)
+
                 # Extract scattering properties from matrix
                 properties = self.get_scattering_properties(scatterer, refractive_indices_at_T)
                 f.write(self.format_properties(radius, properties))
 
-                print(radius, properties)
+                print(f"Mean radius: {radius}")
 
         logging.info(f"Completed: {xsc_filepath}\n")
 
 
-    def set_parameter_combinations(self):
+    def set_parameter_combinations(self, params):
         """Return an iterator based on the configuration"""
-        return itertools.product(self.config.get('shape_ids'),
-                                self.config.get('wavelengths'),
-                                self.config.get('radii'),
-                                self.config.get('temperatures'),
-                                self.config.get('axis_ratios'),
-                                self.config.get('geometric_standard_deviations')
-                                )
+        lists_to_combine = [self.config.get(param) for param in params]
+        return itertools.product(*lists_to_combine)
 
 
     def run_vs_wavelength(self):
-        for shape_id, radius, temperature, axis_ratio, geometric_std_dev in self.set_parameter_combinations():
+        params = [['shape_ids', 'radii', 'temperatures', 'axis_ratios', 'geometric_standard_deviations']]
+
+        for shape_id, radius, temperature, axis_ratio, geometric_std_dev in self.set_parameter_combinations(params):
             logging.info(f"Processing: Shape ID: {shape_id}, Radius: {radius}, Temperature: {temperature}, Axis Ratio: {axis_ratio}, Standard Deviation: {geometric_std_dev}")
             try:
                 self.calculate_properties_vs_wavelength(shape_id, radius, temperature, axis_ratio, geometric_std_dev)
             except Exception as e:
                 logging.error(f"Error processing {shape_id} at {temperature}K and {radius}um: {e}")
 
+
     def run_vs_radius(self):
-        for shape_id, wavelength, radius, temperature, axis_ratio, geometric_std_dev in self.set_parameter_combinations():
+        params = ['shape_ids', 'wavelengths', 'temperatures', 'axis_ratios', 'geometric_standard_deviations']
+        
+        for shape_id, wavelength, temperature, axis_ratio, geometric_std_dev in self.set_parameter_combinations(params):
             logging.info(f"Processing: Shape ID: {shape_id}, Wavelength: {wavelength}, Temperature: {temperature}, Axis Ratio: {axis_ratio}, Standard Deviation: {geometric_std_dev}")
             try:
                 self.calculate_properties_vs_radius(shape_id, wavelength, temperature, axis_ratio, geometric_std_dev)
             except Exception as e:
                 logging.error(f"Error processing {shape_id} at {temperature}K and {wavelength}um: {e}")
+
+
+    
+    def calculate_single_run(self, params):
+        shape_id, wavelength, temperature, axis_ratio, geometric_std_dev = params
+        try:
+            # Assuming you have a function that does the actual calculation
+            # This function should be independent and not rely on shared state
+            self.calculate_properties_vs_radius(shape_id, wavelength, temperature, axis_ratio, geometric_std_dev)
+        except Exception as e:
+            logging.error(f"Error processing {shape_id} at {temperature}K and {wavelength}um: {e}")
+
+    def run_vs_radius_parallel(self):
+        params = ['shape_ids', 'wavelengths', 'temperatures', 'axis_ratios', 'geometric_standard_deviations']
+        
+        param_combinations = list(itertools.product(*[self.config.get(param) for param in params]))
+
+        pool = multiprocessing.Pool(processes=multiprocessing.cpu_count())
+        pool.map(self.calculate_single_run, param_combinations)
+        pool.close()
+        pool.join()
     
 
 def main():
@@ -318,7 +341,7 @@ def main():
     
     # PyTmatrix with these inputs
     model = ScatteringModel(config, spectral_grid, optical_data)
-    model.run_vs_radius()
+    model.run_vs_radius_parallel()
 
 if __name__ == "__main__":
     main()
