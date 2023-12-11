@@ -144,30 +144,62 @@ class ScatteringModel:
         formatted_df.to_csv(new_aerfile, mode='a', sep=' ', index=False, header=False)
 
 
-    def set_aerosol_header(self, f, radius, temperature):
+    def get_aerosol_header_footer(self):
         # Read the template .xsc file
         reference_xscfile = os.path.join(self.config.get('aerosol_scattering_directory'), 'aerosols_baum00.dat')
+        
         with open(reference_xscfile, 'r') as file:
             lines = file.readlines()
+            
+            # Fixed size
             header = lines[0:17]
-            header[0] = f"# Water ice: T = {temperature} K, r_eff = {radius} um, Iwabuchi et al. (2011), PyTMatrix\n"
-        
-        for line in header:
-            f.write(line)
-        
+
+            # Set up End-of-file properly
+            footer = '#'
+
+            ## Optionally, add rerence phase matrix (can be changed later to reflect actual calculations)
+            ## Find index of the line containing the word "volume"
+            # volume_line_index = next(i for i, line in enumerate(lines) if "volume" in line)
+            ## Extract footer starting from the line before 'volume_line_index'
+            # footer = lines[volume_line_index-1:]
+
+        return header, footer
+
+
+    def set_aerosol_header(self, header, temperature, radius, r_min, r_max, sigma):
+        # Customise for unique distribution
+        header[0] = f"# Water ice: T = {temperature} K, r_eff = {radius:.3f} um, Iwabuchi et al. (2011), PyTMatrix\n"
+
+        # Format the minimum radius, maximum radius, and sigma with proper spacing and scientific notation
+        header[5] = f"#   minimum radius, [um]:      {r_min:1.3E}\n"
+        header[6] = f"#   maximum radius, [um]:      {r_max:1.3E}\n"
+        header[7] = f"#                  sigma:      {sigma:1.3E}\n"
+
         return header
 
 
+    def convert_cross_section_to_coefficient(self, xsect):
+        """Assuming that the particle distribution is normalised 1 particle/cm^3
+        and that the cross-sections are in microns^2,
+        the coefficient is in units of 10^3 km-1, and thus needs to be reduced."""
+        return xsect / 1000
+   
+   
     def get_scattering_properties(self, scatterer, refractive_index):
         # Do T-Matrix calculation
-        ext_xsect = scatter.ext_xsect(scatterer) # in units of wavelength squared
-        sca_xsect = scatter.sca_xsect(scatterer) # in units of wavelength squared (Not used for 4A/OP ice)
-        abs_xsect = np.subtract(ext_xsect, sca_xsect) # in units of wavelength squared (Not used for 4A/OP ice)
+        ext = scatter.ext_xsect(scatterer) # extinction cross-section in units of wavelength squared
+        sca = scatter.sca_xsect(scatterer) # scattering cross-section in units of wavelength squared (Not used for 4A/OP ice)
+        abs = np.subtract(ext, sca) # absorption cross-section in units of wavelength squared (Not used for 4A/OP ice)
         ssa = scatter.ssa(scatterer)
         asym = scatter.asym(scatterer)
-        ext_norm = 1 # np.divide(ext_xsect, ext_xsect[np.where(ext_xsect == 0.75)]) # Not used for 4A/OP ice
+        ext_norm = 1 # np.divide(ext_xsect, ext_xsect[np.where(ext == 0.75)]) # Not used for 4A/OP ice
         m_real = refractive_index.real # Not used for 4A/OP ice
         m_imag = refractive_index.imag # Not used for 4A/OP ice
+        
+        # # Convert units
+        # ext = self.convert_cross_section_to_coefficient(ext)
+        # sca = self.convert_cross_section_to_coefficient(sca)
+        # abs = self.convert_cross_section_to_coefficient(abs)
 
         # Check if ssa is within the valid range [0, 1]
         if not 0 <= ssa <= 1:
@@ -175,7 +207,7 @@ class ScatteringModel:
             properties = [np.nan] * 8
         else:
             # All good; prepare the properties list
-            properties = [ext_xsect, sca_xsect, abs_xsect, ssa, asym, ext_norm, m_real, m_imag]
+            properties = [ext, sca, abs, ssa, asym, ext_norm, m_real, m_imag]
         
         # Return the formatted string
         return properties
@@ -200,24 +232,39 @@ class ScatteringModel:
         return psd_function, psd_integrator
 
 
+    def set_parameter_combinations(self, params):
+        """Return an iterator based on the configuration"""
+        lists_to_combine = [self.config.get(param) for param in params]
+        return itertools.product(*lists_to_combine)
+    
+
     def calculate_properties_vs_wavelength(self, shape_id, radius, temperature, axis_ratio, geometric_std_dev):
         # Set the sepctral grid for these calculations
         self.wavelengths = self.spectral_grid.wavelengths
 
         # Gather the temperature-dependent refractive indices at this T
+        self.refractive_indices = self.optical_data.interpolate(self.wavelengths)
         refractive_indices_at_T = self.get_refractive_indices(temperature)
-        xsc_filename = f"aerosols_con_{temperature:03}_r{radius:02}.dat"
+        xsc_filename = f"aerosols_con{int(temperature/10):02d}{radius:02}.dat"
         xsc_filepath = os.path.join(self.config.get('aerosol_scattering_directory'), xsc_filename)
 
         # Make corresponding aerosol input file for 4A/OP
         self.make_aerfile(xsc_filename)
 
         with open(xsc_filepath, "w") as f:
-            self.set_aerosol_header(f, radius, temperature)
-            
+            # Copy header text information and footer phase matrix from reference file
+            header, footer = self.get_aerosol_header_footer()
+
             # Initialise particle distribution integrator
-            D_max = 11  # Maximum diameter in microns
-            psd_function, psd_integrator = self.create_particle_distribution(radius, geometric_std_dev, D_max)
+            D_max = 3*radius  # Minimum and maximum diameter in microns
+            num_points = 50
+            psd_function, psd_integrator = self.create_particle_distribution(2*radius, geometric_std_dev, D_max, num_points)
+
+            # Create new header for this scattering file
+            r_min, r_max = 1, D_max
+            new_header = self.set_aerosol_header(header, temperature, radius, r_min, r_max, geometric_std_dev)
+            for line in new_header:
+                f.write(line)
 
             for wavelength, refractive_index in zip(self.wavelengths, refractive_indices_at_T):
 
@@ -233,9 +280,41 @@ class ScatteringModel:
                 properties = self.get_scattering_properties(scatterer, refractive_index)
                 f.write(self.format_properties(wavelength, properties))
 
-                print(wavelength, refractive_index, properties)
+                print(wavelength, properties)
+            
+            for line in footer:
+                f.write(line)
 
         logging.info(f"Completed: {xsc_filepath}\n")
+
+    def run_vs_wavelength(self):
+        params = ['shape_ids', 'radii', 'temperatures', 'axis_ratios', 'geometric_standard_deviations']
+
+        for shape_id, radius, temperature, axis_ratio, geometric_std_dev in self.set_parameter_combinations(params):
+            logging.info(f"Processing: Shape ID: {shape_id}, Radius: {radius}, Temperature: {temperature}, Axis Ratio: {axis_ratio}, Standard Deviation: {geometric_std_dev}")
+            try:
+                self.calculate_properties_vs_wavelength(shape_id, radius, temperature, axis_ratio, geometric_std_dev)
+            except Exception as e:
+                logging.error(f"Error processing {shape_id} at {temperature}K and {radius}um: {e}")
+
+    def calculate_single_run_vs_wavelength(self, params):
+        shape_id, radius, temperature, axis_ratio, geometric_std_dev = params
+        try:
+            # Assuming you have a function that does the actual calculation
+            # This function should be independent and not rely on shared state
+            self.calculate_properties_vs_wavelength(shape_id, radius, temperature, axis_ratio, geometric_std_dev)
+        except Exception as e:
+            logging.error(f"Error processing {shape_id} at {temperature}K and {radius}um: {e}")
+
+    def run_vs_wavelength_parallel(self):
+        params = ['shape_ids', 'radii', 'temperatures', 'axis_ratios', 'geometric_standard_deviations']
+        
+        param_combinations = list(itertools.product(*[self.config.get(param) for param in params]))
+
+        pool = multiprocessing.Pool(processes=multiprocessing.cpu_count())
+        pool.map(self.calculate_single_run_vs_wavelength, param_combinations)
+        pool.close()
+        pool.join()
 
 
     def calculate_properties_vs_radius(self, shape_id, wavelength, temperature, axis_ratio, geometric_std_dev):
@@ -244,22 +323,30 @@ class ScatteringModel:
         self.refractive_indices = self.optical_data.interpolate(self.wavelengths)
         refractive_indices_at_T = self.get_refractive_indices(temperature)
 
-        xsc_filename = f"aerosols_con_{temperature:03}_{shape_id}_AR_{axis_ratio}.dat"
-        xsc_filepath = os.path.join(self.config.get('aerosol_scattering_directory'), xsc_filename)
+        # xsc_filename = f"aerosols_con_{temperature:03}_{shape_id}_AR_{axis_ratio}.dat"
+        # xsc_filepath = os.path.join(self.config.get('aerosol_scattering_directory'), xsc_filename)
 
-        # # Make corresponding aerosol input file for 4A/OP
-        # self.make_aerfile(xsc_filename)
+        # # # Make corresponding aerosol input file for 4A/OP
+        # # self.make_aerfile(xsc_filename)
 
-        with open(xsc_filepath, "w") as f:
-            self.set_aerosol_header(f, shape_id, temperature)
+        # with open(xsc_filepath, "w") as f:
+        #     self.set_aerosol_header(f, shape_id, temperature)
 
-            # radii = np.arange(1, 12, 1) #np.logspace(0, 1, 20)
-            radii = np.asarray((1, 2, 5, 10, 20, 50))
-            for radius in radii:
+        radii = np.logspace(0, 1.05, 5)
+        for radius in radii:
+            xsc_filename = f"aerosols_con_{temperature:03}_{shape_id}_AR_{axis_ratio}_r{radius:02.2f}.dat"
+            xsc_filepath = os.path.join(self.config.get('aerosol_scattering_directory'), 'radii', xsc_filename)
+
+            # # Make corresponding aerosol input file for 4A/OP
+            # self.make_aerfile(xsc_filename)
+
+            with open(xsc_filepath, "w") as f:
+                # self.set_aerosol_header(f, shape_id, temperature)
+
                 # Initialise particle distribution integrator
                 D_max = 2*radius  # Maximum particle diameter in microns
-                num_points = 20 # Number of integration points (particle size bins)
-                psd_function, psd_integrator = self.create_particle_distribution(radius, geometric_std_dev, D_max, num_points)
+                num_points = 50 # Number of integration points (particle size bins)
+                psd_function, psd_integrator = self.create_particle_distribution(2*radius, geometric_std_dev, D_max, num_points)
 
                 # Initialise the scattering calculations
                 scatterer = Scatterer(radius=radius, wavelength=wavelength, m=refractive_indices_at_T, axis_ratio=axis_ratio, shape=getattr(Scatterer, shape_id))
@@ -273,27 +360,9 @@ class ScatteringModel:
                 properties = self.get_scattering_properties(scatterer, refractive_indices_at_T)
                 f.write(self.format_properties(radius, properties))
 
-                print(f"Mean radius: {radius}")
+            print(f"Mean radius: {radius}")
 
         logging.info(f"Completed: {xsc_filepath}\n")
-
-
-    def set_parameter_combinations(self, params):
-        """Return an iterator based on the configuration"""
-        lists_to_combine = [self.config.get(param) for param in params]
-        return itertools.product(*lists_to_combine)
-
-
-    def run_vs_wavelength(self):
-        params = [['shape_ids', 'radii', 'temperatures', 'axis_ratios', 'geometric_standard_deviations']]
-
-        for shape_id, radius, temperature, axis_ratio, geometric_std_dev in self.set_parameter_combinations(params):
-            logging.info(f"Processing: Shape ID: {shape_id}, Radius: {radius}, Temperature: {temperature}, Axis Ratio: {axis_ratio}, Standard Deviation: {geometric_std_dev}")
-            try:
-                self.calculate_properties_vs_wavelength(shape_id, radius, temperature, axis_ratio, geometric_std_dev)
-            except Exception as e:
-                logging.error(f"Error processing {shape_id} at {temperature}K and {radius}um: {e}")
-
 
     def run_vs_radius(self):
         params = ['shape_ids', 'wavelengths', 'temperatures', 'axis_ratios', 'geometric_standard_deviations']
@@ -304,10 +373,8 @@ class ScatteringModel:
                 self.calculate_properties_vs_radius(shape_id, wavelength, temperature, axis_ratio, geometric_std_dev)
             except Exception as e:
                 logging.error(f"Error processing {shape_id} at {temperature}K and {wavelength}um: {e}")
-
-
     
-    def calculate_single_run(self, params):
+    def calculate_single_run_vs_radius(self, params):
         shape_id, wavelength, temperature, axis_ratio, geometric_std_dev = params
         try:
             # Assuming you have a function that does the actual calculation
@@ -322,7 +389,7 @@ class ScatteringModel:
         param_combinations = list(itertools.product(*[self.config.get(param) for param in params]))
 
         pool = multiprocessing.Pool(processes=multiprocessing.cpu_count())
-        pool.map(self.calculate_single_run, param_combinations)
+        pool.map(self.calculate_single_run_vs_radius, param_combinations)
         pool.close()
         pool.join()
     
@@ -341,7 +408,7 @@ def main():
     
     # PyTmatrix with these inputs
     model = ScatteringModel(config, spectral_grid, optical_data)
-    model.run_vs_radius_parallel()
+    model.run_vs_wavelength_parallel()
 
 if __name__ == "__main__":
     main()

@@ -25,6 +25,7 @@ def read_dat_file(filepath, end_line=None):
     return np.transpose(np.array(data))
 
 def read_ice_data(base_path, temperature_range, wavelength_range):
+    base_path += "efficiency_vs_radius_as_function_of_wavelength\\"
     # Number of temperatures and radii
     num_temperatures = len(temperature_range)
     num_radii = len(wavelength_range)
@@ -70,7 +71,7 @@ config = get_config()
 
 # Read custom ice data
 temperature_range = config.get('temperatures')
-wavelength_range = config.get('wavelengths')
+wavelength_range = [7.1, 8.1, 9.1, 10.1, 11.1, 12.1, 13.1] #config.get('wavelengths')
 ice_data = read_ice_data(config.get('aerosol_scattering_directory'), temperature_range, wavelength_range)
 n_temperatures, n_wavelengths = ice_data.shape[2], ice_data.shape[3]
 
@@ -107,7 +108,7 @@ for i in range(nplots):
 
             # Convert scattering cross-section into efficiency
             D = 2 * xdata
-            ydata = (4 * ydata) / (np.pi * D**2)
+            ydata = (4 * ydata ) / (np.pi * D**2)
 
             # Plotting the i-th property across all wavelengths for a specific temperature and wavelength
             ax.plot(xdata, ydata, color=color, alpha=0.75, label=fr"$\lambda$={int(wavelength-0.1)} $\mu$m")

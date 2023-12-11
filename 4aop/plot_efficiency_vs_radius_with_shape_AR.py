@@ -1,7 +1,7 @@
 import os
 import numpy as np
 import matplotlib.pyplot as plt
-import matplotlib.gridspec as gridspec
+import matplotlib.ticker as ticker
 from scipy.stats import lognorm
 import logging
 import json
@@ -32,7 +32,7 @@ def read_ice_data(base_path, temperature_range, radius_range, shape_range, AR_ra
     num_ARs = len(AR_range)
 
     # Shape of each scattering array
-    num_columns, num_rows = read_dat_file(os.path.join(base_path, f"aerosols_con_230_SHAPE_SPHEROID_AR_1.0.dat")).shape
+    num_columns, num_rows = read_dat_file(os.path.join(base_path, 'big_run_save', f"aerosols_con_230_SHAPE_SPHEROID_AR_1.0.dat")).shape
 
     # Pre-allocate a 4D numpy array
     ice_data = np.empty((num_columns, num_rows, num_temperatures, num_shapes, num_ARs))
@@ -80,9 +80,8 @@ n_temperatures, n_shapes, n_ARs = ice_data.shape[2], ice_data.shape[3], ice_data
 
 
 # Plotting setup
-fig = plt.figure(figsize=(3, 9))
 nplots = 3
-gs = gridspec.GridSpec(nplots, 1, height_ratios=[1, 1, 1])
+fig, axes = plt.subplots(nplots, 1, figsize=(3, 9))
 fig.suptitle('Scattering Properties of\nWater-Ice Mie Particles at 8 $\\mu$m', y=0.95, ha='center')
 
 # Generate a list of colors from the colormap, one for each temperature
@@ -91,15 +90,12 @@ shape_linestyles = ['-', ':']
 AR_colors = ['royalblue', 'green', 'orange']
 
 # Define y-axis labels
-labels = [r'Mean Radius ($\mu$m)', r'$Q_{ext}$',  r'$Q_{abs}$', '$g$']
+labels = [r'Mean Diameter ($\mu$m)', r'$Q_{ext}$',  r'$Q_{abs}$', '$g$']
 
 # Loop through and plot each property
-for i in range(nplots):
-    ax = plt.subplot(gs[i])
-   
+for i, ax in enumerate(axes):   
     # Loop through the ice data and plot
     for itemperature in range(n_temperatures):
-        # color = temperature_colors[itemperature]
 
         for ishape, shape in enumerate(shape_range):
             linestyle = shape_linestyles[ishape]
@@ -122,29 +118,29 @@ for i in range(nplots):
                         ax.set_ylim(0, 1.5)
                     # Convert scattering cross-section into efficiency
                     D = 2 * xdata
-                    ydata = (4 * ydata) / (np.pi * D**2)
+                    ydata = (4 * ydata * 1000) / (np.pi * D**2)
                 elif i == 2:
                     ydata = ice_data[5, :, itemperature, ishape, iAR]
                     ax.set_ylim(0, 1)
 
                 # Plotting the i-th property across all wavelengths for a specific temperature and wavelength
                 ax.plot(xdata, ydata, ls=linestyle, color=color, label=f"{shape_name}, AR={AR}")
-
-    # Hide x-axis labels and ticks for all but the bottom subplot
-    if i < nplots-1:
-        ax.tick_params(labelbottom=False, bottom=False, top=False)  # Also hides the ticks themselves
-    elif i == nplots-1:
-        ax.set_xlabel(labels[0])
-        ax.legend(fontsize=8, loc='lower right')
-    ax.set_xlim(1, 1e4)
+    
+    # Grid and labels settings
+    ax.grid(lw=0.5, ls=':')
     ax.set_xscale('log')
+    ax.set_xlim(1, 1e4)
+    ax.set_xticks([1e0, 1e1, 1e2, 1e3, 1e4])
     ax.set_ylabel(labels[i+1])
 
-plt.xticks((1e0, 1e1, 1e2, 1e3, 1e4))
-        
+    # Hide x-axis labels for all but the bottom subplot
+    if i < nplots - 1:
+        ax.tick_params(labelbottom=False)
+
+axes[-1].set_xlabel(labels[0])
+axes[-1].legend(fontsize=8, loc='lower right')
 
 plt.subplots_adjust(hspace=0.1)
-# plt.tight_layout()
 
 # Save figure
 plt.savefig(f"{config.get('aerosol_scattering_directory')}efficiency_comparison.png", dpi=300, bbox_inches='tight')

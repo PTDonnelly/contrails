@@ -1,9 +1,9 @@
 {
-    "shape_ids": ["SHAPE_SPHEROID", "SHAPE_CYLINDER"],
+    "shape_ids": ["SHAPE_SPHEROID"],
     "wavelengths": [8.0001],
-    "radii": [1],
-    "temperatures": [230],
-    "axis_ratios": [0.3, 1.0, 3.0],
+    "radii": [2],
+    "temperatures": [160, 230],
+    "axis_ratios": [1.0],
     "geometric_standard_deviations": [1.5],
     "model_grid_path": "C:\\Users\\padra\\Documents\\Research\\projects\\contrails\\4aop\\datscat\\4aop_spectral_grid.txt",
     "optical_data_path": "C:\\Users\\padra\\Documents\\Research\\projects\\contrails\\scattering_calculations\\optical_data\\iwabuchi_optical_properties.txt",

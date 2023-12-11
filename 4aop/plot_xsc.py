@@ -42,7 +42,7 @@ def read_ice_data(base_path, temperature_range, radius_range):
 
     for it, temperature in enumerate(temperature_range):
         for ir, radius in enumerate(radius_range):
-            filename = f"aerosols_con_{temperature:03}_r{radius:02}.dat"
+            filename = f"aerosols_con_{temperature:03}_{radius:02}.dat"
             filepath = os.path.join(base_path, filename)
             try:
                 # Read the file into a 2D array
@@ -125,14 +125,15 @@ for i in range(nplots):
     if i == 0:
         ax = plt.subplot(gs[i])
         for radius, color in zip(radius_range, particle_distribution_color_values):
-            psd, D = build_psd(sigma, radius, 11, 50)
+            psd, D = build_psd(1.5, 2*radius, 5*radius, 50)
             ax.plot(D, psd, color=color, label=fr"$\mu_r$={radius}, $\sigma$={sigma[0]}", )
-            ax.set_xlabel(r'Particle Radius ($\mu$m)', labelpad=1)
-            ax.set_xlim((1, 11))
-            ax.set_xticks(np.arange(1, 12, 2))
+            ax.set_xlabel(r'Particle Diameter ($\mu$m)', labelpad=1)
+            ax.set_xscale('log')
+            ax.set_xlim((0.5, 100))
+            # ax.set_xticks(np.arange(1, 50, 10))
             ax.set_ylabel(labels[i+1])
-            ax.set_ylim((0, 1))
-            ax.set_yticks(np.arange(0, 1.1, 0.5))
+            ax.set_ylim((0, 0.6))
+            ax.set_yticks(np.arange(0, 0.61, 0.2))
             ax.legend(fontsize=7)
     elif i == 1:
         pass
@@ -151,18 +152,19 @@ for i in range(nplots):
                 # Get scattering properties
                 data = ice_data[i-1, :, itemperature, iradius] 
 
-                # # Convert scattering cross-section into efficiency
-                # if 1 <= i <= 3:
-                #     data = (4 * data) / (np.pi * radius)
+                # Convert scattering cross-section into efficiency
+                if 1 <= i <= 3:
+                    # data = (4 * data) / (np.pi * radius)
+                    data /= 1000
 
                 # Plotting the i-th property across all wavelengths for a specific temperature and radius
                 ax.plot(ice_data[0, :, itemperature, iradius], data, color=color, alpha=0.75)
 
         # Hide x-axis labels and ticks for all but the bottom subplot
-        if i < nplots-1:
+        if 0 < i < nplots-1:
             if 2 <= i <= 4:
                 ax.set_yscale('log')
-            ax.tick_params(labelbottom=False, bottom=False, top=False)  # Also hides the ticks themselves
+            ax.tick_params(labelbottom=False)  # Also hides the ticks themselves
         elif i == nplots-1:
             ax.set_xlabel(labels[0])
         ax.set_xlim(1200, 800)
