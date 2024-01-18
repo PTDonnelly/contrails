@@ -5,8 +5,10 @@ import os
 # Constants
 DATA_DIR = "C:\\Users\\padra\\Documents\\Research\\projects\\contrails\\4aop\\outputs\\"
 INPUT_FILES = [
-    "spc4asub0001_inv_co2_CAMS_test_iasil1c_icehr20iasi1c.plt",
-    "spc4asub0001_inv_co2_CAMS_test_iasil1c_ice_test_icehr20iasi1c.plt"
+    "spc4asub0001_inv_co2_CAMS_test_iasil1c_ice_clearhr20iasi1c.plt",
+    "spc4asub0001_inv_co2_CAMS_test_iasil1c_ice_test_ice_baumhr20iasi1c.plt",
+    "spc4asub0001_inv_co2_CAMS_test_iasil1c_ice_con1601hr20iasi1c.plt",
+    "spc4asub0001_inv_co2_CAMS_test_iasil1c_ice_con2301hr20iasi1c.plt"
 ]
 OUTPUT_FILE = f"{DATA_DIR}ice_vs_noice.png"  # Add your output directory here
 

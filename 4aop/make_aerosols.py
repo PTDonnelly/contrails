@@ -32,7 +32,7 @@ class SpectralGrid:
         interval (float): The interval between wavelengths for a custom grid.
         wavelengths (numpy.ndarray): The array of wavelengths.
     """
-    def __init__(self, min_wavelength=7, max_wavelength=13, interval=0.5):
+    def __init__(self, min_wavelength=7, max_wavelength=15, interval=0.5):
         self.min_wavelength = min_wavelength
         self.max_wavelength = max_wavelength
         self.interval = interval
@@ -256,8 +256,8 @@ class ScatteringModel:
             header, footer = self.get_aerosol_header_footer()
 
             # Initialise particle distribution integrator
-            D_max = 3*radius  # Minimum and maximum diameter in microns
-            num_points = 50
+            D_max = 6*radius  # Minimum and maximum diameter in microns (3 times the median diameter)
+            num_points = 21
             psd_function, psd_integrator = self.create_particle_distribution(2*radius, geometric_std_dev, D_max, num_points)
 
             # Create new header for this scattering file
@@ -274,13 +274,13 @@ class ScatteringModel:
                 scatterer.psd = psd_function
 
                 # Calculate scattering matrix
-                psd_integrator.init_scatter_table(tm=scatterer, angular_integration=True, verbose=False)
+                psd_integrator.init_scatter_table(tm=scatterer, angular_integration=True, verbose=True)
                 
                 # Extract scattering properties from matrix
                 properties = self.get_scattering_properties(scatterer, refractive_index)
                 f.write(self.format_properties(wavelength, properties))
 
-                print(wavelength, properties)
+                print(f"r = {radius}, lambda = {wavelength}")
             
             for line in footer:
                 f.write(line)
@@ -408,7 +408,7 @@ def main():
     
     # PyTmatrix with these inputs
     model = ScatteringModel(config, spectral_grid, optical_data)
-    model.run_vs_wavelength_parallel()
+    model.run_vs_wavelength()
 
 if __name__ == "__main__":
     main()
