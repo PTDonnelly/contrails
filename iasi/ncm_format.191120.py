@@ -43,6 +43,7 @@ import numpy as np
 from sys import argv
 import struct
 import math
+import pandas as pd
 
 # for planck : begin
 pi = np.pi
@@ -532,7 +533,7 @@ def read_ncm_compute_nedt(formatted_fname, level, verbose=True):
   dwsdt=0.
   print(idfct, "diagonal elements of struct_ncm (level : %s)" % level)
   print(idfct, "iSample, nu0, cov_nedt[i]")
-  for iSample in range(0,8461,200):
+  for iSample in range(0,8461):
       nu0=64500.0+25.*iSample  #m-1
       w, dwsdt = plkderive(T0, nu0)  #m-1
       #keep only 1 diagonal vector (there are 5)
@@ -551,7 +552,7 @@ def read_ncm_compute_nedt(formatted_fname, level, verbose=True):
   dwsdt=0.
   print(idfct, "diagonal elements of reconstructed matrix")
   print(idfct, "iSample, nu0, cov_nedt[i]")
-  for iSample in range(0,8461,200):
+  for iSample in range(0,8461):
     nu0=64500.0+25.*iSample  #m-1
     w, dwsdt = plkderive(T0, nu0)
     # cov_nedt[iSample] = np.sqrt(cov[iSample,iSample])/dwsdt
@@ -560,14 +561,14 @@ def read_ncm_compute_nedt(formatted_fname, level, verbose=True):
     print(my_str)
   
   
-  # Saving the numpy array to a file
-  np.save('covariance.npy', cov_nedt)
-
-  # Writing each element of the numpy array to a text file
-  with open('covariance.txt', 'w') as f:
-      for element in cov_nedt:
-          f.write("%s\n" % element)
+  # Save the NEDT to csv
+  nedt_pd = pd.DataFrame({'NEDT': cov_nedt})
+  nedt_pd.to_csv('nedt.csv', sep='\t')
   
+  # Save the covariance matrix to csv
+  covariance_df = pd.DataFrame(cov, index=range(cov.shape[0]), columns=range(cov.shape[1]))
+  covariance_df.to_csv('covariance_matrix.csv', sep='\t', index=True)
+
 
   print(idfct, "end")
  
@@ -580,7 +581,7 @@ if __name__ == "__main__":
     print(__doc__)
   if (len(argv)==2) :
     formatted_fname=argv[1]
-    for level in ['1b', '1c']:
+    for level in ['1c']:
       read_ncm_compute_nedt(formatted_fname, level, verbose=True)
 
   print(idfct, "end")
