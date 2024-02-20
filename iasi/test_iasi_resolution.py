@@ -92,8 +92,10 @@ def process_spectra_over_bins(df, weights_left, weights_right, number_of_bins_ra
             chi2_reconstructed, p_reconstructed = chisquare(f_obs=hist_reconstructed_normalized, f_exp=hist_original_normalized)
 
             # Store the results for this number_of_bins
-            chi2_results_half_res[number_of_bins].append(chi2_half_res)
-            chi2_results_reconstructed[number_of_bins].append(chi2_reconstructed)
+            reduced_chi2_half_res = chi2_half_res / number_of_bins
+            reduced_chi2_reconstructed = chi2_reconstructed / number_of_bins
+            chi2_results_half_res[number_of_bins].append(reduced_chi2_half_res)
+            chi2_results_reconstructed[number_of_bins].append(reduced_chi2_reconstructed)
             p_values_half_res[number_of_bins].append(p_half_res)
             p_values_reconstructed[number_of_bins].append(p_reconstructed)
 
