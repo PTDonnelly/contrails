@@ -6,6 +6,8 @@ import numpy as np
 import matplotlib.pyplot as plt
 from scipy.stats import chisquare
 
+import snoop
+
 def reconstruct_spectrum(original_spectrum, half_res_spectrum, covariance_matrix):
     # Initialize the reconstructed spectrum with original values, missing values can be NaN or some placeholder
     reconstructed_spectrum = original_spectrum.copy()
@@ -32,11 +34,6 @@ def reconstruct_spectrum(original_spectrum, half_res_spectrum, covariance_matrix
 
     return reconstructed_spectrum
 
-def quantile_binning(series, num_bins):
-    quantiles = np.linspace(0, 1, num_bins + 1)
-    bin_edges = series.quantile(quantiles).unique()
-    return np.histogram(series, bins=bin_edges)
-
 def normalize_frequencies(observed, expected):
     """
     Normalize observed and expected frequencies to have the same total sum.
@@ -62,98 +59,108 @@ def normalize_frequencies(observed, expected):
     
     return observed_normalized, expected_normalized
 
-def calculate_means_and_residuals(original_spectrum, half_res_spectrum, reconstructed_spectrum):
-    # Calculate means
-    original_mean = np.mean(original_spectrum)
-    half_res_mean = np.mean(half_res_spectrum)
-    reconstructed_mean = np.mean(reconstructed_spectrum)
-    print("Mean of Original Spectrum:", original_mean)
-    print("Mean of Half-Resolution Spectrum:", half_res_mean)
-    print("Mean of Reconstructed Spectrum:", reconstructed_mean)
-    
-    # Calculate residuals
-    original_residuals = np.subtract(original_spectrum, original_mean)
-    half_res_residuals = np.subtract(half_res_spectrum, half_res_mean)
-    reconstructed_residuals = np.subtract(reconstructed_spectrum, reconstructed_mean)
-    # Print out the means of the residuals for verification
-    print("Mean Residual for Original Spectrum:", np.mean(original_residuals))
-    print("Mean Residual for Half-Resolution Spectrum:", np.mean(half_res_residuals))
-    print("Mean Residual for Reconstructed Spectrum:", np.mean(reconstructed_residuals))
+# @snoop
+def process_spectra_over_bins(df, covariance_matrix, number_of_bins_range):
+    # Initialize dictionaries to store the results for each number_of_bins
+    chi2_results_half_res = {bins: [] for bins in number_of_bins_range}
+    chi2_results_reconstructed = {bins: [] for bins in number_of_bins_range}
+    p_values_half_res = {bins: [] for bins in number_of_bins_range}
+    p_values_reconstructed = {bins: [] for bins in number_of_bins_range}
 
-    # Define the range of num_bins to test
-    num_bins_range = range(5, 101, 5)  # From 5 to 100 in steps of 5
+    df = df.reset_index(drop=True)
 
-    # Initialize lists to store the results
-    chi2_half_res_list = []
-    p_half_res_list = []
-    chi2_reconstructed_list = []
-    p_reconstructed_list = []
+    for index, row in df.iterrows():
+        print(np.round((index/df.shape[0]) * 100, 2))
+        original_spectrum = row
 
-    for num_bins in num_bins_range:
-        # Calculate histograms using quantile binning
-        hist_original, bin_edges = np.histogram(original_spectrum, bins=num_bins) #quantile_binning(original_spectrum, num_bins)
-        hist_half_res, _ = np.histogram(half_res_spectrum, bins=bin_edges)
-        hist_reconstructed, _ = np.histogram(reconstructed_spectrum, bins=bin_edges)
+        # Loop over the range of number_of_bins
+        for number_of_bins in number_of_bins_range:
+            half_res_spectrum = original_spectrum[::2].reset_index(drop=True)
+            reconstructed_spectrum = reconstruct_spectrum(original_spectrum, half_res_spectrum, covariance_matrix).reset_index(drop=True)
 
-        # Normalize frequencies and perform Chi-square tests using the histograms
-        hist_half_res_normalized, hist_original_normalized = normalize_frequencies(hist_half_res, hist_original)
-        chi2_half_res, p_half_res = chisquare(f_obs=hist_half_res_normalized, f_exp=hist_original_normalized)
-        hist_reconstructed_normalized, hist_original_normalized = normalize_frequencies(hist_reconstructed, hist_original)
-        chi2_reconstructed, p_reconstructed = chisquare(f_obs=hist_reconstructed_normalized, f_exp=hist_original_normalized)
+            # Calculate histograms for the original, half-resolution, and reconstructed spectra
+            hist_original, bin_edges = np.histogram(original_spectrum, bins=number_of_bins)
+            hist_half_res, _ = np.histogram(half_res_spectrum, bins=bin_edges)
+            hist_reconstructed, _ = np.histogram(reconstructed_spectrum, bins=bin_edges)
 
-        # Output the results
-        # print(f"Chi-Square Test for Half-Resolution Spectrum: Chi2 = {chi2_half_res}, p-value = {p_half_res}")
-        # print(f"Chi-Square Test for Reconstructed Spectrum: Chi2 = {chi2_reconstructed}, p-value = {p_reconstructed}")
+            # Normalize frequencies and perform Chi-square tests
+            hist_half_res_normalized, hist_original_normalized = normalize_frequencies(hist_half_res, hist_original)
+            chi2_half_res, p_half_res = chisquare(f_obs=hist_half_res_normalized, f_exp=hist_original_normalized)
 
-        # Store the results
-        chi2_half_res_list.append(chi2_half_res)
-        p_half_res_list.append(p_half_res)
-        chi2_reconstructed_list.append(chi2_reconstructed)
-        p_reconstructed_list.append(p_reconstructed)
+            hist_reconstructed_normalized, hist_original_normalized = normalize_frequencies(hist_reconstructed, hist_original)
+            chi2_reconstructed, p_reconstructed = chisquare(f_obs=hist_reconstructed_normalized, f_exp=hist_original_normalized)
+
+            # Store the results for this number_of_bins
+            chi2_results_half_res[number_of_bins].append(chi2_half_res)
+            chi2_results_reconstructed[number_of_bins].append(chi2_reconstructed)
+            p_values_half_res[number_of_bins].append(p_half_res)
+            p_values_reconstructed[number_of_bins].append(p_reconstructed)
 
     # Plotting
-    fig, ax = plt.subplots(2, 1, figsize=(10, 8))
+    fig, axs = plt.subplots(2, 1, figsize=(12, 10))
 
-    # Panel 1: Chi-square statistics
-    ax[0].plot(num_bins_range, chi2_half_res_list, label='Half-Resolution', marker='o')
-    ax[0].plot(num_bins_range, chi2_reconstructed_list, label='Reconstructed', marker='s')
-    ax[0].set_xlabel('Number of Bins')
-    ax[0].set_ylabel('Chi-square Statistic')
-    ax[0].set_title('Chi-square Statistic vs. Number of Bins')
-    ax[0].legend()
+    mean_chi2_half_res_list = []
+    mean_chi2_reconstructed_list = []
+    mean_p_half_res_list = []
+    mean_p_reconstructed_list = []
 
-    # Panel 2: P-values
-    ax[1].plot(num_bins_range, p_half_res_list, label='Half-Resolution', marker='o')
-    ax[1].plot(num_bins_range, p_reconstructed_list, label='Reconstructed', marker='s')
-    ax[1].set_xlabel('Number of Bins')
-    ax[1].set_ylabel('P-value')
-    ax[1].set_title('P-value vs. Number of Bins')
-    ax[1].legend()
+    # Plot for each number_of_bins
+    for number_of_bins in number_of_bins_range:
+        axs[0].scatter([number_of_bins] * len(chi2_results_half_res[number_of_bins]), chi2_results_half_res[number_of_bins],
+                            marker='o', s=5, color='orange', alpha=0.5)
+        axs[0].scatter([number_of_bins] * len(chi2_results_reconstructed[number_of_bins]), chi2_results_reconstructed[number_of_bins],
+                            marker='o', s=5, color='blue', alpha=0.5)
+        axs[1].scatter([number_of_bins] * len(p_values_half_res[number_of_bins]), p_values_half_res[number_of_bins],
+                            marker='o', s=5, color='orange', alpha=0.5)
+        axs[1].scatter([number_of_bins] * len(p_values_reconstructed[number_of_bins]), p_values_reconstructed[number_of_bins],
+                            marker='o', s=5, color='blue', alpha=0.5)
 
+        # Calculate means
+        mean_chi2_half_res_list.append(np.nanmean(chi2_results_half_res[number_of_bins]))
+        mean_chi2_reconstructed_list.append(np.nanmean(chi2_results_reconstructed[number_of_bins]))
+        mean_p_half_res_list.append(np.nanmean(p_values_half_res[number_of_bins]))
+        mean_p_reconstructed_list.append(np.nanmean(p_values_reconstructed[number_of_bins]))
+
+    # Line plots for averages
+    axs[0].plot(number_of_bins_range, mean_chi2_half_res_list, ls='-', lw=2, color='orange')
+    axs[0].plot(number_of_bins_range, mean_chi2_reconstructed_list, ls='-', lw=2, color='blue')
+    axs[1].plot(number_of_bins_range, mean_p_half_res_list, ls='-', lw=2, color='orange')
+    axs[1].plot(number_of_bins_range, mean_p_reconstructed_list, ls='-', lw=2, color='blue')
+
+    # Customizing the legend to avoid duplicate labels
+    from matplotlib.lines import Line2D
+    custom_lines = [Line2D([0], [0], color='orange', marker='.', linestyle='', markersize=10),
+                    Line2D([0], [0], color='blue', marker='.', linestyle='', markersize=10),
+                    Line2D([0], [0], color='orange', linestyle='-', markersize=10),
+                    Line2D([0], [0], color='blue', linestyle='-', markersize=10)]
+    axs[0].legend(custom_lines, ['Half-Resolution', 'Reconstructed', 'Average Half-Res', 'Average Reconstructed'])
+    axs[1].legend(custom_lines, ['Half-Resolution', 'Reconstructed', 'Average Half-Res', 'Average Reconstructed'])
+
+    axs[0].set_xlabel('Number of Bins')
+    axs[0].set_ylabel('Chi-square Statistic')
+    axs[0].set_title('Chi-square Statistic vs. Number of Bins')
+    axs[1].set_xlabel('Number of Bins')
+    axs[1].set_ylabel('P-value')
+    axs[1].set_title('P-value vs. Number of Bins')
     plt.tight_layout()
-    plt.show()
+    plt.savefig("c:\\Users\\donnelly\\Documents\\projects\\data\\chisquare_test.png")
 
 
 # Example usage with mock data
 if __name__ == "__main__":
     
     # Read in the original spectrum
-    data_file = "c:\\Users\\donnelly\\Documents\\projects\\iasi\\spectra_and_cloud_products.pkl.gz"
+    data_file = "c:\\Users\\donnelly\\Documents\\projects\\data\\spectra_and_cloud_products.pkl.gz"
     with gzip.open(data_file, 'rb') as f:
         df = pickle.load(f)
         spectrum_df = df[[col for col in df.columns if 'Spectrum' in col]]
 
-    # Construct original and half-resolution spectra
-    original_spectrum = spectrum_df.iloc[0]
-    half_res_spectrum = original_spectrum[::2]
-
     # Read in IASI covariance matrix
     covariance_file = "c:\\Users\\donnelly\\Documents\\projects\\iasi\\covariance_matrix.csv"
     covariance_matrix_df = pd.read_csv(covariance_file, sep="\t")
-
-    # Reconstruct original spectrum using weighted average
-    reconstructed_spectrum = reconstruct_spectrum(original_spectrum, half_res_spectrum, covariance_matrix_df)
     
-    calculate_means_and_residuals(original_spectrum, half_res_spectrum, reconstructed_spectrum)
+    # Define the range of number_of_bins to test
+    number_of_bins_range = range(5, 101, 1)
+    process_spectra_over_bins(spectrum_df, covariance_matrix_df, number_of_bins_range)
 
 
