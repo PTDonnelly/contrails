@@ -339,8 +339,8 @@ def read_ncm_compute_nedt(formatted_fname, level, verbose=True):
         print(my_str)
     
 
-    np.save('covariance.npy', cov_nedt)
-    with open('covariance.txt', mode='w') as f:
+    np.save('D:\\Data\\iasi_data\\covariance.npy', cov_nedt)
+    with open('D:\\Data\\iasi_data\\covariance.txt', mode='w') as f:
         for element in cov_nedt:
             f.write(f"{element}\n")
     print(np.shape(cov_nedt))

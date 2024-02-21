@@ -563,11 +563,11 @@ def read_ncm_compute_nedt(formatted_fname, level, verbose=True):
   
   # Save the NEDT to csv
   nedt_pd = pd.DataFrame({'NEDT': cov_nedt})
-  nedt_pd.to_csv('nedt.csv', sep='\t')
+  nedt_pd.to_csv('D:\\Data\\iasi_data\\noise_covariance_matrix\\nedt.csv', sep='\t')
   
   # Save the covariance matrix to csv
-  covariance_df = pd.DataFrame(cov, index=range(cov.shape[0]), columns=range(cov.shape[1]))
-  covariance_df.to_csv('covariance_matrix.csv', sep='\t', index=True)
+  covariance_df = pd.DataFrame(cov, columns=range(cov.shape[1]))
+  covariance_df.to_csv('D:\\Data\\iasi_data\\noise_covariance_matrix\\covariance_matrix.csv', sep='\t', index=False)
 
 
   print(idfct, "end")

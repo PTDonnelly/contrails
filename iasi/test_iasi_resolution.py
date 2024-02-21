@@ -140,33 +140,40 @@ def process_spectra_over_bins(df, weights_left, weights_right, number_of_bins_ra
     axs[1].legend(custom_lines, ['Half-Resolution', 'Reconstructed', 'Average Half-Res', 'Average Reconstructed'])
 
     axs[0].set_xlabel('Number of Bins', fontsize=20)
-    axs[0].set_ylabel('Chi-square Statistic', fontsize=20)
-    axs[0].set_title('Chi-square Statistic vs. Number of Bins', fontsize=20)
-    axs[0].set_xlim([0, number_of_bins_range[-1]])
+    axs[0].set_ylabel(r'$\chi^{2}/N$', fontsize=20)
+    axs[0].set_title('Chi-square Value', fontsize=20)
+    axs[0].set_xlim([number_of_bins_range[0], number_of_bins_range[-1]])
+    axs[0].set_ylim([-0.1, 1])
     axs[1].set_xlabel('Number of Bins', fontsize=20)
-    axs[1].set_ylabel('P-value', fontsize=20)
-    axs[1].set_title('P-value vs. Number of Bins', fontsize=20)
-    axs[1].set_xlim([0, number_of_bins_range[-1]])
-    axs[1].set_ylim([0.7, 1])
+    axs[1].set_ylabel('p-value', fontsize=20)
+    axs[1].set_title('P-value', fontsize=20)
+    axs[1].set_xlim([number_of_bins_range[0], number_of_bins_range[-1]])
+    axs[1].set_ylim([0.7, 1.1])
     plt.tick_params(axis='both', labelsize=16)
     plt.tight_layout()
-    plt.savefig("c:\\Users\\donnelly\\Documents\\projects\\data\\chisquare_test.png")
+    plt.savefig("D:\\Data\\iasi_data\\chisquare_test.png")
 
 def main():
     # Read in the original spectrum
-    data_file = "c:\\Users\\donnelly\\Documents\\projects\\data\\spectra_and_cloud_products.pkl.gz"
+    data_file = "D:\\Data\\iasi_data\\spectra_and_cloud_products.pkl.gz"
     with gzip.open(data_file, 'rb') as f:
         df = pickle.load(f)
         spectrum_df = df[[col for col in df.columns if 'Spectrum' in col]]
 
-    # Read in IASI covariance matrix
-    covariance_file = "c:\\Users\\donnelly\\Documents\\projects\\iasi\\covariance_matrix.csv"
-    covariance_matrix_df = pd.read_csv(covariance_file, sep="\t")
-
-    # Example: Pre-computing weights for adjacent indices
-    weights_left = covariance_matrix_df.values[np.arange(spectrum_df.shape[1] - 1), np.arange(1, spectrum_df.shape[1])]
-    weights_right = covariance_matrix_df.values[np.arange(1, spectrum_df.shape[1]), np.arange(spectrum_df.shape[1] - 1)]
+    # # Read in IASI covariance matrix
+    # covariance_file = "D:\\Data\\iasi_data\\noise_covariance_matrix\\covariance_matrix.csv"
+    # covariance_matrix_df = pd.read_csv(covariance_file, sep="\t")
     
+    # # Example: Pre-computing weights for adjacent indices
+    # weights_left = covariance_matrix_df.values[np.arange(spectrum_df.shape[1] - 1), np.arange(1, spectrum_df.shape[1])]
+    # weights_right = covariance_matrix_df.values[np.arange(1, spectrum_df.shape[1]), np.arange(spectrum_df.shape[1] - 1)]
+
+    # np.save("D:\\Data\\iasi_data\\noise_covariance_matrix\\weights_left.npy", weights_left)
+    # np.save("D:\\Data\\iasi_data\\noise_covariance_matrix\\weights_right.npy", weights_right)
+    # Load weights
+    weights_left = np.load("D:\\Data\\iasi_data\\noise_covariance_matrix\\weights_left.npy")
+    weights_right = np.load("D:\\Data\\iasi_data\\noise_covariance_matrix\\weights_right.npy")
+
     # Define the range of number_of_bins to test
     number_of_bins_range = range(5, 101, 1)
     process_spectra_over_bins(spectrum_df, weights_left, weights_right, number_of_bins_range)
