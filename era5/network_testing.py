@@ -2,18 +2,20 @@ from keras.models import Sequential
 from keras.layers import Dense
 from keras.optimizers import Adam
 
-def build_model(input_shape, learning_rate=0.0001):
-    """"
-    An input layer that matches the shape of your input data (input_shape should be the number of features in your dataset).
-    Two hidden layers, each with 64 neurons and ReLU activation functions.
-    An output layer with a single neuron (since this is a regression problem; adjust according to your specific task).
-    The model uses Mean Squared Error (MSE) as the loss function and Mean Absolute Error (MAE) and MSE as metrics for evaluation.
-    The RMSprop optimizer is used with a learning rate of 0.001.
-    """
-
+def build_model(
+        input_shape:int,
+        learning_rate: float=0.0001,
+        number_of_layers: int=3,
+        nodes_first_layer: int=16,
+        nodes_second_layer: int=32,
+        nodes_third_layer: int=8
+        ):
     model = Sequential()
-    model.add(Dense(128, activation='relu', input_shape=(input_shape,)))
-    model.add(Dense(256, activation='relu'))
+    model.add(Dense(nodes_first_layer, activation='relu', input_shape=(input_shape,)))
+    if number_of_layers >= 2:
+        model.add(Dense(nodes_second_layer, activation='relu'))
+    if number_of_layers >= 3:
+        model.add(Dense(nodes_third_layer, activation='relu'))
     model.add(Dense(1, activation='linear'))
 
     # Using default parameters
