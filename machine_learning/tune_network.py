@@ -13,16 +13,19 @@ from sklearn.datasets import fetch_california_housing
 from sklearn.linear_model import LinearRegression
 from sklearn.preprocessing import MinMaxScaler
 from sklearn.model_selection import train_test_split
+from sklearn.utils import shuffle
 import tensorflow as tf
 
-def get_training_and_test_data(validation_split):
+def get_training_and_test_data(validation_split=0.2, state_seed=42):
     # Load the dataset
     housing = fetch_california_housing(as_frame=True)
     X = housing.data
     y = housing.target
 
+    X_shuffled, y_shuffled = shuffle(X, y, random_state=state_seed)
+
     # Split the dataset
-    return train_test_split(X, y, test_size=validation_split)
+    return train_test_split(X_shuffled, y_shuffled, test_size=validation_split, random_state=state_seed)
 
 def scale_input_features(X_train, X_test):
     # Scale the features
@@ -31,7 +34,48 @@ def scale_input_features(X_train, X_test):
     X_test_scaled = scaler.transform(X_test)
     return X_train_scaled, X_test_scaled
 
-def store_trial_information(tuner):
+def save_best_trials(tuner, X_train, X_test, y_train, y_test, number_of_trials=1, epochs=10):
+    # List to hold DataFrames for each trial's history and the predicted
+    all_histories = []
+    all_predictions = []
+
+    # Get the best hyperparameters for the specified number of trials
+    best_hyperparameters = tuner.get_best_hyperparameters(number_of_trials=number_of_trials)
+    
+    for rank, hps in enumerate(best_hyperparameters, start=1):
+        # Build the model with the current set of hyperparameters
+        model = tuner.hypermodel.build(hps)
+        
+        # Train the model
+        history = model.fit(X_train, y_train, epochs=epochs, validation_split=0.2, verbose=2)
+
+        # Make predictions and add to DataFrame
+        predictions = model.predict(X_test)
+        predictions_df = pd.DataFrame(predictions, columns=['Predicted value'])
+        predictions_df['True value'] = y_test.values
+        predictions_df['Rank'] = rank
+        
+        # Convert the training history to a DataFrame
+        history_df = pd.DataFrame(history.history)
+        history_df['Epoch'] = history.epoch
+        # Add a column for the trial's rank
+        history_df['Rank'] = rank
+
+        # Append this trial's history and predictions DataFrames to the list
+        all_histories.append(history_df)
+        all_predictions.append(predictions_df)
+
+    # Concatenate all history DataFrames together
+    combined_history_df = pd.concat(all_histories, axis=0).reset_index(drop=True)
+    combined_history_df.to_csv(os.path.join(tuner.project_dir, f"performance_metrics_per_epoch_top_{number_of_trials}.csv"), sep='\t')
+
+    # Concatenate all predictions DataFrames together
+    combined_predictions_df = pd.concat(all_predictions, axis=0).reset_index(drop=True)
+    combined_predictions_df.to_csv(os.path.join(tuner.project_dir, f"predicted_data_per_model_top_{number_of_trials}.csv"), sep='\t')
+
+    return
+    
+def save_trial_configurations(tuner):
     # Collect trial information
     trial_details = []
 
@@ -58,20 +102,26 @@ def store_trial_information(tuner):
 
     # Convert to DataFrame for easier manipulation and visualization
     trials_df = pd.DataFrame(trial_details)
-    return trials_df
+    trials_df.to_csv(os.path.join(tuner.project_dir, f"tuning_trials.csv"), sep='\t')
+    print(trials_df.head())
 
-def plot_best_model(tuner, X_train, X_test, y_train, y_test):
-    best_hps = tuner.get_best_hyperparameters(num_trials=1)[0]
-    model = tuner.hypermodel.build(best_hps)
-    history = model.fit(X_train, y_train, epochs=50, validation_split=0.2)
+    return
 
-    # Convert the training history to a DataFrame
-    history_df = pd.DataFrame(history.history)
-    history_df['epoch'] = history.epoch
+def plot_best_model(output_directory, X_train, X_test, y_train, y_test, number_of_trials):
+    # Concatenate all history DataFrames together
+    history_df = pd.read_csv(os.path.join(output_directory, f"performance_metrics_per_epoch_top_{number_of_trials}.csv"), sep='\t')
 
+    # Concatenate all predictions DataFrames together
+    predictions_df = pd.read_csv(os.path.join(output_directory, f"predicted_data_per_model_top_{number_of_trials}.csv"), sep='\t')
+    
+    print(history_df.head())
+
+    print(predictions_df.head())
+
+    
     # Assume `X_test` and `y_test` are defined
-    predictions = model.predict(X_test)
-    true_values = y_test
+    predictions = predictions_df['Precitions']
+    true_values = y_test.values
     # Fit a linear regression model to the predictions vs. true values
     lin_reg = LinearRegression().fit(predictions.reshape(-1, 1), true_values)
     # Use the fitted model to get predicted values for a line
@@ -110,9 +160,10 @@ def plot_best_model(tuner, X_train, X_test, y_train, y_test):
     axs[0, 1].axis('square')  # Force square aspect ratio
 
     plt.tight_layout()
-    plt.savefig(os.path.join(tuner.project_dir, 'performance.png'))
+    plt.savefig(os.path.join(output_directory, 'performance.png'))
 
-    return history_df
+    return
+
 
 class MyHyperModel(HyperModel):
     def __init__(self, input_shape):
@@ -154,40 +205,36 @@ class MyHyperModel(HyperModel):
         
         return model
 
+# Output directory
+output_directory = 'C:\\Users\\donnelly\\Documents\\projects\\machine_learning\\models\\tuning\\housing_prices'
 # Use 20% of the training data for validation
 validation_split = 0.2
+# Number of ranks to take from the best fits
+number_of_trials = 1
 
 # Get data and normalise
-X_train, X_test, y_train, y_test = get_training_and_test_data(validation_split)
+X_train, X_test, y_train, y_test = get_training_and_test_data()
 X_train_scaled, X_test_scaled = scale_input_features(X_train, X_test)
 
-# Instantiate MyHyperModel and pass to the keras tuner
-hyper_model = MyHyperModel(input_shape=X_train.shape[1])
+# Construct the keras tuner for sampling hyperparameter grid
 tuner = Hyperband(
-    hyper_model,
+    MyHyperModel(input_shape=X_train.shape[1]),
     objective='val_mse',
-    max_epochs=100,
-    directory='C:\\Users\\donnelly\\Documents\\projects\\machine_learning\\models\\tuning\\housing_prices',
+    max_epochs=10,
+    directory=output_directory,
     project_name='hypermodel_test',
     overwrite=True
 )
 
 # Set up early stopping to stop training if the validation performance doesn't improve for a specified number of epochs.
 stop_early = tf.keras.callbacks.EarlyStopping(monitor='val_loss', patience=5)
-tuner.search(X_train, y_train, epochs=100, validation_split=0.2, callbacks=[stop_early])
+tuner.search(X_train, y_train, epochs=10, validation_split=validation_split, callbacks=[stop_early])
 
-# Get a summary of the run
-tuner.results_summary()
+# Assuming tuner, X_train, and y_train are already defined
+save_best_trials(tuner, X_train_scaled, X_test_scaled, y_train, y_test)
+
+# # Gather results into pd.DataFrame
+# save_trial_configurations(tuner)
 
 # Train on the best hyper parameters and plot epoch-wise performance
-history_df = plot_best_model(tuner, X_train, X_test, y_train, y_test)
-print(history_df.head())
-
-# Gather results into pd.DataFrame
-trials_df = store_trial_information()
-print(trials_df.head())
-
-trials_df.to_csv('tuning_trials.csv', sep='\t')
-history_df.to_csv('best_model.csv', sep='\t')
-
-
+plot_best_model(tuner, X_train, X_test, y_train, y_test, number_of_trials)
