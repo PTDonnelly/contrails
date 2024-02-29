@@ -6,7 +6,7 @@
     "number_of_best_trials": 10,
     
     // Maximum number of epochs for an individual model
-    "max_epochs": 50,
+    "max_epochs": 100,
     
     // Directory where the project files are stored
     "project_directory": "C:\\Users\\donnelly\\Documents\\projects\\machine_learning\\models\\tuning\\housing_prices",
