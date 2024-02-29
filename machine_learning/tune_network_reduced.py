@@ -1,6 +1,6 @@
 # Standard library imports
 import os
-from typing import Dict, List, Optional
+from typing import Dict, List
 import commentjson
 import matplotlib.pyplot as plt
 import numpy as np
@@ -27,14 +27,13 @@ from keras_tuner.tuners import Hyperband
 
 class HyperModelTuner(HyperModel):
     def __init__(self, config: dict):
-        self.performance_metrics = self.define_performance_metrics()
+        self.performance_metrics = config["performance_metrics"]
         self.validation_split = config["validation_split"]
         self.max_epochs = config["max_epochs"]
         self.number_of_best_trials = config["number_of_best_trials"]
         self.project_directory: str = config["project_directory"]
         self.test_directory: str = f"{config['test_directory']}_{self.max_epochs}"
         self.output_directory: str = self.set_output_directory()
-        self.hyperparameters: dict = self.define_hyperparameters()
         self.X_train: pd.DataFrame = None
         self.X_test: pd.DataFrame = None
         self.y_train: pd.DataFrame = None
@@ -51,7 +50,17 @@ class HyperModelTuner(HyperModel):
         X = housing.data
         y = housing.target
 
-        X_shuffled, y_shuffled = shuffle(X, y, random_state=state_seed)
+        # Combine X and y into a single DataFrame for easier filtering
+        data = pd.concat([X, y], axis=1)
+
+        # Filter out rows where the target (y) is 5 or more
+        filtered_data = data[data['MedHouseVal'] < 5]
+
+        # Separate the filtered data back into X and y
+        X_filtered = filtered_data.drop(columns=['MedHouseVal'])
+        y_filtered = filtered_data['MedHouseVal']
+
+        X_shuffled, y_shuffled = shuffle(X_filtered, y_filtered, random_state=state_seed)
 
         # Split the dataset
         self.X_train, self.X_test, self.y_train, self.y_test = train_test_split(X_shuffled, y_shuffled, test_size=self.validation_split, random_state=state_seed)
@@ -64,129 +73,33 @@ class HyperModelTuner(HyperModel):
         self.X_test_scaled = scaler.transform(self.X_test)
         return
 
-    def define_performance_metrics(self):
-        return [
-            {"name": "loss", "direction": "min"},
-            {"name": "mae", "direction": "min"},
-            {"name": "mse", "direction": "min"},
-            {"name": "val_loss", "direction": "min"},
-            {"name": "val_mae", "direction": "min"},
-            {"name": "val_mse", "direction": "min"}
-        ]
-    def define_hyperparameters(self):
-        """Define the hyperparameter space."""
-        return {
-            'n_layers': {'min_value': 1, 'max_value': 4, 'step': 1},
-            'units': {'min_value': 32, 'max_value': 512, 'step': 32},
-            'activation': ['relu', 'tanh', 'sigmoid'],
-            'l1': {'min_value': 0, 'max_value': 0.01, 'step': 0.005},
-            'l2': {'min_value': 0, 'max_value': 0.01, 'step': 0.005},
-            'dropout_rate': {'min_value': 0.0, 'max_value': 0.5, 'step': 0.1},
-            'optimizer': ['adam', 'sgd', 'rmsprop'],
-            'learning_rate': [1e-2, 1e-3, 1e-4],
-            'momentum': {'min_value': 0.0, 'max_value': 0.9},
-        }
-    
     def build(self, hp):
-        """Build the model."""
         model = Sequential()
         
-        # Add input layer
-        self.add_input_layer(model)
-
-        # Dynamically add hidden layers
-        self.add_hidden_layers(model, hp)
-
-        # Add output layer
-        self.add_output_layer(model)
+        # Define the input layer to have the same number of node as input features
+        model.add(Input(shape=(self.X_train.shape[1],)))
         
-        # Choose and set the optimizer
-        optimizer = self.choose_optimizer(hp)
+        # Dynamic addition of layers
+        for i in range(hp.Int('n_layers', 1, 3)):
+            model.add(Dense(units=hp.Int(f'units_{i}', min_value=16, max_value=64, step=16),
+                            activation='relu'))
 
-        # Compile the model
-        self.compile_model(model, optimizer, hp)
+        
+        # Output layer
+        model.add(Dense(1, activation='linear'))
+        
+        # Optimizer selection
+        optimizer = Adam(learning_rate=hp.Choice('lr_adam', [1e-2, 1e-3, 1e-4]))
+
+        # Extract metric names for model compilation, validation metrics tracked automatically by keras
+        metrics_list = [
+            metric["name"] for metric in self.performance_metrics
+            if not metric["name"].startswith("val_") and metric["name"] != "loss"
+        ]
+        # Compile model
+        model.compile(optimizer=optimizer, loss='mean_squared_error', metrics=metrics_list)
         
         return model
-        
-    def add_input_layer(self, model: object) -> None:
-        """Add the input layer to the model."""
-        model.add(Input(shape=(self.X_train.shape[1],)))
-        return
-    
-    def add_hidden_layers(self, model: object, hp: object) -> None:
-        """Add hidden layers to the model based on hyperparameters."""
-        for i in range(hp.Int('n_layers', **self.hyperparameters['n_layers'])):
-            model.add(Dense(units=hp.Int(f'units_{i}', **self.hyperparameters['units']),
-                            activation=hp.Choice(f'activation_{i}', self.hyperparameters['activation']),
-                            kernel_regularizer=l1_l2(l1=hp.Float(f'l1_{i}', **self.hyperparameters['l1']),
-                                                      l2=hp.Float(f'l2_{i}', **self.hyperparameters['l2']))))
-            if hp.Boolean(f'batch_norm_{i}'):
-                model.add(BatchNormalization())
-            if hp.Float(f'dropout_{i}', **self.hyperparameters['dropout_rate']):
-                model.add(Dropout(rate=hp.Float(f'dropout_rate_{i}', **self.hyperparameters['dropout_rate'])))
-        return
-    
-    def add_output_layer(self, model: object) -> None:
-        """Add the output layer to the model."""
-        model.add(Dense(1, activation='linear'))
-        return
-
-    def choose_optimizer(self, hp: object) -> object:
-        """Choose the optimizer based on hyperparameters."""
-        optimizer_type = hp.Choice('optimizer', self.hyperparameters['optimizer'])
-        if optimizer_type == 'adam':
-            return Adam(learning_rate=hp.Choice('lr', self.hyperparameters['learning_rate']))
-        elif optimizer_type == 'sgd':
-            return SGD(learning_rate=hp.Choice('lr', self.hyperparameters['learning_rate']),
-                       momentum=hp.Float('momentum', **self.hyperparameters['momentum']))
-        else:  # rmsprop
-            return RMSprop(learning_rate=hp.Choice('lr', self.hyperparameters['learning_rate']))
-
-    def compile_model(self, model: object, optimizer: object, hp: object) -> None:
-        """Compile the model."""
-        metrics_list = [metric for metric in ['mae', 'mse'] if metric in hp.values]
-        model.compile(optimizer=optimizer, loss='mean_squared_error', metrics=metrics_list)
-        return
-
-        # model = Sequential()
-        
-        # # Define the input layer to have the same number of node as input features
-        # model.add(Input(shape=(self.X_train.shape[1],)))
-        
-        # # Dynamic addition of layers
-        # for i in range(hp.Int('n_layers', 1, 4)):
-        #     model.add(Dense(units=hp.Int(f'units_{i}', min_value=32, max_value=512, step=32),
-        #                     activation=hp.Choice(f'activation_{i}', ['relu', 'tanh', 'sigmoid']),
-        #                     kernel_regularizer=l1_l2(l1=hp.Float(f'l1_{i}', 0, 0.01, step=0.005),
-        #                                               l2=hp.Float(f'l2_{i}', 0, 0.01, step=0.005))))
-        #     if hp.Boolean(f'batch_norm_{i}'):
-        #         model.add(BatchNormalization())
-        #     if hp.Float(f'dropout_{i}', 0, 0.5):
-        #         model.add(Dropout(rate=hp.Float(f'dropout_rate_{i}', min_value=0.0, max_value=0.5, step=0.1)))
-        
-        # # Output layer
-        # model.add(Dense(1, activation='linear'))
-        
-        # # Optimizer selection
-        # optimizer_type = hp.Choice('optimizer', ['adam', 'sgd', 'rmsprop'])
-        # if optimizer_type == 'adam':
-        #     optimizer = Adam(learning_rate=hp.Choice('lr_adam', [1e-2, 1e-3, 1e-4]))
-        # elif optimizer_type == 'sgd':
-        #     optimizer = SGD(
-        #         learning_rate=hp.Choice('lr_sgd', [1e-2, 1e-3, 1e-4]),
-        #         momentum=hp.Float('momentum_sgd', 0.0, 0.9))
-        # elif optimizer_type == 'rmsprop':
-        #     optimizer = RMSprop(learning_rate=hp.Choice('lr_rmsprop', [1e-2, 1e-3, 1e-4]))
-
-        # # Extract metric names for model compilation, validation metrics tracked automatically by keras
-        # metrics_list = [
-        #     metric["name"] for metric in self.performance_metrics
-        #     if not metric["name"].startswith("val_") and metric["name"] != "loss"
-        # ]
-        # # Compile model
-        # model.compile(optimizer=optimizer, loss='mean_squared_error', metrics=metrics_list)
-        
-        # return model
 
     def get_tuner_objectives(self):
         objectives = [
@@ -312,6 +225,7 @@ def plot_best_results(hyper_model: HyperModelTuner) -> None:
         true_values = current_predictions_df['True value'].values
         # Fit a linear regression model to the predictions vs. true values
         lin_reg = LinearRegression().fit(predictions.reshape(-1, 1), true_values)
+        r_squared = lin_reg.score(predictions.reshape(-1, 1), true_values)
         line_x = np.linspace(predictions.min(), predictions.max(), 100)
         line_y = lin_reg.predict(line_x.reshape(-1, 1))
 
@@ -341,6 +255,7 @@ def plot_best_results(hyper_model: HyperModelTuner) -> None:
         axs[0, 1].scatter(true_values, predictions, s=2, marker='.', alpha=0.3)
         axs[0, 1].plot([true_values.min(), true_values.max()], [true_values.min(), true_values.max()], 'k--', lw=2)  # x=y line
         axs[0, 1].plot(line_x, line_y, color='red', label='Linear Fit')  # Linear fit
+        axs[0, 1].text(0.95, 0.95, f'$R^2 = {r_squared:.2f}$', fontsize=12, va='top', ha='right', transform=axs[0, 1].transAxes)
         axs[0, 1].set_title('Predicted vs True Values')
         axs[0, 1].set_xlabel('True Values')
         axs[0, 1].set_ylabel('Predicted Values')
