@@ -57,7 +57,7 @@ def plot_pairplot_for_continuous_hyperparameters(dataset: pd.DataFrame, continuo
 
     # Create a pair plot of the standardized data
     pairplot = sns.pairplot(data=standardized_df,
-                            kind='scatter',
+                            kind='hist',
                             diag_kind='kde')
     
     # Finish and save the plot
@@ -115,11 +115,9 @@ def plot_trial_configurations(hyper_model):
     trials_df = pd.read_csv(os.path.join(hyper_model.output_directory, f"trial_configurations_top_{hyper_model.number_of_best_trials}.csv"), sep='\t')
     
     # continuous_hyperparameters = ['Score', 'loss', 'mae', 'mse', 'val_loss', 'val_mae', 'val_mse', 'dropout_0', 'learning_rate', 'dropout_rate_0', 'momentum', 'dropout_1', 'dropout_rate_1', 'dropout_2', 'dropout_rate_2', 'dropout_3', 'dropout_rate_3']
-    continuous_hyperparameters = ['n_layers', 'units_0', 'l1_0', 'l2_0', 
-                                'units_1', 'l1_1', 'l2_1',
-                                'units_2', 'l1_2', 'l2_2',
-                                'units_3', 'l1_3', 'l2_3',
-                                'learning_rate', 'dropout_rate_0', 'dropout_rate_1', 'dropout_rate_2', 'dropout_rate_3']
+    continuous_hyperparameters = ['n_layers', 'learning_rate', 'units_0', 'units_1', 'units_2',
+                                'l1_0', 'l2_0', 'l1_1', 'l2_1','l1_2', 'l2_2','l1_3', 'l2_3',
+                                'dropout_rate_0', 'dropout_rate_1', 'dropout_rate_2', 'dropout_rate_3']
     # categorical_hyperparameters = ['n_layers', 'units_0', 'activation_0', 'l1_0', 'l2_0', 'batch_norm_0', 'optimizer_type', 'units_1', 'activation_1', 'l1_1', 'l2_1', 'batch_norm_1', 'units_2', 'activation_2', 'l1_2', 'l2_2', 'batch_norm_2', 'units_3', 'activation_3', 'l1_3', 'l2_3', 'batch_norm_3', 'tuner/epochs', 'tuner/initial_epoch', 'tuner/bracket', 'tuner/round', 'tuner/trial_id']
 
     plot_pairplot_for_continuous_hyperparameters(trials_df, continuous_hyperparameters, hyper_model.output_directory)
