@@ -16,8 +16,10 @@ from keras.optimizers import Adam, RMSprop, SGD
 from keras.regularizers import l1_l2
 import pandas as pd
 from sklearn.datasets import fetch_california_housing
-from sklearn.model_selection import train_test_split
-from sklearn.preprocessing import MinMaxScaler
+from sklearn.linear_model import RidgeCV
+from sklearn.model_selection import train_test_split, cross_validate
+from sklearn.pipeline import make_pipeline
+from sklearn.preprocessing import MinMaxScaler, StandardScaler
 from sklearn.utils import shuffle
 import tensorflow as tf
 import keras_tuner as kt
@@ -48,8 +50,14 @@ class HyperModelTuner(HyperModel):
     def get_training_and_test_data(self, state_seed: int=42) -> None:
         # Load the dataset
         housing = fetch_california_housing(as_frame=True)
+        
+        # Separate independent (X) and dependent (y) variables
         X = housing.data
         y = housing.target
+
+        # Plot statistics overview
+        plot_pairplot(housing.frame, target_variable='MedHouseVal', file_path=self.output_directory)
+        plot_ridge_regression_cross_validation(X, y, file_path=self.output_directory)
 
         X_shuffled, y_shuffled = shuffle(X, y, random_state=state_seed)
 
@@ -58,10 +66,15 @@ class HyperModelTuner(HyperModel):
         return
     
     def scale_input_features(self):
-        # Apply normalistion to input features such that they vary in the range [0, 1]
-        scaler = MinMaxScaler()
+        # # Apply normalistion to input features such that they vary in the range [0, 1]
+        # scaler = MinMaxScaler()
+        # self.X_train_scaled = scaler.fit_transform(self.X_train)
+        # self.X_test_scaled = scaler.transform(self.X_test)
+        # # Apply standardisation to input features such that they have a mean of zero and standard deviation of 1
+        scaler = StandardScaler()
         self.X_train_scaled = scaler.fit_transform(self.X_train)
         self.X_test_scaled = scaler.transform(self.X_test)
+
         return
 
     def define_performance_metrics(self):
@@ -73,14 +86,15 @@ class HyperModelTuner(HyperModel):
             {"name": "val_mae", "direction": "min"},
             {"name": "val_mse", "direction": "min"}
         ]
+    
     def define_hyperparameters(self):
         """Define the hyperparameter space."""
         return {
-            'n_layers': {'min_value': 1, 'max_value': 4, 'step': 1},
-            'units': {'min_value': 32, 'max_value': 512, 'step': 32},
+            'number_of_layers': {'min_value': 1, 'max_value': 4, 'step': 1},
+            'nodes_per_layer': {'min_value': 32, 'max_value': 512, 'step': 32},
             'activation': ['relu', 'tanh', 'sigmoid'],
-            'l1': {'min_value': 0, 'max_value': 0.01, 'step': 0.005},
-            'l2': {'min_value': 0, 'max_value': 0.01, 'step': 0.005},
+            'l1_regularisation': {'min_value': 0, 'max_value': 0.01, 'step': 0.005},
+            'l2_regularisation': {'min_value': 0, 'max_value': 0.01, 'step': 0.005},
             'dropout_rate': {'min_value': 0.0, 'max_value': 0.5, 'step': 0.1},
             'optimizer': ['adam', 'sgd', 'rmsprop'],
             'learning_rate': [1e-2, 1e-3, 1e-4],
@@ -114,33 +128,60 @@ class HyperModelTuner(HyperModel):
         return
     
     def add_hidden_layers(self, model: object, hp: object) -> None:
-        """Add hidden layers to the model based on hyperparameters."""
+        """
+        Add hidden layers to the model based on hyperparameters.
+        
+        Args:
+            model: The neural network model to which the layers will be added.
+            hp: Hyperparameter object for hyperparameter tuning.
+        """
         for i in range(hp.Int('n_layers', **self.hyperparameters['n_layers'])):
             model.add(Dense(units=hp.Int(f'units_{i}', **self.hyperparameters['units']),
                             activation=hp.Choice(f'activation_{i}', self.hyperparameters['activation']),
                             kernel_regularizer=l1_l2(l1=hp.Float(f'l1_{i}', **self.hyperparameters['l1']),
-                                                      l2=hp.Float(f'l2_{i}', **self.hyperparameters['l2']))))
+                                                        l2=hp.Float(f'l2_{i}', **self.hyperparameters['l2']))))
+            
             if hp.Boolean(f'batch_norm_{i}'):
                 model.add(BatchNormalization())
+            
             if hp.Float(f'dropout_{i}', **self.hyperparameters['dropout_rate']):
                 model.add(Dropout(rate=hp.Float(f'dropout_rate_{i}', **self.hyperparameters['dropout_rate'])))
         return
-    
+        
     def add_output_layer(self, model: object) -> None:
-        """Add the output layer to the model."""
+        """
+        Add the output layer to the model with linear activation.
+        
+        Args:
+            model: The neural network model to which the output layer will be added.
+        """
         model.add(Dense(1, activation='linear'))
         return
 
     def choose_optimizer(self, hp: object) -> object:
-        """Choose the optimizer based on hyperparameters."""
-        optimizer_type = hp.Choice('optimizer', self.hyperparameters['optimizer'])
+        """
+        Choose the optimizer based on hyperparameters.
+        
+        Args:
+            hp: Hyperparameter object for hyperparameter tuning.
+        
+        Returns:
+            Optimizer object configured with the selected hyperparameters.
+        """
+        # Default optimizer choices
+        optimizer_choices = self.hyperparameters.get('optimizer', ['adam', 'sgd', 'rmsprop'])
+        optimizer_type = hp.Choice('optimizer', optimizer_choices)
+        
+        # Default learning rates
+        learning_rate = self.hyperparameters.get('learning_rate', [1e-2, 1e-3, 1e-4])
+        
         if optimizer_type == 'adam':
-            return Adam(learning_rate=hp.Choice('lr', self.hyperparameters['learning_rate']))
+            return Adam(learning_rate=hp.Choice('lr', learning_rate))
         elif optimizer_type == 'sgd':
-            return SGD(learning_rate=hp.Choice('lr', self.hyperparameters['learning_rate']),
-                       momentum=hp.Float('momentum', **self.hyperparameters['momentum']))
-        else:  # rmsprop
-            return RMSprop(learning_rate=hp.Choice('lr', self.hyperparameters['learning_rate']))
+            momentum = self.hyperparameters.get('momentum', {'min_value': 0.0, 'max_value': 0.9, 'step': 0.1})
+            return SGD(learning_rate=hp.Choice('lr', learning_rate), momentum=hp.Float('momentum', **momentum))
+        else:  # Default case for rmsprop
+            return RMSprop(learning_rate=hp.Choice('lr', learning_rate))
 
     def compile_model(self, model: object, optimizer: object, hp: object) -> None:
         """Compile the model."""
@@ -297,7 +338,111 @@ def save_best_trials(hyper_model: HyperModelTuner, tuner: Hyperband) -> None:
 
     return
 
+
+def plot_pairplot(data: pd.DataFrame, target_variable: str, file_path: str, n_samples: int=500, columns_drop=None, n_quantiles=5, state_seed: int=42):
+    """
+    Generates and saves a seaborn pair plot for a randomly sampled subset of the provided DataFrame.
+
+    Parameters:
+    - data (pd.DataFrame): The DataFrame containing the data to plot.
+    - target_variable (str): The name of the column in 'data' to use as the target variable for coloring.
+    - file_path (str): The directory path where the plot image will be saved.
+    - n_samples (int, optional): The number of samples to randomly select from 'data' for plotting. Default is 500.
+    - columns_drop (list, optional): A list of column names to be excluded from the plot. Default is None.
+    - n_quantiles (int, optional): The number of quantiles to use for discretizing the target variable. Default is 5.
+    - state_seed (int, optional): A seed for the random number generator for reproducibility. Default is 42.
+
+    Saves a PNG image of the pair plot to the specified file path.
+    """
+    rng = np.random.RandomState(state_seed)
+    indices = rng.choice(data.shape[0], size=n_samples, replace=False)
+
+    # Drop the unwanted columns if specified
+    if columns_drop is not None:
+        subset = data.iloc[indices].drop(columns=columns_drop)
+    else:
+        subset = data.iloc[indices]
+
+    # Quantize the target variable and keep the midpoint for each interval
+    subset[target_variable] = pd.qcut(subset[target_variable], n_quantiles, retbins=False)
+    subset[target_variable] = subset[target_variable].apply(lambda x: x.mid)
+
+    # Create a pair plot
+    pairplot = sns.pairplot(data=subset,
+                            hue=target_variable,
+                            kind='scatter',
+                            diag_kind='kde',
+                            palette="viridis")
+
+    plt.suptitle('Pair Plot of Sampled Data', y=1.02)  # Adjust title position
+
+    # Finish and save the plot
+    plt.tight_layout()
+    plt.savefig(os.path.join(file_path, f'dataset_pariplot.png'))
+    plt.close()
+
+def plot_ridge_regression_cross_validation(data: pd.DataFrame, target: pd.DataFrame, file_path: str, alphas: np.array =np.logspace(-3, 1, num=30), n_jobs: int=2):
+    """
+    Performs Ridge regression with cross-validation on the provided dataset and plots the distribution of the estimated coefficients.
+
+    Parameters:
+    - data (pd.DataFrame): The DataFrame containing the predictor variables.
+    - target (pd.DataFrame): The DataFrame containing the target variable.
+    - file_path (str): The directory path where the plot image will be saved.
+    - alphas (np.array, optional): Array of alpha values to test in Ridge regression. Default is logspace(-3, 1, num=30).
+    - n_jobs (int, optional): The number of CPUs to use to do the computation. -1 means using all processors. Default is 2.
+
+    Performs cross-validation for Ridge regression, calculates the R2 score, and saves a boxplot of the coefficients to the specified file path.
+    """
+    # Create a Ridge regression model with standard scaling and cross-validation
+    model = make_pipeline(StandardScaler(), RidgeCV(alphas=alphas))
+    
+    # Perform cross-validation
+    cv_results = cross_validate(
+        model,
+        data,
+        target,
+        return_estimator=True,
+        n_jobs=n_jobs
+    )
+    
+    # Calculate and print R2 score
+    score = cv_results["test_score"]
+    print(f"R2 score: {score.mean():.3f} ± {score.std():.3f}")
+    
+    # Extract coefficients from Ridge models
+    coefs = pd.DataFrame(
+        [est[-1].coef_ for est in cv_results["estimator"]],
+        columns=data.columns,
+    )
+    
+    # Plot boxplot for coefficients
+    color = {"whiskers": "black", "medians": "black", "caps": "black"}
+    coefs.plot.box(vert=False, color=color)
+    plt.axvline(x=0, color="black", linestyle="--")
+    plt.title("Coefficients of Ridge models\n via cross-validation")
+    
+    # Finish and save the plot
+    plt.savefig(os.path.join(file_path, f'dataset_ridge_regression_cross_validation.png'))
+    plt.close()
+
 def plot_best_results(hyper_model: HyperModelTuner) -> None:
+    """
+    Generates and saves plots for the best trial results based on rank. Each plot contains
+    training and validation loss, training and validation MSE, and a scatter plot of
+    predicted vs true values along with a linear fit for each rank of trial.
+
+    Parameters:
+    - hyper_model (HyperModelTuner): An instance of HyperModelTuner containing attributes
+      such as output_directory and number_of_best_trials that dictate where to save the
+      plots and how many best trial results to plot.
+
+    This function reads the performance metrics and predicted data from CSV files stored
+    in the output directory of the hyper_model, generates plots for each specified rank of
+    trial, and saves each plot as a PNG file in the output directory. The plots include a
+    line plot for model loss over epochs, a line plot for model MSE over epochs, and a
+    scatter plot for predicted vs true values with a linear regression fit.
+    """
     # Read in best trial results
     history_df = pd.read_csv(os.path.join(hyper_model.output_directory, f"performance_metrics_per_epoch_top_{hyper_model.number_of_best_trials}.csv"), sep='\t')
     predictions_df = pd.read_csv(os.path.join(hyper_model.output_directory, f"predicted_data_per_model_top_{hyper_model.number_of_best_trials}.csv"), sep='\t')
@@ -307,49 +452,68 @@ def plot_best_results(hyper_model: HyperModelTuner) -> None:
         current_history_df = history_df[history_df['Rank'] == rank]
         current_predictions_df = predictions_df[predictions_df['Rank'] == rank]
 
-        # Extract predicted and true values
-        predictions = current_predictions_df['Predicted value'].values
-        true_values = current_predictions_df['True value'].values
-        # Fit a linear regression model to the predictions vs. true values
-        lin_reg = LinearRegression().fit(predictions.reshape(-1, 1), true_values)
-        line_x = np.linspace(predictions.min(), predictions.max(), 100)
-        line_y = lin_reg.predict(line_x.reshape(-1, 1))
+        if not current_predictions_df.empty and len(current_predictions_df) > 1:
 
-        # Create plots similar to the above with current_history_df and predictions
-        fig, axs = plt.subplots(2, 2, figsize=(8, 8))
+            # Extract predicted and true values
+            predictions = current_predictions_df['Predicted value'].values
+            true_values = current_predictions_df['True value'].values
+            
+            # Fit a linear regression model to the predictions vs. true values
+            lin_reg = LinearRegression().fit(predictions.reshape(-1, 1), true_values)
+            r_squared = lin_reg.score(predictions.reshape(-1, 1), true_values)
+            line_x = np.linspace(predictions.min(), predictions.max(), 100)
+            line_y = lin_reg.predict(line_x.reshape(-1, 1))
 
-        # Plot training & validation loss values
-        axs[0, 0].plot(current_history_df['Epoch'], current_history_df['loss'], label='Training')
-        axs[0, 0].plot(current_history_df['Epoch'], current_history_df['val_loss'], label='Validation')
-        axs[0, 0].set_title('Model Loss over Test Epochs')
-        axs[0, 0].set_ylabel('Loss')
-        axs[0, 0].set_xlabel('Epoch')
-        axs[0, 0].legend(loc='upper right')
+            # Calculate fraction of predictions that are within one standard deviation of the truth
+            differences = true_values - predictions
+            sigma = np.std(differences)
+            within_1_sigma = np.sum(np.abs(differences) <= sigma) / len(differences)
 
-        # Leave the bottom right plot (1,0) empty
-        axs[1, 1].axis('off')
+            # Create plots similar to the above with current_history_df and predictions
+            fig, axs = plt.subplots(2, 2, figsize=(8, 8))
 
-        # Plot training & validation MSE
-        axs[1, 0].plot(current_history_df['Epoch'], current_history_df['mse'], label='Train MSE')
-        axs[1, 0].plot(current_history_df['Epoch'], current_history_df['val_mse'], label='Validation MSE')
-        axs[1, 0].set_title('Model MSE over Test Epochs')
-        axs[1, 0].set_ylabel('MSE')
-        axs[1, 0].set_xlabel('Epoch')
-        axs[1, 0].legend(loc='upper right')
+            # Plot training & validation loss values
+            axs[0, 0].plot(current_history_df['Epoch'], current_history_df['loss'], label='Training')
+            axs[0, 0].plot(current_history_df['Epoch'], current_history_df['val_loss'], label='Validation')
+            axs[0, 0].set_title('Model Loss over Test Epochs')
+            axs[0, 0].set_ylabel('Loss')
+            axs[0, 0].set_yscale('log')
+            axs[0, 0].set_xlabel('Epoch')
+            axs[0, 0].legend(loc='upper right')
 
-        # Scatter plot of predicted vs true values in the top right plot
-        axs[0, 1].scatter(true_values, predictions, s=2, marker='.', alpha=0.3)
-        axs[0, 1].plot([true_values.min(), true_values.max()], [true_values.min(), true_values.max()], 'k--', lw=2)  # x=y line
-        axs[0, 1].plot(line_x, line_y, color='red', label='Linear Fit')  # Linear fit
-        axs[0, 1].set_title('Predicted vs True Values')
-        axs[0, 1].set_xlabel('True Values')
-        axs[0, 1].set_ylabel('Predicted Values')
-        axs[0, 1].axis('square')  # Force square aspect ratio
+            # Leave the bottom right plot (1,0) empty
+            axs[1, 1].axis('off')
 
-        plt.tight_layout()
-        plt.savefig(os.path.join(hyper_model.output_directory, f'performance_and_predictions_rank_{rank}.png'))
-        plt.close()  # Close the plot to free memory
+            # Plot training & validation MSE
+            axs[1, 0].plot(current_history_df['Epoch'], current_history_df['mse'], label='Train MSE')
+            axs[1, 0].plot(current_history_df['Epoch'], current_history_df['val_mse'], label='Validation MSE')
+            axs[1, 0].set_title('Model MSE over Test Epochs')
+            axs[1, 0].set_ylabel('MSE')
+            axs[1, 0].set_yscale('log')
+            axs[1, 0].set_xlabel('Epoch')
+            axs[1, 0].legend(loc='upper right')
 
+            # Scatter plot of predicted vs true values in the top right plot
+            axs[0, 1].scatter(true_values, predictions, s=2, marker='.', alpha=0.3)
+            axs[0, 1].plot([true_values.min(), true_values.max()], [true_values.min(), true_values.max()], 'k--', lw=2)  # x=y line
+            axs[0, 1].plot(line_x, line_y, color='red', label='Linear Fit')  # Linear fit
+            # Add text for R^2 and fraction within 1-sigma to the plot
+            axs[0, 1].text(0.95, 0.85, f'$R^2 = {r_squared:.2f}$\n$1\\sigma$ fraction = {within_1_sigma:.2f}',
+                           fontsize=12, va='top', ha='right', transform=axs[0, 1].transAxes)
+            axs[0, 1].set_title('Predicted vs True Values')
+            axs[0, 1].set_xlabel('True Values')
+            axs[0, 1].set_ylabel('Predicted Values')
+            axs[0, 1].axis('square')  # Force square aspect ratio
+
+            plt.tight_layout()
+            plt.savefig(os.path.join(hyper_model.output_directory, f'performance_and_predictions_rank_{rank}.png'))
+            plt.close()  # Close the plot to free memory
+        else:
+            print(f"Not enough data for plotting results. Number of samples: {len(predictions_df)}")
+    return
+
+def plot_trial_configurations():
+    return
 
 def main():
     # Read global parameters from JSON configuration file
@@ -371,5 +535,7 @@ def main():
     # Plot epoch-wise performance and predictions for the best trials
     plot_best_results(hyper_model)
 
+    # Plot distribution of hyper parameters across best trials
+    plot_trial_configurations()
 if __name__ == "__main__":
     main()

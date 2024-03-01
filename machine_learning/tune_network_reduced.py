@@ -34,6 +34,7 @@ class HyperModelTuner(HyperModel):
         self.project_directory: str = config["project_directory"]
         self.test_directory: str = f"{config['test_directory']}_{self.max_epochs}"
         self.output_directory: str = self.set_output_directory()
+        self.hyperparameters: dict = self.define_hyperparameters()
         self.X_train: pd.DataFrame = None
         self.X_test: pd.DataFrame = None
         self.y_train: pd.DataFrame = None
@@ -89,19 +90,38 @@ class HyperModelTuner(HyperModel):
             {"name": "val_mse", "direction": "min"}
         ]
     
+    def define_hyperparameters(self):
+        """Define the hyperparameter space."""
+        return {
+            'n_layers': {'min_value': 1, 'max_value': 4, 'step': 1},
+            'units': {'min_value': 32, 'max_value': 512, 'step': 32},
+            'activation': ['relu', 'tanh', 'sigmoid'],
+            'l1': {'min_value': 0, 'max_value': 0.01, 'step': 0.005},
+            'l2': {'min_value': 0, 'max_value': 0.01, 'step': 0.005},
+            'dropout_rate': {'min_value': 0.0, 'max_value': 0.5, 'step': 0.1},
+            'optimizer': ['adam', 'sgd', 'rmsprop'],
+            'learning_rate': [1e-2, 1e-3, 1e-4],
+            'momentum': {'min_value': 0.0, 'max_value': 0.9},
+        }
+    
     def build(self, hp):
         model = Sequential()
         
         # Define the input layer to have the same number of node as input features
         model.add(Input(shape=(self.X_train.shape[1],)))
         
-        # Dynamic addition of layers
-        for i in range(hp.Int('n_layers', 1, 3)):
-            model.add(Dense(units=hp.Int(f'units_{i}', min_value=16, max_value=32, step=8),
-                            activation='relu'))
+        # # Dynamic addition of layers
+        # for i in range(hp.Int('n_layers', 1, 3)):
+        #     model.add(Dense(units=hp.Int(f'units_{i}', min_value=16, max_value=32, step=8),
+        #                     activation='relu'))
 
-            # model.add(BatchNormalization())
-            # model.add(Dropout(rate=hp.Float(f'dropout_rate_{i}', **self.hyperparameters['dropout_rate'])))
+        model.add(Dense(16, activation='relu'))
+        model.add(BatchNormalization())
+        model.add(Dropout(rate=hp.Float(f'dropout_rate_2', **self.hyperparameters['dropout_rate'])))
+
+        model.add(Dense(32, activation='relu'))
+        model.add(BatchNormalization())
+        model.add(Dropout(rate=hp.Float(f'dropout_rate_3', **self.hyperparameters['dropout_rate'])))
     
         # Output layer
         model.add(Dense(1, activation='linear'))
@@ -244,11 +264,17 @@ def plot_best_results(hyper_model: HyperModelTuner) -> None:
             # Extract predicted and true values
             predictions = current_predictions_df['Predicted value'].values
             true_values = current_predictions_df['True value'].values
+            
             # Fit a linear regression model to the predictions vs. true values
             lin_reg = LinearRegression().fit(predictions.reshape(-1, 1), true_values)
             r_squared = lin_reg.score(predictions.reshape(-1, 1), true_values)
             line_x = np.linspace(predictions.min(), predictions.max(), 100)
             line_y = lin_reg.predict(line_x.reshape(-1, 1))
+
+            # Calculate fraction of predictions that are within one standard deviation of the truth
+            differences = true_values - predictions
+            sigma = np.std(differences)
+            within_1_sigma = np.sum(np.abs(differences) <= sigma) / len(differences)
 
             # Create plots similar to the above with current_history_df and predictions
             fig, axs = plt.subplots(2, 2, figsize=(8, 8))
@@ -278,14 +304,16 @@ def plot_best_results(hyper_model: HyperModelTuner) -> None:
             axs[0, 1].scatter(true_values, predictions, s=2, marker='.', alpha=0.3)
             axs[0, 1].plot([true_values.min(), true_values.max()], [true_values.min(), true_values.max()], 'k--', lw=2)  # x=y line
             axs[0, 1].plot(line_x, line_y, color='red', label='Linear Fit')  # Linear fit
-            axs[0, 1].text(0.95, 0.95, f'$R^2 = {r_squared:.2f}$', fontsize=12, va='top', ha='right', transform=axs[0, 1].transAxes)
+            # Add text for R^2 and fraction within 1-sigma to the plot
+            axs[0, 1].text(0.95, 0.85, f'$R^2 = {r_squared:.2f}$\n$1\\sigma$ fraction = {within_1_sigma:.2f}',
+                           fontsize=12, va='top', ha='right', transform=axs[0, 1].transAxes)
             axs[0, 1].set_title('Predicted vs True Values')
             axs[0, 1].set_xlabel('True Values')
             axs[0, 1].set_ylabel('Predicted Values')
             axs[0, 1].axis('square')  # Force square aspect ratio
 
             plt.tight_layout()
-            plt.savefig(os.path.join(hyper_model.output_directory, f'performance_and_predictions_rank_{rank}.png'))
+            plt.savefig(os.path.join(hyper_model.output_directory, f'model_performance_and_predictions_rank_{rank}.png'))
             plt.close()  # Close the plot to free memory
         else:
             print(f"Not enough data for plotting results. Number of samples: {len(predictions_df)}")

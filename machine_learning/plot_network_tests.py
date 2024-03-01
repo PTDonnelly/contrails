@@ -86,15 +86,18 @@ def plot_categorical_hyperparameters(df, categorical_hyperparameters):
             plt.xticks(rotation=45)  # Rotate labels if they overlap
             plt.show()
 
-def plot_hyperparameters(output_directory, number_of_best_trials):
+def plot_trial_configurations(hyper_model):
     # Read in best trial configurations
-    trials_df = pd.read_csv(os.path.join(output_directory, f"trial_configurations_top_{number_of_best_trials}.csv"), sep='\t')
+    trials_df = pd.read_csv(os.path.join(hyper_model.output_directory, f"trial_configurations_top_{hyper_model.number_of_best_trials}.csv"), sep='\t')
     
     continuous_hyperparameters = ['val_loss', 'val_mae', 'val_mse', 'loss', 'mae', 'mse', 'dropout_0', 'lr_adam', 'dropout_rate_0', 'dropout_1', 'dropout_rate_1', 'dropout_rate_2', 'lr_sgd', 'momentum_sgd', 'lr_rmsprop', 'dropout_3']
     categorical_hyperparameters = ['n_layers', 'units_0', 'activation_0', 'batch_norm_0', 'optimizer', 'units_1', 'activation_1', 'batch_norm_1', 'units_2', 'activation_2', 'batch_norm_2', 'units_3', 'activation_3', 'batch_norm_3']
 
     plot_continuous_hyperparameters(trials_df, continuous_hyperparameters)
     plot_categorical_hyperparameters(trials_df, categorical_hyperparameters)
+
+    return
+
 
 # Read global parameters from JSON configuration file
 config = get_config("config.jsonc")
@@ -106,7 +109,8 @@ hyper_model = HyperModelTuner(config)
 hyper_model.get_training_and_test_data()
 hyper_model.scale_input_features()
 
-# Plot epoch-wise performance and predictions for the best trials
-plot_best_results(hyper_model)
+# # Plot epoch-wise performance and predictions for the best trials
+# plot_best_results(hyper_model)
 
-# plot_hyperparameters(output_directory, number_of_best_trials)
+
+plot_trial_configurations(hyper_model)
