@@ -3,7 +3,7 @@
     "validation_split": 0.2,
     
     // Number of ranks to take from the best fits (e.g. 10 = Top 10 best fits)
-    "number_of_best_trials": 10,
+    "number_of_best_trials": 100,
     
     // Maximum number of epochs for an individual model
     "max_epochs": 50,
@@ -12,5 +12,5 @@
     "project_directory": "C:\\Users\\donnelly\\Documents\\projects\\machine_learning\\models\\tuning\\housing_prices",
     
     // Name of the test directory
-    "test_directory": "hypermodel_test_reduced"
+    "test_directory": "hypermodel_test"
 }

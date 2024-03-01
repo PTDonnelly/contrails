@@ -45,25 +45,36 @@ class HyperModelTuner(HyperModel):
         self.X_test_scaled: pd.DataFrame = None
     
     def set_output_directory(self) -> None:
-        return os.path.join(self.project_directory, self.test_directory)
+        # Build the output_directory string
+        output_directory = os.path.join(self.project_directory, self.test_directory)
+        # Ensure output directory exists
+        os.makedirs(output_directory, exist_ok=True)
+        return output_directory
     
     def get_training_and_test_data(self, state_seed: int=42) -> None:
         # Load the dataset
         housing = fetch_california_housing(as_frame=True)
         
-        # Separate independent (X) and dependent (y) variables
-        X = housing.data
-        y = housing.target
+        # # Separate independent (X) and dependent (y) variables
+        # X = housing.data
+        # y = housing.target
 
-        # Plot statistics overview
-        plot_pairplot(housing.frame, target_variable='MedHouseVal', file_path=self.output_directory)
-        plot_ridge_regression_cross_validation(X, y, file_path=self.output_directory)
+        # Combine X and y into a single DataFrame for easier filtering
+        data = housing.frame
 
-        X_shuffled, y_shuffled = shuffle(X, y, random_state=state_seed)
+        # Filter out rows where the target (y) is 5 or more
+        filtered_data = data[data['MedHouseVal'] < 5]
+
+        # Separate the filtered data back into X and y
+        X_filtered = filtered_data.drop(columns=['MedHouseVal'])
+        y_filtered = filtered_data['MedHouseVal']
+
+        # Pre-shuffle the data to increase randomness and avoid information leakage through network
+        X_shuffled, y_shuffled = shuffle(X_filtered, y_filtered, random_state=state_seed)
 
         # Split the dataset
         self.X_train, self.X_test, self.y_train, self.y_test = train_test_split(X_shuffled, y_shuffled, test_size=self.validation_split, random_state=state_seed)
-        return
+        return housing.frame
     
     def scale_input_features(self):
         # # Apply normalistion to input features such that they vary in the range [0, 1]
@@ -135,16 +146,16 @@ class HyperModelTuner(HyperModel):
             model: The neural network model to which the layers will be added.
             hp: Hyperparameter object for hyperparameter tuning.
         """
-        for i in range(hp.Int('n_layers', **self.hyperparameters['n_layers'])):
-            model.add(Dense(units=hp.Int(f'units_{i}', **self.hyperparameters['units']),
+        for i in range(hp.Int('n_layers', **self.hyperparameters['number_of_layers'])):
+            model.add(Dense(units=hp.Int(f'units_{i}', **self.hyperparameters['nodes_per_layer']),
                             activation=hp.Choice(f'activation_{i}', self.hyperparameters['activation']),
-                            kernel_regularizer=l1_l2(l1=hp.Float(f'l1_{i}', **self.hyperparameters['l1']),
-                                                        l2=hp.Float(f'l2_{i}', **self.hyperparameters['l2']))))
+                            kernel_regularizer=l1_l2(l1=hp.Float(f'l1_{i}', **self.hyperparameters['l1_regularisation']),
+                                                        l2=hp.Float(f'l2_{i}', **self.hyperparameters['l2_regularisation']))))
             
             if hp.Boolean(f'batch_norm_{i}'):
                 model.add(BatchNormalization())
             
-            if hp.Float(f'dropout_{i}', **self.hyperparameters['dropout_rate']):
+            if hp.Boolean(f'dropout_{i}'):
                 model.add(Dropout(rate=hp.Float(f'dropout_rate_{i}', **self.hyperparameters['dropout_rate'])))
         return
         
@@ -168,66 +179,34 @@ class HyperModelTuner(HyperModel):
         Returns:
             Optimizer object configured with the selected hyperparameters.
         """
-        # Default optimizer choices
-        optimizer_choices = self.hyperparameters.get('optimizer', ['adam', 'sgd', 'rmsprop'])
-        optimizer_type = hp.Choice('optimizer', optimizer_choices)
+        # Retrieve optimizer type configurations
+        optimizer_type = hp.Choice('optimizer_type', self.hyperparameters['optimizer'])
+        # Retrieve learning rate configurations
+        learning_rate = hp.Choice('learning_rate', self.hyperparameters['learning_rate'])
         
-        # Default learning rates
-        learning_rate = self.hyperparameters.get('learning_rate', [1e-2, 1e-3, 1e-4])
-        
+        # Based on optimizer type, configure and return the optimizer
         if optimizer_type == 'adam':
-            return Adam(learning_rate=hp.Choice('lr', learning_rate))
+            return Adam(learning_rate=learning_rate)
+        
         elif optimizer_type == 'sgd':
-            momentum = self.hyperparameters.get('momentum', {'min_value': 0.0, 'max_value': 0.9, 'step': 0.1})
-            return SGD(learning_rate=hp.Choice('lr', learning_rate), momentum=hp.Float('momentum', **momentum))
-        else:  # Default case for rmsprop
-            return RMSprop(learning_rate=hp.Choice('lr', learning_rate))
+            # Retrieve momentum configurations for SGD
+            momentum = hp.Float('momentum', **self.hyperparameters['momentum'])
+            return SGD(learning_rate=learning_rate, momentum=momentum)
+        
+        elif optimizer_type == 'rmsprop':
+            # RMSprop specific configurations could also be handled here similarly
+            return RMSprop(learning_rate=learning_rate)
 
     def compile_model(self, model: object, optimizer: object, hp: object) -> None:
         """Compile the model."""
-        metrics_list = [metric for metric in ['mae', 'mse'] if metric in hp.values]
+        # Extract metric names for model compilation, validation metrics tracked automatically by keras
+        metrics_list = [
+            metric["name"] for metric in self.performance_metrics
+            if not metric["name"].startswith("val_") and metric["name"] != "loss"
+        ]
+        # Compile model
         model.compile(optimizer=optimizer, loss='mean_squared_error', metrics=metrics_list)
         return
-
-        # model = Sequential()
-        
-        # # Define the input layer to have the same number of node as input features
-        # model.add(Input(shape=(self.X_train.shape[1],)))
-        
-        # # Dynamic addition of layers
-        # for i in range(hp.Int('n_layers', 1, 4)):
-        #     model.add(Dense(units=hp.Int(f'units_{i}', min_value=32, max_value=512, step=32),
-        #                     activation=hp.Choice(f'activation_{i}', ['relu', 'tanh', 'sigmoid']),
-        #                     kernel_regularizer=l1_l2(l1=hp.Float(f'l1_{i}', 0, 0.01, step=0.005),
-        #                                               l2=hp.Float(f'l2_{i}', 0, 0.01, step=0.005))))
-        #     if hp.Boolean(f'batch_norm_{i}'):
-        #         model.add(BatchNormalization())
-        #     if hp.Float(f'dropout_{i}', 0, 0.5):
-        #         model.add(Dropout(rate=hp.Float(f'dropout_rate_{i}', min_value=0.0, max_value=0.5, step=0.1)))
-        
-        # # Output layer
-        # model.add(Dense(1, activation='linear'))
-        
-        # # Optimizer selection
-        # optimizer_type = hp.Choice('optimizer', ['adam', 'sgd', 'rmsprop'])
-        # if optimizer_type == 'adam':
-        #     optimizer = Adam(learning_rate=hp.Choice('lr_adam', [1e-2, 1e-3, 1e-4]))
-        # elif optimizer_type == 'sgd':
-        #     optimizer = SGD(
-        #         learning_rate=hp.Choice('lr_sgd', [1e-2, 1e-3, 1e-4]),
-        #         momentum=hp.Float('momentum_sgd', 0.0, 0.9))
-        # elif optimizer_type == 'rmsprop':
-        #     optimizer = RMSprop(learning_rate=hp.Choice('lr_rmsprop', [1e-2, 1e-3, 1e-4]))
-
-        # # Extract metric names for model compilation, validation metrics tracked automatically by keras
-        # metrics_list = [
-        #     metric["name"] for metric in self.performance_metrics
-        #     if not metric["name"].startswith("val_") and metric["name"] != "loss"
-        # ]
-        # # Compile model
-        # model.compile(optimizer=optimizer, loss='mean_squared_error', metrics=metrics_list)
-        
-        # return model
 
     def get_tuner_objectives(self):
         objectives = [
@@ -363,8 +342,11 @@ def plot_pairplot(data: pd.DataFrame, target_variable: str, file_path: str, n_sa
     else:
         subset = data.iloc[indices]
 
-    # Quantize the target variable and keep the midpoint for each interval
+    # Ensure target_variable is numerical
+    subset[target_variable] = subset[target_variable].astype(float)  # Or any appropriate numerical type
+    # Quantize the target variable
     subset[target_variable] = pd.qcut(subset[target_variable], n_quantiles, retbins=False)
+    # Keep the midpoint for each interval
     subset[target_variable] = subset[target_variable].apply(lambda x: x.mid)
 
     # Create a pair plot
@@ -378,10 +360,10 @@ def plot_pairplot(data: pd.DataFrame, target_variable: str, file_path: str, n_sa
 
     # Finish and save the plot
     plt.tight_layout()
-    plt.savefig(os.path.join(file_path, f'dataset_pariplot.png'))
+    plt.savefig(os.path.join(file_path, f'dataset_pairplot.png'), bbox_inches='tight')
     plt.close()
 
-def plot_ridge_regression_cross_validation(data: pd.DataFrame, target: pd.DataFrame, file_path: str, alphas: np.array =np.logspace(-3, 1, num=30), n_jobs: int=2):
+def plot_cross_validation(dataset: pd.DataFrame, file_path: str, alphas: np.array =np.logspace(-3, 1, num=30), n_jobs: int=2):
     """
     Performs Ridge regression with cross-validation on the provided dataset and plots the distribution of the estimated coefficients.
 
@@ -394,6 +376,10 @@ def plot_ridge_regression_cross_validation(data: pd.DataFrame, target: pd.DataFr
 
     Performs cross-validation for Ridge regression, calculates the R2 score, and saves a boxplot of the coefficients to the specified file path.
     """
+    # Separate independent (data) and dependent (target) variables
+    data = dataset.drop(columns=['MedHouseVal'])
+    target = dataset['MedHouseVal']
+
     # Create a Ridge regression model with standard scaling and cross-validation
     model = make_pipeline(StandardScaler(), RidgeCV(alphas=alphas))
     
@@ -423,7 +409,7 @@ def plot_ridge_regression_cross_validation(data: pd.DataFrame, target: pd.DataFr
     plt.title("Coefficients of Ridge models\n via cross-validation")
     
     # Finish and save the plot
-    plt.savefig(os.path.join(file_path, f'dataset_ridge_regression_cross_validation.png'))
+    plt.savefig(os.path.join(file_path, f'dataset_cross_validation.png'), bbox_inches='tight')
     plt.close()
 
 def plot_best_results(hyper_model: HyperModelTuner) -> None:
@@ -506,7 +492,7 @@ def plot_best_results(hyper_model: HyperModelTuner) -> None:
             axs[0, 1].axis('square')  # Force square aspect ratio
 
             plt.tight_layout()
-            plt.savefig(os.path.join(hyper_model.output_directory, f'performance_and_predictions_rank_{rank}.png'))
+            plt.savefig(os.path.join(hyper_model.output_directory, f'model_performance_and_predictions_rank_{rank}.png'), bbox_inches='tight')
             plt.close()  # Close the plot to free memory
         else:
             print(f"Not enough data for plotting results. Number of samples: {len(predictions_df)}")
@@ -523,7 +509,7 @@ def main():
     hyper_model = HyperModelTuner(config)
 
     # Preprocess data: organise into DataFrames and normalise
-    hyper_model.get_training_and_test_data()
+    dataset = hyper_model.get_training_and_test_data()
     hyper_model.scale_input_features()
 
     # Build and run the hyper model tuner
@@ -532,10 +518,15 @@ def main():
     # Extract general view of all best trials as well as per-trial predictions and performance
     save_best_trials(hyper_model, tuner)
 
+    # Plot statistics overview of the data set
+    plot_pairplot(dataset, target_variable='MedHouseVal', file_path=hyper_model.output_directory)
+    plot_cross_validation(dataset, file_path=hyper_model.output_directory)
+
     # Plot epoch-wise performance and predictions for the best trials
     plot_best_results(hyper_model)
 
     # Plot distribution of hyper parameters across best trials
     plot_trial_configurations()
+    
 if __name__ == "__main__":
     main()
