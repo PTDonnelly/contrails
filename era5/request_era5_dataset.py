@@ -31,20 +31,24 @@ c = cdsapi.Client()
 
 # Define the start and end dates
 start_date = datetime(2013, 3, 1)
-end_date = datetime(2013, 5, 31)
+end_date = datetime(2013, 3, 1)
 
-# Define the geographic locations (North, West, South, East)
-locations = [
-    [60, -60, 30, 0],  # Atlantic
-    [40, -125, 30, -115],  # Specific region in North America
-    [-10, 110, -40, 150],  # Specific region in the Southern Hemisphere
-]
+# Define the geographic regions (South, North, West, East)
+regions = {
+    "North Atlantic": {"lat": [30, 60], "lon": [0, -60]},  # Note the conversion of 15° W to -15 for consistency with the -180 to 180 degree convention
+    "South China Sea": {"lat": [0, 30], "lon": [90, 150]},
+    "Eastern Pacific": {"lat": [30, 60], "lon": [-180, -120]}  # Note the conversion of longitudes to negative for W
+}
 
 # Iterate over each date and location
 for single_date in daterange(start_date, end_date):
-    for area in locations:
-        output_file = f'C:\\Users\\donnelly\\Documents\\projects\\data\\era5\\{single_date.strftime("%Y%m%d")}_{area[0]}_{area[1]}_{area[2]}_{area[3]}.nc'
+    for region, coordinates in regions.items():
+        output_file = f'C:\\Users\\donnelly\\Documents\\projects\\data\\era5\\{single_date.strftime("%Y%m%d")}_{region}.nc'
         
+        # Format region co-ordinates for API (North, West, South, East)
+        west, east = min(coordinates["lon"]), max(coordinates["lon"])
+        south, north = min(coordinates["lat"]), max(coordinates["lat"])
+
         data_retrieval = {
             'product_type': 'reanalysis',
             'format': 'netcdf',
@@ -54,7 +58,7 @@ for single_date in daterange(start_date, end_date):
             'month': single_date.strftime("%m"),
             'day': single_date.strftime("%d"),
             'time': '12:00',
-            'area': area,
+            'area': [north, west, south, east],
             'grid': [1, 1],
         }
         
