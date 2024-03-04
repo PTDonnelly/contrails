@@ -41,6 +41,8 @@ def plot_earth_with_windowed_regions(regions, output_directory):
         for lat in lats:
             ax.plot([lon_min, lon_max], [lat, lat], color='black', linewidth=0.25, transform=ccrs.PlateCarree())
     
+    # Add a title
+    plt.title("Dense Flight Corridors: Common Grid for IASI and ERA5", fontsize=10)
     # Set x-axis and y-axis labels
     ax.set_xlabel('Longitude', fontsize=12)
     ax.set_ylabel('Latitude', fontsize=12)
@@ -50,9 +52,6 @@ def plot_earth_with_windowed_regions(regions, output_directory):
     # Optional: Customize tick labels, for example, to increase font size or change style
     ax.xaxis.set_tick_params(labelsize=10)
     ax.yaxis.set_tick_params(labelsize=10)
-
-    # Adding a title
-    plt.title("Dense Flight Corridors: Common Grid for IASI and ERA5", fontsize=10)
 
     plt.savefig(os.path.join(output_directory, f'geographic_regions.png'), bbox_inches='tight', dpi=300)
     plt.close()
