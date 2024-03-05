@@ -25,7 +25,6 @@ variables = [
     {"name": "Fraction of cloud cover", "short_name": "cc", "paramID": 248},
 ]
 
-
 # Initialize the CDS API client
 c = cdsapi.Client()
 
@@ -43,7 +42,8 @@ regions = {
 # Iterate over each date and location
 for single_date in daterange(start_date, end_date):
     for region, coordinates in regions.items():
-        output_file = f'C:\\Users\\donnelly\\Documents\\projects\\data\\era5\\{single_date.strftime("%Y%m%d")}_{region}.nc'
+        # output_file = f'C:\\Users\\donnelly\\Documents\\projects\\data\\era5\\{single_date.strftime("%Y%m%d")}_{region}.nc'
+        output_file = f"/data/pdonnelly/era5/{single_date.strftime("%Y%m%d")}_{region}.nc"
         
         # Format region co-ordinates for API (North, West, South, East)
         west, east = min(coordinates["lon"]), max(coordinates["lon"])
@@ -59,7 +59,7 @@ for single_date in daterange(start_date, end_date):
             'day': single_date.strftime("%d"),
             'time': ['06:00', '07:00', '08:00', '09:00', '10:00', '11:00', '12:00', '13:00', '14:00', '15:00', '16:00', '17:00', '18:00'],
             'area': [north, west, south, east],
-            'grid': [1, 1],
+            'grid': [1, 1]
         }
         
         # Send the API request
