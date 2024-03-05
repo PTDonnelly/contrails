@@ -176,10 +176,8 @@ def main():
     dfs = []
 
     for data_file in data_files:
+        # Open NetCDF data and compute daily average
         ds = xr.open_dataset(os.path.join(data_path, data_file))
-
-        print(ds)
-        exit()
         mean_ds = ds.mean(dim='time')
 
         # Extract geographic region from the file name
