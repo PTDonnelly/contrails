@@ -45,8 +45,6 @@ for single_date in daterange(start_date, end_date):
         # output_file = f'C:\\Users\\donnelly\\Documents\\projects\\data\\era5\\{single_date.strftime("%Y%m%d")}_{region}.nc'
         output_file = f"/data/pdonnelly/era5/{single_date.strftime('%Y%m%d')}_{region}.nc"
         
-        print(f"\nRequesting: {output_file}\n")
-        
         # Format region co-ordinates for API (North, West, South, East)
         west, east = min(coordinates["lon"]), max(coordinates["lon"])
         south, north = min(coordinates["lat"]), max(coordinates["lat"])
