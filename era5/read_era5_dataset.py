@@ -61,10 +61,10 @@ def remove_land_values(ds, land_mask):
             ds[variable] = attribute.where(land_mask==0, np.nan)
     return ds
 
-def plot_masked_data(mean_datasets_by_region, land, output_directory, variable='t'):
-    # # First, determine the global min and max across all datasets for consistent color scaling
-    # global_min = min(mean_ds[variable].min().item() for mean_ds in mean_datasets_by_region.values())
-    # global_max = max(mean_ds[variable].max().item() for mean_ds in mean_datasets_by_region.values())
+def plot_masked_data_from_df(combined_df, output_directory, variable='t'):
+    # Prepare DataFrame: separate regions and pressure levels
+    regions = combined_df['region'].unique()
+    reference_pressure_level = 250 # mbar
 
     # Create a figure with subplots in a 3x1 layout
     fig, axs = plt.subplots(nrows=1, ncols=3, figsize=(10, 5), subplot_kw={'projection': ccrs.PlateCarree()})
@@ -73,15 +73,34 @@ def plot_masked_data(mean_datasets_by_region, land, output_directory, variable='
     # Ensure axs is an array, even with a single subplot
     axs = axs.flatten()
 
-    # Iterate over each region and its dataset
-    for ax, (region, mean_ds) in zip(axs, mean_datasets_by_region.items()):
-        # Extract spatial grid and data
-        lat = mean_ds.latitude
-        lon = mean_ds.longitude
-        data = mean_ds[variable].sel(level=250)
+    for ax, region in zip(axs, regions):
+        region_df = combined_df[(combined_df['region'] == region) & (combined_df['level'] == reference_pressure_level)]
+
+        # Dynamically determine the unique counts of latitude and longitude
+        unique_lats = region_df['latitude'].unique()
+        unique_lons = region_df['longitude'].unique()
+        lat_count = len(unique_lats)
+        lon_count = len(unique_lons)
+
+        # Ensure data is sorted by latitude and longitude
+        region_df_sorted = region_df.sort_values(by=['latitude', 'longitude'])
+
+        # Extract lat, lon, and data arrays
+        lat = unique_lats
+        lon = unique_lons
+        data = region_df_sorted[variable].to_numpy()
+
+        # Reshape the data according to the actual dimensions
+        try:
+            data_reshaped = data.reshape(lat_count, lon_count)
+            data_reshaped = np.flipud(data_reshaped) # Sort latitudes by ascending order
+        except ValueError as e:
+            print(f"Error reshaping data for region {region}: {e}")
+            print(f"Expected shape: ({lat_count}, {lon_count}), Got: {data.size}")
+            continue  # Skip this iteration
 
         # Plotting the data
-        mesh = ax.pcolormesh(lon, lat, data, transform=ccrs.PlateCarree(), cmap='cividis')
+        mesh = ax.pcolormesh(lon, lat, data_reshaped, transform=ccrs.PlateCarree(), cmap='cividis')
 
         # Add the land feature boundaries
         land = cfeature.NaturalEarthFeature('physical', 'land', '50m', edgecolor='black', facecolor='none')
@@ -95,6 +114,7 @@ def plot_masked_data(mean_datasets_by_region, land, output_directory, variable='
         ax.set_title(f'{region}', fontsize=10)
         ax.set_xlabel('Longitude', fontsize=10)
         ax.set_ylabel('Latitude', fontsize=10)
+        # Assuming you can calculate or have min and max values for lon and lat per region
         ax.set_extent([lon.min(), lon.max(), lat.min(), lat.max()], crs=ccrs.PlateCarree())
 
         # Setting gridlines and labels
@@ -107,10 +127,10 @@ def plot_masked_data(mean_datasets_by_region, land, output_directory, variable='
         gl.ylabel_style = {'size': 10, 'color': 'black'}
 
     # Adjust layout
-    plt.savefig(os.path.join(output_directory, 'masked_data_subplot.png'), bbox_inches='tight', dpi=300)
+    plt.savefig(os.path.join(output_directory, f"masked_data_{variable}.png"), bbox_inches='tight', dpi=300)
     plt.close()
 
-def plot_statistics(data, output_directory, n_samples=1000, columns_drop=None, state_seed=42):   
+def plot_statistics_from_df(data, output_directory, n_samples=1000, columns_drop=None, state_seed=42):   
     # Sub-sample the dataset
     rng = np.random.RandomState(state_seed)
     indices = rng.choice(data.shape[0], size=n_samples, replace=False)
@@ -152,12 +172,14 @@ def main():
     # output_directory = "C:\\Users\\donnelly\\Documents\\projects\\era5"
     output_directory = "C:\\Users\\padra\\Documents\\Research\\projects\\contrails\\era5"
 
-    # Initialize a dictionary to store the mean datasets for each region
-    mean_datasets_by_region = {}
+    # Initialise a list to store the mean datasets for each region
     dfs = []
 
     for data_file in data_files:
         ds = xr.open_dataset(os.path.join(data_path, data_file))
+
+        print(ds)
+        exit()
         mean_ds = ds.mean(dim='time')
 
         # Extract geographic region from the file name
@@ -169,22 +191,22 @@ def main():
         # Remove overland values from dataset
         masked_mean_ds = remove_land_values(mean_ds, land_mask)
 
-        # Store the masked mean dataset in the dictionary using the region as the key
-        mean_datasets_by_region[region] = masked_mean_ds
-
-        # Flatten the dataset to a DataFrame
+        # Store the masked mean dataset in to a DataFrame
         df = masked_mean_ds.to_dataframe().reset_index()
+
+        # Add a 'region' column to the DataFrame
+        df['region'] = region
 
         # Append the DataFrame to the list
         dfs.append(df)
 
-    # Combine all regional DataFrames into a single DataFrame and save to a CSV file
+    # # Combine all regional DataFrames into a single DataFrame and save to a CSV file
     combined_df = pd.concat(dfs, ignore_index=True)
     combined_df.to_csv(os.path.join(output_directory, "combined_data.csv"), sep='\t', index=False)
-    plot_statistics(combined_df, output_directory)
 
     # Plot data
-    plot_masked_data(mean_datasets_by_region, output_directory)
+    # plot_statistics_from_df(combined_df, output_directory)
+    plot_masked_data_from_df(combined_df, output_directory)
 
 
 
