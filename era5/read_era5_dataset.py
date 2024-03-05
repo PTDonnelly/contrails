@@ -144,13 +144,14 @@ def plot_statistics(data, output_directory, n_samples=1000, columns_drop=None, s
     plt.close()
 
 def main():
-    # Specify the location to save reduced data and plots
-    output_directory = "C:\\Users\\donnelly\\Documents\\projects\\era5"
-
     # Open the NetCDF file and calculate the average across the time dimension
-    data_path = "C:\\Users\\donnelly\\Documents\\projects\\data"
+    data_path = "G:\\My Drive\\Research\\Postdoc_2_CNRS_LATMOS\\data\\era5"
     data_files = ["20130301_North Pacific.nc", "20130301_North Atlantic.nc", "20130301_South China Sea.nc"]
     
+    # Specify the location to save reduced data and plots
+    # output_directory = "C:\\Users\\donnelly\\Documents\\projects\\era5"
+    output_directory = "C:\\Users\\padra\\Documents\\Research\\projects\\contrails\\era5"
+
     # Initialize a dictionary to store the mean datasets for each region
     mean_datasets_by_region = {}
     dfs = []
@@ -182,8 +183,8 @@ def main():
     combined_df.to_csv(os.path.join(output_directory, "combined_data.csv"), sep='\t', index=False)
     plot_statistics(combined_df, output_directory)
 
-    # # Plot data
-    # plot_masked_data(mean_datasets_by_region, output_directory)
+    # Plot data
+    plot_masked_data(mean_datasets_by_region, output_directory)
 
 
 
