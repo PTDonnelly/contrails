@@ -92,7 +92,7 @@ for i, filename in enumerate(os.listdir(directory_path)):
         df = df[df['Flight Number'].notna() & (df['Flight Number'] != '')]
         df['Flight Number'] = df['Flight Number'].astype(str)
 
-        df = df.iloc[0]
+        df = df.loc[0]
 
         print(df.head())
 
