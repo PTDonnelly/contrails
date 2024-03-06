@@ -59,11 +59,12 @@ def plot_earth_with_windowed_regions(regions, output_directory):
 output_directory = "C:\\Users\\donnelly\\Documents\\projects\\era5"
 
 
-# Define the geographic regions (South, North, West, East)
+# Define the geographic regions
 regions = {
     "GMCS": {"lat": [0, 45], "lon": [-60, -100]}, # Gulf of Mexico / Carribean Sea
     "NAO": {"lat": [30, 60], "lon": [0, -60]}, # North Atlantic Ocean
-    "NPO": {"lat": [30, 60], "lon": [-180, -120]}, # North Pacific Ocean
+    "NEPO": {"lat": [30, 60], "lon": [-180, -120]}, # North East Pacific Ocean
+    "NWPO": {"lat": [30, 60], "lon": [120, 180]}, # North West Pacific Ocean
     "SCS": {"lat": [0, 30], "lon": [90, 150]} # South Schina Sea
 }
 
