@@ -61,9 +61,10 @@ output_directory = "C:\\Users\\donnelly\\Documents\\projects\\era5"
 
 # Define the geographic regions (South, North, West, East)
 regions = {
-    "North Atlantic": {"lat": [30, 60], "lon": [0, -60]},  # Note the conversion of 15° W to -15 for consistency with the -180 to 180 degree convention
-    "South China Sea": {"lat": [0, 30], "lon": [90, 150]},
-    "North Pacific": {"lat": [30, 60], "lon": [-180, -120]}  # Note the conversion of longitudes to negative for W
+    "GMCS": {"lat": [0, 45], "lon": [-60, -100]}, # Gulf of Mexico / Carribean Sea
+    "NAO": {"lat": [30, 60], "lon": [0, -60]}, # North Atlantic Ocean
+    "NPO": {"lat": [30, 60], "lon": [-180, -120]}, # North Pacific Ocean
+    "SCS": {"lat": [0, 30], "lon": [90, 150]} # South Schina Sea
 }
 
 plot_earth_with_windowed_regions(regions, output_directory)
