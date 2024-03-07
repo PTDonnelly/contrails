@@ -130,23 +130,28 @@ def plot_masked_data_from_df(combined_df, output_directory, variable='t'):
     plt.savefig(os.path.join(output_directory, f"masked_data_{variable}.png"), bbox_inches='tight', dpi=300)
     plt.close()
 
-def plot_statistics_from_df(data, output_directory, n_samples=1000, columns_drop=None, state_seed=42):   
+def plot_statistics_from_df(df, output_directory, n_samples=1000, columns_drop=None, state_seed=42):   
     # Sub-sample the dataset
     rng = np.random.RandomState(state_seed)
-    indices = rng.choice(data.shape[0], size=n_samples, replace=False)
+    indices = rng.choice(df.shape[0], size=n_samples, replace=False)
 
     # Drop horizontal and vertical grids, and the liquid cloud parameter
     columns_drop = ['latitude', 'longitude', 'level', 'clwc', ]
     # Drop the unwanted columns if specified
     if columns_drop is not None:
-        subset = data.iloc[indices].drop(columns=columns_drop)
+        subset_df = df.iloc[indices].drop(columns=columns_drop)
     else:
-        subset = data.iloc[indices]
+        subset_df = df.iloc[indices]
+    # Extract numerical columns
+    numeric_subset_df = subset_df.select_dtypes(include=[np.number])
 
     # Initialize the StandardScaler
     scaler = StandardScaler()
-    standardised_dataset = scaler.fit_transform(subset)
+    standardised_dataset = scaler.fit_transform(numeric_subset_df)
     standardised_df = pd.DataFrame(standardised_dataset, columns=['t', 'u', 'v', 'q', 'ciwc', 'cc'])
+
+    # # Create a figure with subplots in a 3x1 layout
+    # fig, axs = plt.subplots(nrows=1, ncols=3, figsize=(10, 10))
 
     # Create a pair plot
     pairplot = sns.pairplot(data=standardised_df,
@@ -156,11 +161,20 @@ def plot_statistics_from_df(data, output_directory, n_samples=1000, columns_drop
                             diag_kws = {'bins':10},
                             corner=True)
 
-    plt.suptitle('Pair Plot of Sampled Data', y=1.02)  # Adjust title position
+    plt.suptitle('Pair Plot of Sampled Data', y=0.9)  # Adjust title position
+    
+    # Iterate over the axes in the pairplot
+    for ax in pairplot.axes.flatten():
+        # Check if the axis is not None
+        if ax is not None:
+            ax.tick_params(axis='both', size=15, labelsize=10)
+            # Set axes label size
+            ax.set_xlabel(ax.get_xlabel(), fontsize=20)
+            ax.set_ylabel(ax.get_ylabel(), fontsize=20)
 
     # Finish and save the plot
     plt.tight_layout()
-    plt.savefig(os.path.join(output_directory, f'dataset_pairplot.png'), bbox_inches='tight')
+    plt.savefig(os.path.join(output_directory, f'dataset_pairplot2.png'), bbox_inches='tight')
     plt.close()
 
 def main():
@@ -169,8 +183,8 @@ def main():
     data_files = ["20130301_North Pacific.nc", "20130301_North Atlantic.nc", "20130301_South China Sea.nc"]
     
     # Specify the location to save reduced data and plots
-    # output_directory = "C:\\Users\\donnelly\\Documents\\projects\\era5"
-    output_directory = "C:\\Users\\padra\\Documents\\Research\\projects\\contrails\\era5"
+    output_directory = "C:\\Users\\donnelly\\Documents\\projects\\era5"
+    # output_directory = "C:\\Users\\padra\\Documents\\Research\\projects\\contrails\\era5"
 
     # Initialise a list to store the mean datasets for each region
     dfs = []
@@ -203,7 +217,7 @@ def main():
     combined_df.to_csv(os.path.join(output_directory, "combined_data.csv"), sep='\t', index=False)
 
     # Plot data
-    # plot_statistics_from_df(combined_df, output_directory)
+    plot_statistics_from_df(combined_df, output_directory)
     plot_masked_data_from_df(combined_df, output_directory)
 
 
