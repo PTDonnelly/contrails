@@ -12,7 +12,7 @@ def process_era5_files(variables_dict, start_year, end_year, start_month, end_mo
     for long_name, short_name in variables_dict.items():
         for year in range(start_year, end_year + 1):
             for month in range(start_month, end_month + 1):
-                file_path = os.path.join(base_path, f"{short_name}.{year}{month:02d}.ap1e5.GLOBAL_025.nc")
+                file_path = base_path / f"{short_name}.{year}{month:02d}.ap1e5.GLOBAL_025.nc"
                 
                 if file_path.exists():
                     ds = xr.open_dataset(file_path)
@@ -30,7 +30,7 @@ def process_era5_files(variables_dict, start_year, end_year, start_month, end_mo
                     ds_daily = ds_coarse.resample(time='1D').mean()
                     
                     # Write to new NetCDF file
-                    output_file = os.path.join(output_directory, f"{short_name}_daily_{year}{month:02d}_1x1.nc")
+                    output_file = output_directory / f"{short_name}_daily_{year}{month:02d}_1x1.nc"
                     ds_daily.to_netcdf(output_file)
                     
                     print(f"Processed {output_file}")
