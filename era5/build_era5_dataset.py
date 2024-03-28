@@ -27,12 +27,15 @@ def process_era5_files(variables_dict, start_year, end_year, start_month, end_mo
                     # Create daily averages
                     ds_daily = ds_coarse.resample(time='1D').mean()
                     
+                    # Convert all data points to csv format
+                    df_daily = ds_daily.to_dataframe().reset_index()
+
                     # Write to new NetCDF file
-                    output_file = output_directory / f"{short_name}_daily_{year}{month:02d}_1x1.nc"
+                    output_file = output_directory / f"{short_name}_daily_{year}{month:02d}_1x1.csv"
                     
-                    print(ds_daily.variables)
+                    print(df_daily.columns)
                     input()
-                    ds_daily.to_netcdf(output_file)
+                    df_daily.to_csv(output_file, index=False)
                     
                     print(f"Processed {output_file}")
                     
