@@ -22,14 +22,21 @@ def process_era5_files(variables_dict, start_year, end_year, start_month, end_mo
                                          latitude=slice(30, 60),
                                          longitude=slice(-60, 0))
                     print(ds_selected.shape)
+                    input()
                     # Regrid to 1x1 degree using interpolation or nearest-neighbor method
                     ds_coarse = ds_selected.coarsen(latitude=4,
                                                     longitude=4,
                                                     boundary='trim').mean()  # Example coarsening
                     
+                    print(ds_coarse.shape)
+                    input()
+
                     # Create daily averages
                     ds_daily = ds_coarse.resample(time='1D').mean()
                     
+                    print(ds_daily.shape)
+                    input()
+
                     # Convert all data points to csv format
                     df_daily = ds_daily.to_dataframe().reset_index()
 
