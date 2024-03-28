@@ -19,10 +19,14 @@ def process_era5_files(variables_dict, start_year, end_year, start_month, end_mo
                     
                     # Select upper-tropospheric pressures where contrails form and focus on the North Atlantic Ocean (NAO)
                     pressure_levels = [200, 250, 300]
-                    ds_selected = ds.sel(level=pressure_levels, lat=slice(30, 60), lon=slice(-60, 0))
+                    ds_selected = ds.sel(level=pressure_levels,
+                                         latitude=slice(30, 60),
+                                         longitude=slice(-60, 0))
                     
                     # Regrid to 1x1 degree using interpolation or nearest-neighbor method
-                    ds_coarse = ds_selected.coarsen(latitude=4, longitude=4, boundary='trim').mean()  # Example coarsening
+                    ds_coarse = ds_selected.coarsen(latitude=4,
+                                                    longitude=4,
+                                                    boundary='trim').mean()  # Example coarsening
                     
                     # Create daily averages
                     ds_daily = ds_coarse.resample(time='1D').mean()
