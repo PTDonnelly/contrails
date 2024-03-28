@@ -24,21 +24,19 @@ def process_era5_files(variables_dict, start_year, end_year, start_month, end_mo
                     ds_selected = ds[short_name].sel(level=[200, 250, 300],
                                                      latitude=slice(60, 30),
                                                      longitude=slice(300, 360))
-                    print(ds_selected.shape)
                     
                     # Regrid to 1x1 degree using interpolation or nearest-neighbor method
                     ds_coarse = ds_selected.coarsen(latitude=4,
                                                     longitude=4,
                                                     boundary='trim').mean()
-                    print(ds_coarse.shape)
                     
                     
                     # Create daily averages
                     ds_daily = ds_coarse.resample(time='1D').mean()
-                    print(ds_daily.shape)
                     
                     for time_slice in ds_daily.time:
                         ds_slice = ds_daily.sel(time=time_slice)
+                        print(ds_slice.shape)
                         df_slice = ds_slice.to_dataframe().reset_index()
                         # Append to CSV
                         with open(f"{output_file}.csv", 'a') as f:
