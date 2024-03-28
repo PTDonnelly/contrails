@@ -5,7 +5,7 @@ import pandas as pd
 from pathlib import Path
 import xarray as xr
 
-def process_era5_files(variables_dict, start_year, end_year, start_month, end_month, output_directory):
+def process_era5_files(variables_dict, start_year, end_year, start_month, end_month, output_directory='./era/processed_files'):
     base_path = Path(f"/bdd/ECMWF/ERA5/NETCDF/GLOBAL_025/hourly/AN_PL/{start_year}")
     output_directory = Path(output_directory)
     output_directory.mkdir(parents=True, exist_ok=True)
@@ -31,19 +31,18 @@ def process_era5_files(variables_dict, start_year, end_year, start_month, end_mo
                                                     longitude=4,
                                                     boundary='trim').mean()
                     
-                    
                     # Create daily averages
                     ds_daily = ds_coarse.resample(time='1D').mean()
                                         
                     # Write to new NetCDF file
                     ds_daily.to_netcdf(f"{output_file}.nc", compute=False)
 
-                    # # Read the saved NetCDF file
-                    # ds_reduced = xr.open_dataset(f"{output_file}.nc", chunks={})
-                    # # Convert to DataFrame
-                    # df_reduced = ds_reduced.to_dataframe().reset_index()
-                    # # Write the DataFrame to a CSV file
-                    # df_reduced.to_csv(f"{output_file}.csv", index=False)
+                    # Read the saved NetCDF file
+                    ds_reduced = xr.open_dataset(f"{output_file}.nc", chunks={})
+                    
+                    # Convert to DataFrame and write to a CSV file
+                    df_reduced = ds_reduced.to_dataframe().reset_index()
+                    df_reduced.to_csv(f"{output_file}.csv", index=False)
                     
                     print(f"Processed {output_file}")
                     
@@ -65,4 +64,4 @@ variables_dict = {
 }
 
 # Execute on specified date range
-process_era5_files(variables_dict, 2018, 2018, 3, 3, './processed_files')
+process_era5_files(variables_dict, 2018, 2018, 3, 3)
