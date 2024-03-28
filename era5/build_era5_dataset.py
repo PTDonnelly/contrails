@@ -19,41 +19,38 @@ def process_era5_files(variables_dict, start_year, end_year, start_month, end_mo
                     
 
                 if input_file.exists():
-                    ds = xr.open_dataset(input_file, chunks= {'time':1, 'level':1})
+                    ds = xr.open_dataset(input_file, chunks= {'time':1})
                     
                     # Select upper-tropospheric pressures where contrails form and focus on the North Atlantic Ocean (NAO)
                     ds_selected = ds[short_name].sel(level=[200, 250, 300],
                                                      latitude=slice(60, 30),
                                                      longitude=slice(300, 360),
                                                      drop=True)
-                    print(ds_selected.shape)
                     
                     # Regrid to 1x1 degree using interpolation or nearest-neighbor method
                     ds_coarse = ds_selected.coarsen(latitude=4,
                                                     longitude=4,
                                                     boundary='trim').mean()
-                    print(ds_coarse.shape)
-
                     # Create daily averages
                     ds_daily = ds_coarse.resample(time='1D').mean()
-                    print(ds_daily.shape)
 
                     # Write to new NetCDF file
                     ds_daily.to_netcdf(f"{output_file}.nc")
+                    print("Written to NetCDF")
 
                     # Read the saved NetCDF file
-                    ds_reduced = xr.open_dataset(f"{output_file}.nc", chunks={})
+                    ds_reduced = xr.open_dataset(f"{output_file}.nc")
                     
                     # Convert to DataFrame and write to a CSV file
                     df_reduced = ds_reduced.to_dataframe().reset_index()
-                    df_reduced.to_csv(f"{output_file}.csv", index=False)
+                    df_reduced.to_csv(f"{output_file}.csv", sep='\t', index=False)
                     
                     print(f"Processed {output_file}")
                     
                 else:
                     print(f"File does not exist: {input_file}")
 
-                exit()
+                exit
 
 # Define ERA5 variables
 variables_dict = {
