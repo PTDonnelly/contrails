@@ -29,6 +29,9 @@ def process_era5_files(variables_dict, start_year, end_year, start_month, end_mo
                     
                     # Write to new NetCDF file
                     output_file = output_directory / f"{short_name}_daily_{year}{month:02d}_1x1.nc"
+                    
+                    print(np.shape(ds_daily))
+                    input()
                     ds_daily.to_netcdf(output_file)
                     
                     print(f"Processed {output_file}")
