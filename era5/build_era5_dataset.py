@@ -1,3 +1,4 @@
+import dask.dataframe as dd
 import numpy as np
 import os
 import pandas as pd
@@ -34,13 +35,8 @@ def process_era5_files(variables_dict, start_year, end_year, start_month, end_mo
                     # Create daily averages
                     ds_daily = ds_coarse.resample(time='1D').mean()
                     
-                    for time_slice in ds_daily.time:
-                        ds_slice = ds_daily.sel(time=time_slice)
-                        print(ds_slice.shape)
-                        df_slice = ds_slice.to_dataframe().reset_index()
-                        # Append to CSV
-                        with open(f"{output_file}.csv", 'a') as f:
-                            df_slice.to_csv(f, header=f.tell()==0, index=False)
+                    # Convert to a Dask DataFrame
+                    ddf = dd.from_pandas(ds_daily.to_dataframe(), npartitions=10)
 
                     # # Write to new NetCDF file
                     # # ds_daily.to_netcdf(f"{output_file}.nc")
@@ -49,8 +45,8 @@ def process_era5_files(variables_dict, start_year, end_year, start_month, end_mo
                     # # ds_reduced = xr.open_dataset(f"{output_file}.nc", chunks={})
                     # # Convert to DataFrame
                     # df_reduced = ds_reduced.to_dataframe().reset_index()
-                    # # Write the DataFrame to a CSV file
-                    # df_reduced.to_csv(f"{output_file}.csv", index=False)
+                    # Write the DataFrame to a CSV file
+                    ddf.to_csv(f"{output_file}.csv", index=False)
                     
                     print(f"Processed {output_file}")
                     
