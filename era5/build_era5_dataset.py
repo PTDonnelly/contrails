@@ -36,8 +36,8 @@ def process_era5_files(variables_dict, start_year, end_year, start_month, end_mo
                     ds_daily = ds_coarse.resample(time='1D').mean()
                     
                     # Convert to a Dask DataFrame
-                    ddf = dd.from_pandas(ds_daily.to_dataframe(), npartitions=10)
-
+                    ddf = dd.from_array(ds_daily.to_array().data)
+                                        
                     # # Write to new NetCDF file
                     # # ds_daily.to_netcdf(f"{output_file}.nc")
 
