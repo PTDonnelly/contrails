@@ -35,4 +35,4 @@ def process_era5_files(variable_name, start_year, end_year, start_month, end_mon
                 print(f"File does not exist: {file_path}")
 
 # Execute on specified date range
-process_era5_files('t', 2014, 2014, 3, 3, './processed_files')
+process_era5_files('t', 2018, 2018, 3, 3, './processed_files')
