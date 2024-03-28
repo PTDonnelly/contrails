@@ -16,7 +16,7 @@ def process_era5_files(variables_dict, start_year, end_year, start_month, end_mo
                 
                 if file_path.exists():
                     ds = xr.open_dataset(file_path)
-                    print(ds.variables)
+                    # print(ds.variables)
                     print(ds['level'])
                     exit()
                     
