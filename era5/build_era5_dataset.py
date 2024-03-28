@@ -17,6 +17,12 @@ def process_era5_files(variables_dict, start_year, end_year, start_month, end_mo
                 if file_path.exists():
                     ds = xr.open_dataset(file_path, chunks={})
                     
+                    print("Dataset dimensions before slicing:", ds.dims)
+                    print("Coordinate values before slicing:")
+                    print("Latitude range:", ds['latitude'].min().data, "to", ds['latitude'].max().data)
+                    print("Longitude range:", ds['longitude'].min().data, "to", ds['longitude'].max().data)
+
+                    input()
                     # Select upper-tropospheric pressures where contrails form and focus on the North Atlantic Ocean (NAO)
                     ds_selected = ds[short_name].sel(level=[200, 250, 300],
                                          latitude=slice(30, 60),
