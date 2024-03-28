@@ -29,25 +29,30 @@ def process_era5_files(variables_dict, start_year, end_year, start_month, end_mo
                                                     boundary='trim').mean()
                     print(ds_coarse.shape)
                     
-
+                    
                     # Create daily averages
                     ds_daily = ds_coarse.resample(time='1D').mean()
                     print(ds_daily.shape)
                     
-                    # Convert all data points to csv format
-                    df_daily = ds_daily.to_dataframe().reset_index()
-                    exit()
-                    # Write to new NetCDF file
-                    output_file = output_directory / f"{short_name}_daily_{year}{month:02d}_1x1.csv"
+                    # Define output filename
+                    output_file = output_directory / f"{short_name}_daily_{year}{month:02d}_1x1"
                     
-                    print(df_daily.columns)
-                    input()
-                    df_daily.to_csv(output_file, index=False)
+                    # Write to new NetCDF file
+                    ds_daily.to_netcdf(f"{output_file}.nc")
+
+                    # Read the saved NetCDF file
+                    ds_reduced = xr.open_dataset(f"{output_file}.nc", chunks={})
+                    # Convert to DataFrame
+                    df_reduced = ds_reduced.to_dataframe().reset_index()
+                    # Write the DataFrame to a CSV file
+                    df_reduced.to_csv(f"{output_file}.csv", index=False)
                     
                     print(f"Processed {output_file}")
                     
                 else:
                     print(f"File does not exist: {file_path}")
+
+                exit()
 
 # Define ERA5 variables
 variables_dict = {
