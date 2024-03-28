@@ -21,7 +21,7 @@ def process_era5_files(variables_dict, start_year, end_year, start_month, end_mo
                     ds_selected = ds.isel(level=9)  # Indexing starts at 0
                     
                     # Regrid to 1x1 degree using interpolation or nearest-neighbor method
-                    ds_coarse = ds_selected.coarsen(lat=4, lon=4, boundary='trim').mean()  # Example coarsening
+                    ds_coarse = ds_selected.coarsen(latitude=4, longitude=4, boundary='trim').mean()  # Example coarsening
                     
                     # Create daily averages
                     ds_daily = ds_coarse.resample(time='1D').mean()
