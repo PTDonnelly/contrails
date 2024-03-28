@@ -34,7 +34,9 @@ def process_era5_files(variables_dict, start_year, end_year, start_month, end_mo
                     # Create daily averages
                     ds_daily = ds_coarse.resample(time='1D').mean()
 
-                    print(ds.variables)
+                    print(ds.variables.keys())
+                    print(ds['cc'].attrs)
+                    
                     exit()        
                     # Write to new NetCDF file
                     ds_daily.to_netcdf(f"{output_file}.nc", compute=False)
