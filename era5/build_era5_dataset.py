@@ -16,12 +16,10 @@ def process_era5_files(variables_dict, start_year, end_year, start_month, end_mo
                 
                 if file_path.exists():
                     ds = xr.open_dataset(file_path)
-                    # print(ds.variables)
-                    print(ds['level'])
-                    exit()
                     
-                    # Select the 10th altitude index
-                    ds_selected = ds.isel(level=9)  # Indexing starts at 0
+                    # Select upper-tropospheric pressures where contrails form
+                    pressure_levels = [200, 250, 300]
+                    ds_selected = ds.sel(level=pressure_levels)
                     
                     # Regrid to 1x1 degree using interpolation or nearest-neighbor method
                     ds_coarse = ds_selected.coarsen(latitude=4, longitude=4, boundary='trim').mean()  # Example coarsening
