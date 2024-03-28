@@ -12,7 +12,7 @@ def process_era5_files(variables_dict, start_year, end_year, start_month, end_mo
     for long_name, short_name in variables_dict.items():
         for year in range(start_year, end_year + 1):
             for month in range(start_month, end_month + 1):
-                file_path = base_path / f"{short_name}.{year}{month:02d}.aph1e5.GLOBAL_025.nc"
+                file_path = base_path / f"{short_name}.{year}{month:02d}.ap1e5.GLOBAL_025.nc"
                 
                 if file_path.exists():
                     ds = xr.open_dataset(file_path)
@@ -34,7 +34,7 @@ def process_era5_files(variables_dict, start_year, end_year, start_month, end_mo
                     
                 else:
                     print(f"File does not exist: {file_path}")
-                    
+
 # Define ERA5 variables
 variables_dict = {
     "cloud cover": "cc",
