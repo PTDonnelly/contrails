@@ -5,7 +5,7 @@ import pandas as pd
 from pathlib import Path
 import xarray as xr
 
-def process_era5_files(variables_dict, start_year, end_year, start_month, end_month, output_directory='./era/processed_files'):
+def process_era5_files(variables_dict, start_year, end_year, start_month, end_month, output_directory='./era5/processed_files'):
     base_path = Path(f"/bdd/ECMWF/ERA5/NETCDF/GLOBAL_025/hourly/AN_PL/{start_year}")
     output_directory = Path(output_directory)
     output_directory.mkdir(parents=True, exist_ok=True)
