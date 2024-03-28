@@ -65,7 +65,7 @@ def main():
             # Plot each flight's path
             for departure, arrival in zip(departure_points.itertuples(index=False), arrival_points.itertuples(index=False)):
                 ax.plot([departure[1], arrival[1]], [departure[0], arrival[0]],
-                        color='blue', linewidth=1, marker='o',
+                        color='orange', linewidth=0.5, alpha=0.5,
                         transform=ccrs.Geodetic())
 
             # Add gridlines and set extent
