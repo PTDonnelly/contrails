@@ -5,7 +5,7 @@ import pandas as pd
 from pathlib import Path
 import xarray as xr
 
-def process_era5_files(variables_dict, start_year, end_year, start_month, end_month, output_directory='./era5/processed_files'):
+def process_era5_files(variables_dict, start_year, end_year, start_month, end_month, output_directory='/data/pdonnelly/era5/processed_files'):
     base_path = Path(f"/bdd/ECMWF/ERA5/NETCDF/GLOBAL_025/hourly/AN_PL/{start_year}")
     output_directory = Path(output_directory)
     output_directory.mkdir(parents=True, exist_ok=True)
@@ -33,7 +33,9 @@ def process_era5_files(variables_dict, start_year, end_year, start_month, end_mo
                     
                     # Create daily averages
                     ds_daily = ds_coarse.resample(time='1D').mean()
-                                        
+
+                    print(ds['cc'].values)
+                    exit()        
                     # Write to new NetCDF file
                     ds_daily.to_netcdf(f"{output_file}.nc", compute=False)
 
