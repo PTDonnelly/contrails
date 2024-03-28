@@ -19,7 +19,7 @@ def process_era5_files(variables_dict, start_year, end_year, start_month, end_mo
                     
 
                 if input_file.exists():
-                    ds = xr.open_dataset(input_file, chunks= {'time':-1, 'longitude':360, 'latitude':45})
+                    ds = xr.open_dataset(input_file, chunks= {'time':100, 'longitude':360, 'latitude':45})
                     
                     # Select upper-tropospheric pressures where contrails form and focus on the North Atlantic Ocean (NAO)
                     ds_selected = ds[short_name].sel(level=[200, 250, 300],
