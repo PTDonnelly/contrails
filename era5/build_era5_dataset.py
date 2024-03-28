@@ -25,7 +25,8 @@ def process_era5_files(variables_dict, start_year, end_year, start_month, end_mo
                     ds_selected = ds[short_name].sel(level=[200, 250, 300],
                                                      latitude=slice(60, 30),
                                                      longitude=slice(300, 360),
-                                                     drop=True).load()
+                                                     drop=True)
+                    test = ds_selected.load()
                     input()
                     # Regrid to 1x1 degree using interpolation or nearest-neighbor method
                     ds_coarse = ds_selected.coarsen(latitude=4,
