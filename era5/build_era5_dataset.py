@@ -12,10 +12,13 @@ def process_era5_files(variables_dict, start_year, end_year, start_month, end_mo
     for long_name, short_name in variables_dict.items():
         for year in range(start_year, end_year + 1):
             for month in range(start_month, end_month + 1):
-                file_path = base_path / f"{short_name}.{year}{month:02d}.ap1e5.GLOBAL_025.nc"
-                
-                if file_path.exists():
-                    ds = xr.open_dataset(file_path, chunks={})
+                # Define filenames
+                input_file = base_path / f"{short_name}.{year}{month:02d}.ap1e5.GLOBAL_025.nc"
+                output_file = output_directory / f"{short_name}_daily_{year}{month:02d}_1x1"
+                    
+
+                if input_file.exists():
+                    ds = xr.open_dataset(input_file, chunks={})
                     
                     # Select upper-tropospheric pressures where contrails form and focus on the North Atlantic Ocean (NAO)
                     ds_selected = ds[short_name].sel(level=[200, 250, 300],
@@ -34,23 +37,27 @@ def process_era5_files(variables_dict, start_year, end_year, start_month, end_mo
                     ds_daily = ds_coarse.resample(time='1D').mean()
                     print(ds_daily.shape)
                     
-                    # Define output filename
-                    output_file = output_directory / f"{short_name}_daily_{year}{month:02d}_1x1"
-                    
-                    # Write to new NetCDF file
-                    ds_daily.to_netcdf(f"{output_file}.nc")
+                    for time_slice in ds_daily.time:
+                        ds_slice = ds_daily.sel(time=time_slice)
+                        df_slice = ds_slice.to_dataframe().reset_index()
+                        # Append to CSV
+                        with open(f"{output_file}.csv", 'a') as f:
+                            df_slice.to_csv(f, header=f.tell()==0, index=False)
 
-                    # Read the saved NetCDF file
-                    ds_reduced = xr.open_dataset(f"{output_file}.nc", chunks={})
-                    # Convert to DataFrame
-                    df_reduced = ds_reduced.to_dataframe().reset_index()
-                    # Write the DataFrame to a CSV file
-                    df_reduced.to_csv(f"{output_file}.csv", index=False)
+                    # # Write to new NetCDF file
+                    # # ds_daily.to_netcdf(f"{output_file}.nc")
+
+                    # # # Read the saved NetCDF file
+                    # # ds_reduced = xr.open_dataset(f"{output_file}.nc", chunks={})
+                    # # Convert to DataFrame
+                    # df_reduced = ds_reduced.to_dataframe().reset_index()
+                    # # Write the DataFrame to a CSV file
+                    # df_reduced.to_csv(f"{output_file}.csv", index=False)
                     
                     print(f"Processed {output_file}")
                     
                 else:
-                    print(f"File does not exist: {file_path}")
+                    print(f"File does not exist: {input_file}")
 
                 exit()
 
