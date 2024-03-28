@@ -34,21 +34,15 @@ def process_era5_files(variables_dict, start_year, end_year, start_month, end_mo
                     
                     # Create daily averages
                     ds_daily = ds_coarse.resample(time='1D').mean()
-                    
-                    for chunk in np.array_split(ds_daily.time, 10):  # Splitting the time dimension into 10 chunks
-                        ds_chunk = ds_daily.sel(time=chunk)
-                        df_chunk = ds_chunk.to_dataframe().reset_index()
-                        # Process df_chunk or append to CSV
-                        df_chunk.to_csv('chunked_data.csv', mode='a', header=not bool(chunk.start))
-
+          
                     # # Convert xarray DataArray to a pandas DataFrame
                     # df_daily = ds_daily.to_dataframe().reset_index()
 
                     # # Convert the pandas DataFrame to a Dask DataFrame
                     # ddf = dd.from_pandas(df_daily, npartitions=10)
                                         
-                    # # # Write to new NetCDF file
-                    # # # ds_daily.to_netcdf(f"{output_file}.nc")
+                    # Write to new NetCDF file
+                    ds_daily.to_netcdf(f"{output_file}.nc")
 
                     # # # # Read the saved NetCDF file
                     # # # ds_reduced = xr.open_dataset(f"{output_file}.nc", chunks={})
