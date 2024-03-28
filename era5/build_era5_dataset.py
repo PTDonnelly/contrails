@@ -35,8 +35,11 @@ def process_era5_files(variables_dict, start_year, end_year, start_month, end_mo
                     # Create daily averages
                     ds_daily = ds_coarse.resample(time='1D').mean()
                     
-                    # Convert to a Dask DataFrame
-                    ddf = dd.from_array(ds_daily.to_array().data)
+                    # Convert xarray DataArray to a pandas DataFrame
+                    df_daily = ds_daily.to_dataframe().reset_index()
+
+                    # Convert the pandas DataFrame to a Dask DataFrame
+                    ddf = dd.from_pandas(df_daily, npartitions=10)
                                         
                     # # Write to new NetCDF file
                     # # ds_daily.to_netcdf(f"{output_file}.nc")
