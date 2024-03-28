@@ -19,7 +19,7 @@ def process_era5_files(variables_dict, start_year, end_year, start_month, end_mo
                     print(ds['latitude'].values)
                     # Select upper-tropospheric pressures where contrails form and focus on the North Atlantic Ocean (NAO)
                     ds_selected = ds[short_name].sel(level=[200, 250, 300],
-                                                     latitude=slice(-90, 90),
+                                                     latitude=slice(90, -90),
                                                      longitude=slice(300, 360))
                     print(ds_selected.shape)
                     input()
