@@ -28,11 +28,13 @@ def reduce_fields(input_file, short_name):
 def save_reduced_fields_to_netcdf(ds, output_file):
     # Write to new NetCDF file
     logging.info(f"Saving: {output_file}.nc")
+    logging.info(ds.shape)
     ds.to_netcdf(f"{output_file}.nc")
 
 def save_reduced_fields_to_csv(output_file):
     # Read the saved NetCDF file
     ds = xr.open_dataset(f"{output_file}.nc")
+    logging.info(ds.shape)
     
     # Convert to DataFrame and write to a CSV file
     df = ds.to_dataframe().reset_index()
