@@ -14,7 +14,7 @@ def reduce_fields(input_file, short_name):
     ds = xr.open_dataset(input_file, chunks={'time':1})#, 'level':10, 'longitude':360, 'latitude':180})
     
     # Select upper-tropospheric pressures where contrails form and focus on the North Atlantic Ocean (NAO)
-    ds_selected = ds[short_name].sel(level=[200, 250, 300], latitude=slice(60, 30), longitude=slice(300, 360), drop=True)
+    ds_selected = ds[short_name].sel(level=[250], latitude=slice(60, 30), longitude=slice(300, 360), drop=True)
     logging.info("Windowing geographic region")
     
     # Regrid to 1x1 degree using interpolation or nearest-neighbor method
