@@ -32,40 +32,40 @@ def reduce_fields(input_file, short_name):
     return ds_daily
 
 @snoop
-def convert_dataset_to_dataframe(ds, short_name):
-    logging.info("Converting xarray DataSet to pandas DataFrame")
+def convert_slice_to_dataframe(time_value, level_value, latitude, longitude, variable_slice, variable_name):
+    """
+    Converts a slice of the dataset for a specific time and level to a DataFrame.
 
-    # Assuming the Dataset has dimensions ('time', 'level', 'latitude', 'longitude')
-    # and that 'time' and 'level' are coordinate variables
-    time = ds['time'].values
-    level = ds['level'].values
-    latitude = ds['latitude'].values
-    longitude = ds['longitude'].values
+    Parameters:
+    - time_value: The specific time value of the slice.
+    - level_value: The specific level value of the slice.
+    - latitude: 1D array of latitude values.
+    - longitude: 1D array of longitude values.
+    - variable_slice: 2D array (latitude x longitude) of the variable values for the slice.
+    - variable_name: Name of the variable being processed.
 
-    # Get the variable of interest as a numpy array
-    variable_data = ds.values
-
-    # Create meshgrids for each pair of coordinates, resulting in arrays
-    # that have the same shape as the variable_data
-    T, L, Lat, Lon = np.meshgrid(time, level, latitude, longitude, indexing='ij')
-
-    # Flatten the meshgrids and the data array to create 1D arrays
-    T_flat = T.flatten()
-    L_flat = L.flatten()
+    Returns:
+    - df: A pandas DataFrame representing the slice.
+    """
+    # Create meshgrids for latitude and longitude, resulting in arrays
+    Lat, Lon = np.meshgrid(latitude, longitude, indexing='ij')
+    
+    # Flatten the meshgrids and the variable slice to create 1D arrays
     Lat_flat = Lat.flatten()
     Lon_flat = Lon.flatten()
-    variable_flat = variable_data.flatten()
+    variable_flat = variable_slice.flatten()
 
     # Create a DataFrame from the flattened arrays
     df = pd.DataFrame({
-        'date': T_flat,
-        'pressure': L_flat,
+        'date': np.repeat(time_value, len(Lat_flat)),
+        'pressure': np.repeat(level_value, len(Lon_flat)),
         'latitude': Lat_flat,
         'longitude': Lon_flat,
-        short_name: variable_flat
+        variable_name: variable_flat
     })
 
     return df
+
 
 def save_reduced_fields_to_netcdf(output_file, ds=None):
     # Write to new NetCDF file
@@ -78,7 +78,26 @@ def save_reduced_fields_to_csv(output_file, df):
 
     # Convert to DataFrame and write to a CSV file
     logging.info(f"Saving: {output_file}.csv")
-    df.to_csv(f"{output_file}.csv", sep='\t', index=False)
+    df.to_csv(f"{output_file}.csv", mode='a', sep='\t', index=False)
+
+def process_and_save_to_csv(ds, variable_name, output_file):
+    logging.info("Processing and saving dataset to CSV")
+
+    # Ensure no existing file conflicts
+    output_csv = f"{output_file}.csv"
+    if os.path.exists(output_csv):
+        os.remove(output_csv)
+
+    for time_value in ds['time'].values:
+        for level_value in ds['level'].values:
+            # Select the slice for the current time and level
+            variable_slice = ds.sel(time=time_value, level=level_value)[variable_name].values
+
+            # Convert the slice to a DataFrame
+            df_slice = convert_slice_to_dataframe(time_value, level_value, ds['latitude'].values, ds['longitude'].values, variable_slice, variable_name)
+
+            # Append this slice to the CSV file
+            save_reduced_fields_to_csv(output_csv, df_slice)
     
 def process_era5_files(variables_dict, start_year, end_year, start_month, end_month, output_directory='/data/pdonnelly/era5/processed_files'):
     base_path = Path(f"/bdd/ECMWF/ERA5/NETCDF/GLOBAL_025/hourly/AN_PL/{start_year}")
@@ -99,8 +118,10 @@ def process_era5_files(variables_dict, start_year, end_year, start_month, end_mo
                     # save_reduced_fields_to_netcdf(output_file, ds)
 
                     # Convert xarray Dataset into pandas DataFrame
-                    df = convert_dataset_to_dataframe(ds, short_name)
-                    save_reduced_fields_to_csv(output_file, df)
+                    # df = convert_dataset_to_dataframe(ds, short_name)
+                    # save_reduced_fields_to_csv(output_file, df)
+
+                    process_and_save_to_csv(ds, short_name, output_file)
                         
                     logging.info(f"Processed {output_file}")
                     
