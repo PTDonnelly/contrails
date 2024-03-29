@@ -47,7 +47,7 @@ def process_era5_files(variables_dict, start_year, end_year, start_month, end_mo
     output_directory = Path(output_directory)
     output_directory.mkdir(parents=True, exist_ok=True)
     
-    for short_name in variables_dict.values:
+    for short_name in variables_dict.values():
         for year in range(start_year, end_year + 1):
             for month in range(start_month, end_month + 1):
                 # Define filenames
