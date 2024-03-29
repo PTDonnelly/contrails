@@ -11,7 +11,7 @@ import snoop
 # Set up logger
 logging.basicConfig(level=logging.INFO, format='%(asctime)s - %(levelname)s - %(message)s')
 
-# Set Dask to use the 'processes' scheduler globally
+# # Set Dask to use the 'processes' scheduler globally
 # dask.config.set(scheduler='processes')
 
 def reduce_fields(input_file, short_name):
@@ -32,32 +32,19 @@ def reduce_fields(input_file, short_name):
     return ds_daily
 
 @snoop
-def convert_dataset_to_dataframe(ds, short_name):
-    logging.info("Converting xarray DataSet to pandas DataFrame")
+def convert_dataset_to_dataframe_vectorized(ds, short_name):
+    # Stack the 'time' and 'level' dimensions to a single dimension ('samples')
+    # while keeping 'latitude' and 'longitude' as they are.
+    stacked_ds = ds.stack(samples=('time', 'level'))
     
-    # List to hold data before creating DataFrame
-    data_list = []
-
-    # Directly iterate over time and level dimensions
-    for time_value in ds.time.values:
-        for level_value in ds.level.values:
-            slice_data = ds.sel(time=time_value, level=level_value)
-            
-            # Use xarray to convert to DataFrame, which keeps latitude and longitude intact
-            with dask.config.set(scheduler='processes'):
-                slice_df = slice_data.to_dataframe().reset_index()
-
-            # Change default column names
-            slice_df.rename(columns={'time': 'date', 'level': 'pressure'}, inplace=True)
-
-            # Re-order DataFrame columns
-            slice_df = slice_df[['date', 'pressure', 'latitude', 'longitude', short_name]]
-            data_list.append(slice_df)
-            exit()
+    # Convert the stacked DataArray to a DataFrame
+    # This automatically handles the combination of 'time', 'level', 'latitude', and 'longitude'
+    df = stacked_ds.to_dataframe(name=short_name).reset_index()
     
-    # Concatenate all DataFrames in the list into a single DataFrame
-    all_data = pd.concat(data_list, ignore_index=True)
-    return all_data
+    # Optionally, if 'level' represents pressure levels, rename the column
+    df.rename(columns={'time': 'date', 'level': 'pressure'}, inplace=True)
+    
+    return df
 
 def save_reduced_fields_to_netcdf(output_file, ds=None):
     # Write to new NetCDF file
