@@ -16,17 +16,17 @@ def reduce_fields(input_file, short_name):
                                     latitude=slice(60, 30),
                                     longitude=slice(300, 360),
                                     drop=True)
-    logging.info("Windowing region: ", ds_selected.shape)
+    logging.info("Windowing region: {ds_selected.shape}")
     
     # Regrid to 1x1 degree using interpolation or nearest-neighbor method
     ds_coarse = ds_selected.coarsen(latitude=4,
                                     longitude=4,
                                     boundary='trim').mean()
-    logging.info("Downscaling grid: ", ds_coarse.shape)
+    logging.info("Downscaling grid: {ds_coarse.shape}")
 
     # Create daily averages
     ds_daily = ds_coarse.resample(time='1D').mean()
-    logging.info("Daily average: ", ds_daily.shape)
+    logging.info("Daily average: {ds_daily.shape}")
     
     return ds_daily
 
