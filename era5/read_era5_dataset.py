@@ -61,7 +61,7 @@ def remove_land_values(ds, land_mask):
             ds[variable] = attribute.where(land_mask==0, np.nan)
     return ds
 
-def plot_masked_data_from_df(combined_df, output_directory, variable='t'):
+def plot_masked_data_from_df(combined_df, iasi_df, output_directory, variable='t'):
     # Prepare DataFrame: separate regions and pressure levels
     regions = combined_df['region'].unique()
     reference_pressure_level = 250 # mbar
@@ -106,6 +106,9 @@ def plot_masked_data_from_df(combined_df, output_directory, variable='t'):
         land = cfeature.NaturalEarthFeature('physical', 'land', '50m', edgecolor='black', facecolor='none')
         ax.add_feature(land)
 
+        # Add locations of IASI measurements
+        ax.scatter(iasi_df['Longitude'], iasi_df['Latitude'], s=2, color='red', transform=ccrs.PlateCarree())
+
         # Add a colorbar
         cbar = fig.colorbar(mesh, ax=ax, orientation='horizontal', pad=0.1, aspect=30)
         cbar.set_label(r"$T_{250 mbar} (K)$")
@@ -114,6 +117,7 @@ def plot_masked_data_from_df(combined_df, output_directory, variable='t'):
         ax.set_title(f'{region}', fontsize=10)
         ax.set_xlabel('Longitude', fontsize=10)
         ax.set_ylabel('Latitude', fontsize=10)
+        
         # Assuming you can calculate or have min and max values for lon and lat per region
         ax.set_extent([lon.min(), lon.max(), lat.min(), lat.max()], crs=ccrs.PlateCarree())
 
@@ -130,28 +134,23 @@ def plot_masked_data_from_df(combined_df, output_directory, variable='t'):
     plt.savefig(os.path.join(output_directory, f"masked_data_{variable}.png"), bbox_inches='tight', dpi=300)
     plt.close()
 
-def plot_statistics_from_df(df, output_directory, n_samples=1000, columns_drop=None, state_seed=42):   
+def plot_statistics_from_df(data, output_directory, n_samples=1000, columns_drop=None, state_seed=42):   
     # Sub-sample the dataset
     rng = np.random.RandomState(state_seed)
-    indices = rng.choice(df.shape[0], size=n_samples, replace=False)
+    indices = rng.choice(data.shape[0], size=n_samples, replace=False)
 
     # Drop horizontal and vertical grids, and the liquid cloud parameter
     columns_drop = ['latitude', 'longitude', 'level', 'clwc', ]
     # Drop the unwanted columns if specified
     if columns_drop is not None:
-        subset_df = df.iloc[indices].drop(columns=columns_drop)
+        subset = data.iloc[indices].drop(columns=columns_drop)
     else:
-        subset_df = df.iloc[indices]
-    # Extract numerical columns
-    numeric_subset_df = subset_df.select_dtypes(include=[np.number])
+        subset = data.iloc[indices]
 
     # Initialize the StandardScaler
     scaler = StandardScaler()
-    standardised_dataset = scaler.fit_transform(numeric_subset_df)
+    standardised_dataset = scaler.fit_transform(subset)
     standardised_df = pd.DataFrame(standardised_dataset, columns=['t', 'u', 'v', 'q', 'ciwc', 'cc'])
-
-    # # Create a figure with subplots in a 3x1 layout
-    # fig, axs = plt.subplots(nrows=1, ncols=3, figsize=(10, 10))
 
     # Create a pair plot
     pairplot = sns.pairplot(data=standardised_df,
@@ -161,64 +160,60 @@ def plot_statistics_from_df(df, output_directory, n_samples=1000, columns_drop=N
                             diag_kws = {'bins':10},
                             corner=True)
 
-    plt.suptitle('Pair Plot of Sampled Data', y=0.9)  # Adjust title position
-    
-    # Iterate over the axes in the pairplot
-    for ax in pairplot.axes.flatten():
-        # Check if the axis is not None
-        if ax is not None:
-            ax.tick_params(axis='both', size=15, labelsize=10)
-            # Set axes label size
-            ax.set_xlabel(ax.get_xlabel(), fontsize=20)
-            ax.set_ylabel(ax.get_ylabel(), fontsize=20)
+    plt.suptitle('Pair Plot of Sampled Data', y=1.02)  # Adjust title position
 
     # Finish and save the plot
     plt.tight_layout()
-    plt.savefig(os.path.join(output_directory, f'dataset_pairplot2.png'), bbox_inches='tight')
+    plt.savefig(os.path.join(output_directory, f'dataset_pairplot.png'), bbox_inches='tight')
     plt.close()
 
 def main():
+    # Open CSV file containing IASI OLR measurements
+    iasi_data_path = "G:\\My Drive\\Research\\Postdoc_2_CNRS_LATMOS\\data\\iasi"
+    iasi_data_file = "spectra_and_cloud_products.csv"
+    iasi_df = pd.read_csv(os.path.join(iasi_data_path, iasi_data_file), sep='\t')
+
     # Open the NetCDF file and calculate the average across the time dimension
-    data_path = "G:\\My Drive\\Research\\Postdoc_2_CNRS_LATMOS\\data\\era5"
+    era5_data_path = "G:\\My Drive\\Research\\Postdoc_2_CNRS_LATMOS\\data\\era5"
     data_files = ["20130301_North Pacific.nc", "20130301_North Atlantic.nc", "20130301_South China Sea.nc"]
     
     # Specify the location to save reduced data and plots
-    output_directory = "C:\\Users\\donnelly\\Documents\\projects\\era5"
-    # output_directory = "C:\\Users\\padra\\Documents\\Research\\projects\\contrails\\era5"
+    # output_directory = "C:\\Users\\donnelly\\Documents\\projects\\era5"
+    output_directory = "C:\\Users\\padra\\Documents\\Research\\projects\\contrails\\era5"
 
     # Initialise a list to store the mean datasets for each region
-    dfs = []
+    era5_dfs = []
 
     for data_file in data_files:
         # Open NetCDF data and compute daily average
-        ds = xr.open_dataset(os.path.join(data_path, data_file))
-        mean_ds = ds.mean(dim='time')
+        era5_ds = xr.open_dataset(os.path.join(era5_data_path, data_file))
+        mean_era5_ds = era5_ds.mean(dim='time')
 
         # Extract geographic region from the file name
         region = get_region_from_data_file(data_file)
 
         # Create land mask, interpolate onto dataset grid
-        land_mask = get_land_mask(mean_ds)
+        land_mask = get_land_mask(mean_era5_ds)
         
         # Remove overland values from dataset
-        masked_mean_ds = remove_land_values(mean_ds, land_mask)
+        masked_mean_era5_ds = remove_land_values(mean_era5_ds, land_mask)
 
         # Store the masked mean dataset in to a DataFrame
-        df = masked_mean_ds.to_dataframe().reset_index()
+        era5_df = masked_mean_era5_ds.to_dataframe().reset_index()
 
         # Add a 'region' column to the DataFrame
-        df['region'] = region
+        era5_df['region'] = region
 
         # Append the DataFrame to the list
-        dfs.append(df)
+        era5_dfs.append(era5_df)
 
     # # Combine all regional DataFrames into a single DataFrame and save to a CSV file
-    combined_df = pd.concat(dfs, ignore_index=True)
-    combined_df.to_csv(os.path.join(output_directory, "combined_data.csv"), sep='\t', index=False)
+    combined_era5_df = pd.concat(era5_dfs, ignore_index=True)
+    combined_era5_df.to_csv(os.path.join(output_directory, "combined_data.csv"), sep='\t', index=False)
 
     # Plot data
-    plot_statistics_from_df(combined_df, output_directory)
-    plot_masked_data_from_df(combined_df, output_directory)
+    # plot_statistics_from_df(combined_era5_df, output_directory)
+    plot_masked_data_from_df(combined_era5_df, iasi_df, output_directory)
 
 
 
