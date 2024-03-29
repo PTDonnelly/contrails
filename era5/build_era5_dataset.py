@@ -5,6 +5,40 @@ import pandas as pd
 from pathlib import Path
 import xarray as xr
 
+def reduce_fields(input_file, short_name):
+    ds = xr.open_dataset(input_file, chunks={'time':1, 'level':5, 'longitude':200, 'latitude':100})
+    
+    # Select upper-tropospheric pressures where contrails form and focus on the North Atlantic Ocean (NAO)
+    ds_selected = ds[short_name].sel(level=[200, 250, 300],
+                                    latitude=slice(60, 30),
+                                    longitude=slice(300, 360),
+                                    drop=True)
+    print(ds_selected.shape)
+    
+    # Regrid to 1x1 degree using interpolation or nearest-neighbor method
+    ds_coarse = ds_selected.coarsen(latitude=4,
+                                    longitude=4,
+                                    boundary='trim').mean()
+    print(ds_coarse.shape)
+
+    # Create daily averages
+    ds_daily = ds_coarse.resample(time='1D').mean()
+    print(ds_daily.shape)
+    
+    return ds_daily
+
+def save_reduced_fields_to_netcdf(ds, output_file):
+    # Write to new NetCDF file
+    ds.to_netcdf(f"{output_file}.nc")
+
+def save_reduced_fields_to_csv(output_file):
+    # Read the saved NetCDF file
+    ds = xr.open_dataset(f"{output_file}.nc")
+    
+    # Convert to DataFrame and write to a CSV file
+    df = ds.to_dataframe().reset_index()
+    df.to_csv(f"{output_file}.csv", sep='\t', index=False)
+    
 def process_era5_files(variables_dict, start_year, end_year, start_month, end_month, output_directory='/data/pdonnelly/era5/processed_files'):
     base_path = Path(f"/bdd/ECMWF/ERA5/NETCDF/GLOBAL_025/hourly/AN_PL/{start_year}")
     output_directory = Path(output_directory)
@@ -19,35 +53,13 @@ def process_era5_files(variables_dict, start_year, end_year, start_month, end_mo
                     
 
                 if input_file.exists():
-                    ds = xr.open_dataset(input_file, chunks={'time':1, 'level':5, 'longitude':200, 'latitude':100})
-                    
-                    # Select upper-tropospheric pressures where contrails form and focus on the North Atlantic Ocean (NAO)
-                    ds_selected = ds[short_name].sel(level=[200, 250, 300],
-                                                     latitude=slice(60, 30),
-                                                     longitude=slice(300, 360),
-                                                     drop=True)
-                    print(ds_selected.shape)
-                    
-                    # Regrid to 1x1 degree using interpolation or nearest-neighbor method
-                    ds_coarse = ds_selected.coarsen(latitude=4,
-                                                    longitude=4,
-                                                    boundary='trim').mean()
-                    print(ds_coarse.shape)
+                    # Read and reduce atmospheric data
+                    ds_reduced = reduce_fields(input_file, short_name)
 
-                    # Create daily averages
-                    ds_daily = ds_coarse.resample(time='1D').mean()
-                    print(ds_daily.shape)
+                    save_reduced_fields_to_netcdf(ds_reduced, output_file)
 
-                    # Write to new NetCDF file
-                    ds_daily.to_netcdf(f"{output_file}.nc")
-
-                    # Read the saved NetCDF file
-                    ds_reduced = xr.open_dataset(f"{output_file}.nc")
-                    
-                    # Convert to DataFrame and write to a CSV file
-                    df_reduced = ds_reduced.to_dataframe().reset_index()
-                    df_reduced.to_csv(f"{output_file}.csv", sep='\t', index=False)
-                    
+                    save_reduced_fields_to_csv(output_file)
+                        
                     print(f"Processed {output_file}")
                     
                 else:
