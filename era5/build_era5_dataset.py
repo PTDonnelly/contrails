@@ -6,8 +6,6 @@ import pandas as pd
 from pathlib import Path
 import xarray as xr
 
-import snoop
-
 logging.basicConfig(level=logging.INFO, format='%(asctime)s - %(levelname)s - %(message)s')
 
 def reduce_fields(input_file, short_name):
@@ -27,16 +25,15 @@ def reduce_fields(input_file, short_name):
     
     return ds_daily
 
-@snoop
 def save_reduced_fields_to_netcdf(ds, output_file):
     # Write to new NetCDF file
     logging.info(f"Saving: {output_file}.nc")
     logging.info(ds.shape)
     ds.to_netcdf(f"{output_file}.nc")
 
-def save_reduced_fields_to_csv(output_file):
+def save_reduced_fields_to_csv(ds, output_file):
     # Read the saved NetCDF file
-    ds = xr.open_dataset(f"{output_file}.nc")
+    # ds = xr.open_dataset(f"{output_file}.nc")
     logging.info(ds.shape)
     
     # Convert to DataFrame and write to a CSV file
@@ -61,8 +58,8 @@ def process_era5_files(variables_dict, start_year, end_year, start_month, end_mo
                     # Read and reduce atmospheric data
                     ds_reduced = reduce_fields(input_file, short_name)
 
-                    save_reduced_fields_to_netcdf(ds_reduced, output_file)
-                    save_reduced_fields_to_csv(output_file)
+                    # save_reduced_fields_to_netcdf(ds_reduced, output_file)
+                    save_reduced_fields_to_csv(ds_reduced, output_file)
                         
                     logging.info(f"Processed {output_file}")
                     
