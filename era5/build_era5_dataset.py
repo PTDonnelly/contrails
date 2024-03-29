@@ -1,9 +1,12 @@
 import dask.dataframe as dd
+import logging
 import numpy as np
 import os
 import pandas as pd
 from pathlib import Path
 import xarray as xr
+
+logging.basicConfig(level=logging.INFO, format='%(asctime)s - %(levelname)s - %(message)s')
 
 def reduce_fields(input_file, short_name):
     ds = xr.open_dataset(input_file, chunks={'time':1, 'level':5, 'longitude':200, 'latitude':100})
@@ -13,22 +16,23 @@ def reduce_fields(input_file, short_name):
                                     latitude=slice(60, 30),
                                     longitude=slice(300, 360),
                                     drop=True)
-    print(ds_selected.shape)
+    logging.info("Windowing region: ", ds_selected.shape)
     
     # Regrid to 1x1 degree using interpolation or nearest-neighbor method
     ds_coarse = ds_selected.coarsen(latitude=4,
                                     longitude=4,
                                     boundary='trim').mean()
-    print(ds_coarse.shape)
+    logging.info("Downscaling grid: ", ds_coarse.shape)
 
     # Create daily averages
     ds_daily = ds_coarse.resample(time='1D').mean()
-    print(ds_daily.shape)
+    logging.info("Daily average: ", ds_daily.shape)
     
     return ds_daily
 
 def save_reduced_fields_to_netcdf(ds, output_file):
     # Write to new NetCDF file
+    logging.info(f"Saving: {output_file}.nc")
     ds.to_netcdf(f"{output_file}.nc")
 
 def save_reduced_fields_to_csv(output_file):
@@ -37,6 +41,7 @@ def save_reduced_fields_to_csv(output_file):
     
     # Convert to DataFrame and write to a CSV file
     df = ds.to_dataframe().reset_index()
+    logging.info(f"Saving: {output_file}.csv")
     df.to_csv(f"{output_file}.csv", sep='\t', index=False)
     
 def process_era5_files(variables_dict, start_year, end_year, start_month, end_month, output_directory='/data/pdonnelly/era5/processed_files'):
@@ -57,13 +62,12 @@ def process_era5_files(variables_dict, start_year, end_year, start_month, end_mo
                     ds_reduced = reduce_fields(input_file, short_name)
 
                     save_reduced_fields_to_netcdf(ds_reduced, output_file)
-
                     save_reduced_fields_to_csv(output_file)
                         
-                    print(f"Processed {output_file}")
+                    logging.info(f"Processed {output_file}")
                     
                 else:
-                    print(f"File does not exist: {input_file}")
+                    logging.info(f"File does not exist: {input_file}")
 
                 exit()
 
