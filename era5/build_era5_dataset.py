@@ -1,4 +1,4 @@
-import dask.dataframe as dd
+import dask
 import logging
 import numpy as np
 import os
@@ -8,10 +8,14 @@ import xarray as xr
 
 import snoop
 
+# Set up logger
 logging.basicConfig(level=logging.INFO, format='%(asctime)s - %(levelname)s - %(message)s')
 
+# Set Dask to use the 'processes' scheduler globally
+dask.config.set(scheduler='processes')
+
 def reduce_fields(input_file, short_name):
-    ds = xr.open_dataset(input_file, chunks={'time':1})#, 'level':10, 'longitude':360, 'latitude':180})
+    ds = xr.open_dataset(input_file, chunks={})#, 'level':10, 'longitude':360, 'latitude':180})
     
     # Select upper-tropospheric pressures where contrails form and focus on the North Atlantic Ocean (NAO)
     ds_selected = ds[short_name].sel(level=[250], latitude=slice(60, 30), longitude=slice(300, 360), drop=True)
