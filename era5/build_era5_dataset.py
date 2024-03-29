@@ -9,7 +9,7 @@ import xarray as xr
 logging.basicConfig(level=logging.INFO, format='%(asctime)s - %(levelname)s - %(message)s')
 
 def reduce_fields(input_file, short_name):
-    ds = xr.open_dataset(input_file, chunks={'time':1})#, 'level':10, 'longitude':720, 'latitude':360})
+    ds = xr.open_dataset(input_file, chunks={'time':1, 'level':10, 'longitude':360, 'latitude':180})
     
     # Select upper-tropospheric pressures where contrails form and focus on the North Atlantic Ocean (NAO)
     ds_selected = ds[short_name].sel(level=[200, 250, 300], latitude=slice(60, 30), longitude=slice(300, 360), drop=True)
@@ -25,15 +25,16 @@ def reduce_fields(input_file, short_name):
     
     return ds_daily
 
-def save_reduced_fields_to_netcdf(ds, output_file):
+def save_reduced_fields_to_netcdf(output_file, ds=None):
     # Write to new NetCDF file
     logging.info(f"Saving: {output_file}.nc")
     logging.info(ds.shape)
     ds.to_netcdf(f"{output_file}.nc")
 
-def save_reduced_fields_to_csv(ds, output_file):
-    # Read the saved NetCDF file
-    # ds = xr.open_dataset(f"{output_file}.nc")
+def save_reduced_fields_to_csv(output_file, ds=None):
+    if not ds:
+        # Read the saved NetCDF file
+        ds = xr.open_dataset(f"{output_file}.nc")
     logging.info(ds.shape)
     
     # Convert to DataFrame and write to a CSV file
@@ -46,7 +47,7 @@ def process_era5_files(variables_dict, start_year, end_year, start_month, end_mo
     output_directory = Path(output_directory)
     output_directory.mkdir(parents=True, exist_ok=True)
     
-    for long_name, short_name in variables_dict.items():
+    for short_name in variables_dict.values:
         for year in range(start_year, end_year + 1):
             for month in range(start_month, end_month + 1):
                 # Define filenames
@@ -58,7 +59,7 @@ def process_era5_files(variables_dict, start_year, end_year, start_month, end_mo
                     # Read and reduce atmospheric data
                     ds_reduced = reduce_fields(input_file, short_name)
 
-                    # save_reduced_fields_to_netcdf(ds_reduced, output_file)
+                    save_reduced_fields_to_netcdf(ds_reduced, output_file)
                     save_reduced_fields_to_csv(ds_reduced, output_file)
                         
                     logging.info(f"Processed {output_file}")
