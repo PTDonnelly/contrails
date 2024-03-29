@@ -59,8 +59,8 @@ def process_era5_files(variables_dict, start_year, end_year, start_month, end_mo
                     # Read and reduce atmospheric data
                     ds_reduced = reduce_fields(input_file, short_name)
 
-                    save_reduced_fields_to_netcdf(ds_reduced, output_file)
-                    save_reduced_fields_to_csv(ds_reduced, output_file)
+                    save_reduced_fields_to_netcdf(output_file, ds_reduced)
+                    save_reduced_fields_to_csv(output_file, ds_reduced)
                         
                     logging.info(f"Processed {output_file}")
                     
