@@ -12,21 +12,16 @@ def reduce_fields(input_file, short_name):
     ds = xr.open_dataset(input_file, chunks={'time':1, 'level':5, 'longitude':200, 'latitude':100})
     
     # Select upper-tropospheric pressures where contrails form and focus on the North Atlantic Ocean (NAO)
-    ds_selected = ds[short_name].sel(level=[200, 250, 300],
-                                    latitude=slice(60, 30),
-                                    longitude=slice(300, 360),
-                                    drop=True)
-    logging.info("Windowing region: {ds_selected.shape}")
+    ds_selected = ds[short_name].sel(level=[200, 250, 300], latitude=slice(60, 30), longitude=slice(300, 360), drop=True)
+    logging.info("Windowing geographic region")
     
     # Regrid to 1x1 degree using interpolation or nearest-neighbor method
-    ds_coarse = ds_selected.coarsen(latitude=4,
-                                    longitude=4,
-                                    boundary='trim').mean()
-    logging.info("Downscaling grid: {ds_coarse.shape}")
+    ds_coarse = ds_selected.coarsen(latitude=4, longitude=4, boundary='trim').mean()
+    logging.info("Downscaling spatial grid")
 
     # Create daily averages
     ds_daily = ds_coarse.resample(time='1D').mean()
-    logging.info("Daily average: {ds_daily.shape}")
+    logging.info("Computing daily average")
     
     return ds_daily
 
