@@ -32,7 +32,7 @@ def reduce_fields(input_file, short_name):
     return ds_daily
 
 @snoop
-def convert_dataset_to_dataframe_optimized(ds, short_name):
+def convert_dataset_to_dataframe(ds, short_name):
     logging.info("Converting xarray DataSet to pandas DataFrame")
 
     # Assuming the Dataset has dimensions ('time', 'level', 'latitude', 'longitude')
