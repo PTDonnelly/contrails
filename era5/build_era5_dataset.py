@@ -42,6 +42,10 @@ def convert_dataset_to_dataframe(ds, short_name):
     latitude = ds['latitude'].values
     longitude = ds['longitude'].values
 
+    print(ds.variables)
+
+    exit()
+
     # Get the variable of interest as a numpy array
     variable_data = ds[short_name].values
 
