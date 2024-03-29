@@ -39,7 +39,7 @@ def convert_dataset_to_dataframe(ds, short_name):
             slice_data = ds.isel(time=time_idx, level=level_idx)
             
             # Flatten the latitude and longitude dimensions and prepare data for DataFrame
-            flattened_data = slice_data.cc.values.flatten()
+            flattened_data = slice_data.values.flatten()
             lat, lon = [coord.flatten() for coord in np.meshgrid(slice_data.latitude, slice_data.longitude, indexing='ij')]
             
             # Create a temporary DataFrame for the current slice
@@ -51,6 +51,7 @@ def convert_dataset_to_dataframe(ds, short_name):
                 'value': flattened_data
             })
             
+            logging.info(temp_df.head(10))
             # Append the temporary DataFrame to the main DataFrame
             all_data = pd.concat([all_data, temp_df], ignore_index=True)
     
