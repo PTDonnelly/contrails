@@ -6,6 +6,8 @@ import pandas as pd
 from pathlib import Path
 import xarray as xr
 
+import snoop
+
 logging.basicConfig(level=logging.INFO, format='%(asctime)s - %(levelname)s - %(message)s')
 
 def reduce_fields(input_file, short_name):
@@ -25,6 +27,7 @@ def reduce_fields(input_file, short_name):
     
     return ds_daily
 
+@snoop
 def save_reduced_fields_to_netcdf(ds, output_file):
     # Write to new NetCDF file
     logging.info(f"Saving: {output_file}.nc")
