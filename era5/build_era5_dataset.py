@@ -11,7 +11,7 @@ import snoop
 logging.basicConfig(level=logging.INFO, format='%(asctime)s - %(levelname)s - %(message)s')
 
 def reduce_fields(input_file, short_name):
-    ds = xr.open_dataset(input_file, chunks={'time':1, 'level':10, 'longitude':360, 'latitude':180})
+    ds = xr.open_dataset(input_file, chunks={'time':1})#, 'level':10, 'longitude':360, 'latitude':180})
     
     # Select upper-tropospheric pressures where contrails form and focus on the North Atlantic Ocean (NAO)
     ds_selected = ds[short_name].sel(level=[200, 250, 300], latitude=slice(60, 30), longitude=slice(300, 360), drop=True)
@@ -30,21 +30,28 @@ def reduce_fields(input_file, short_name):
 @snoop
 def convert_dataset_to_dataframe(ds, short_name):
     logging.info("Converting xarray DataSet to pandas DataFrame")
+    
+    # List to hold data before creating DataFrame
+    data_list = []
 
-    # Stack the time and level dimensions into a single 'samples' dimension
-    stacked_ds = ds.stack(samples=('time', 'level'))
+    # Directly iterate over time and level dimensions
+    for time_value in ds.time.values:
+        for level_value in ds.level.values:
+            slice_data = ds.sel(time=time_value, level=level_value)
+            
+            # Use xarray to convert to DataFrame, which keeps latitude and longitude intact
+            slice_df = slice_data.to_dataframe().reset_index()
 
-    # Convert the stacked DataArray to a DataFrame
-    df = stacked_ds.to_dataframe(name=short_name).reset_index()
+            # Change default column names
+            slice_df.rename(columns={'time': 'date', 'level': 'pressure'}, inplace=True)
 
-    # At this point, 'df' contains columns for 'time', 'level', 'latitude', 'longitude', and your variable.
-    # Rename 'level' to 'pressure' to match your desired output
-    df.rename(columns={'level': 'pressure'}, inplace=True)
-
-    # Ensure the DataFrame has columns in the desired order
-    df = df[['time', 'pressure', 'latitude', 'longitude', short_name]]
-
-    return df
+            # Re-order DataFrame columns
+            slice_df = slice_df[['time', 'pressure', 'latitude', 'longitude', short_name]]
+            data_list.append(slice_df)
+    
+    # Concatenate all DataFrames in the list into a single DataFrame
+    all_data = pd.concat(data_list, ignore_index=True)
+    return all_data
 
 def save_reduced_fields_to_netcdf(output_file, ds=None):
     # Write to new NetCDF file
