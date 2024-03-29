@@ -38,8 +38,7 @@ def convert_dataset_to_dataframe(ds, short_name):
     stacked_ds = ds.stack(samples=('time', 'level'))
     
     # Convert the stacked DataArray to a DataFrame
-    # This automatically handles the combination of 'time', 'level', 'latitude', and 'longitude'
-    df = stacked_ds.to_dataframe(name=short_name).reset_index()
+    df = stacked_ds.to_dataframe().reset_index()
     
     # Optionally, if 'level' represents pressure levels, rename the column
     df.rename(columns={'time': 'date', 'level': 'pressure'}, inplace=True)
