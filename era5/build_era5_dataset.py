@@ -46,7 +46,7 @@ def convert_dataset_to_dataframe(ds, short_name):
             slice_df.rename(columns={'time': 'date', 'level': 'pressure'}, inplace=True)
 
             # Re-order DataFrame columns
-            slice_df = slice_df[['time', 'pressure', 'latitude', 'longitude', short_name]]
+            slice_df = slice_df[['date', 'pressure', 'latitude', 'longitude', short_name]]
             data_list.append(slice_df)
     
     # Concatenate all DataFrames in the list into a single DataFrame
