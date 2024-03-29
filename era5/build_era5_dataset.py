@@ -91,7 +91,7 @@ def process_and_save_to_csv(ds, variable_name, output_file):
     for time_value in ds['time'].values:
         for level_value in ds['level'].values:
             # Select the slice for the current time and level
-            variable_slice = ds.sel(time=time_value, level=level_value)[variable_name].values
+            variable_slice = ds.sel(time=time_value, level=level_value).values
 
             # Convert the slice to a DataFrame
             df_slice = convert_slice_to_dataframe(time_value, level_value, ds['latitude'].values, ds['longitude'].values, variable_slice, variable_name)
