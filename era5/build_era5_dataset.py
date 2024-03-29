@@ -12,7 +12,7 @@ import snoop
 logging.basicConfig(level=logging.INFO, format='%(asctime)s - %(levelname)s - %(message)s')
 
 # Set Dask to use the 'processes' scheduler globally
-dask.config.set(scheduler='processes')
+# dask.config.set(scheduler='processes')
 
 def reduce_fields(input_file, short_name):
     ds = xr.open_dataset(input_file, chunks={})#, 'level':10, 'longitude':360, 'latitude':180})
@@ -44,7 +44,8 @@ def convert_dataset_to_dataframe(ds, short_name):
             slice_data = ds.sel(time=time_value, level=level_value)
             
             # Use xarray to convert to DataFrame, which keeps latitude and longitude intact
-            slice_df = slice_data.to_dataframe().reset_index()
+            with dask.config.set(scheduler='processes'):
+                slice_df = slice_data.to_dataframe().reset_index()
 
             # Change default column names
             slice_df.rename(columns={'time': 'date', 'level': 'pressure'}, inplace=True)
