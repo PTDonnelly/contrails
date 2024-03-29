@@ -15,7 +15,7 @@ logging.basicConfig(level=logging.INFO, format='%(asctime)s - %(levelname)s - %(
 # dask.config.set(scheduler='processes')
 
 def reduce_fields(input_file, short_name):
-    ds = xr.open_dataset(input_file, chunks={'time':1})#, 'level':10, 'longitude':360, 'latitude':180})
+    ds = xr.open_dataset(input_file, chunks={})#, 'level':10, 'longitude':360, 'latitude':180})
     
     # Select upper-tropospheric pressures where contrails form and focus on the North Atlantic Ocean (NAO)
     ds_selected = ds[short_name].sel(level=[250], latitude=slice(60, 30), longitude=slice(300, 360), drop=True)
@@ -32,17 +32,39 @@ def reduce_fields(input_file, short_name):
     return ds_daily
 
 @snoop
-def convert_dataset_to_dataframe(ds, short_name):
-    # Stack the 'time' and 'level' dimensions to a single dimension ('samples')
-    # while keeping 'latitude' and 'longitude' as they are.
-    stacked_ds = ds.stack(samples=('time', 'level'))
-    
-    # Convert the stacked DataArray to a DataFrame
-    df = stacked_ds.to_dataframe().reset_index()
-    
-    # Optionally, if 'level' represents pressure levels, rename the column
-    df.rename(columns={'time': 'date', 'level': 'pressure'}, inplace=True)
-    
+def convert_dataset_to_dataframe_optimized(ds, short_name):
+    logging.info("Converting xarray DataSet to pandas DataFrame")
+
+    # Assuming the Dataset has dimensions ('time', 'level', 'latitude', 'longitude')
+    # and that 'time' and 'level' are coordinate variables
+    time = ds['time'].values
+    level = ds['level'].values
+    latitude = ds['latitude'].values
+    longitude = ds['longitude'].values
+
+    # Get the variable of interest as a numpy array
+    variable_data = ds[short_name].values
+
+    # Create meshgrids for each pair of coordinates, resulting in arrays
+    # that have the same shape as the variable_data
+    T, L, Lat, Lon = np.meshgrid(time, level, latitude, longitude, indexing='ij')
+
+    # Flatten the meshgrids and the data array to create 1D arrays
+    T_flat = T.flatten()
+    L_flat = L.flatten()
+    Lat_flat = Lat.flatten()
+    Lon_flat = Lon.flatten()
+    variable_flat = variable_data.flatten()
+
+    # Create a DataFrame from the flattened arrays
+    df = pd.DataFrame({
+        'date': T_flat,
+        'pressure': L_flat,
+        'latitude': Lat_flat,
+        'longitude': Lon_flat,
+        short_name: variable_flat
+    })
+
     return df
 
 def save_reduced_fields_to_netcdf(output_file, ds=None):
