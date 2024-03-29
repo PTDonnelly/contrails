@@ -42,6 +42,9 @@ def convert_dataset_to_dataframe(ds, short_name):
             # Use xarray to convert to DataFrame, which keeps latitude and longitude intact
             slice_df = slice_data.to_dataframe().reset_index()
 
+            # Rename level column to pressure
+            slice_df.rename(columns={'level': 'pressure'}, inplace=True)
+
             # Re-order DataFrame columns
             slice_df = slice_df[['time', 'pressure', 'latitude', 'longitude', short_name]]
             data_list.append(slice_df)
