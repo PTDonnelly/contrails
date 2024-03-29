@@ -27,7 +27,7 @@ def reduce_fields(input_file, short_name):
     
     return ds_daily
 
-@snoop
+# @snoop
 def convert_dataset_to_dataframe(ds, short_name):
     # Preparing an empty DataFrame to hold all the data
     columns = ['time', 'altitude', 'latitude', 'longitude', short_name]
@@ -48,7 +48,7 @@ def convert_dataset_to_dataframe(ds, short_name):
                 'altitude': np.repeat(slice_data.level.values, len(flattened_data)),
                 'latitude': np.tile(lat, 1),
                 'longitude': np.tile(lon, 1),
-                'value': flattened_data
+                short_name: flattened_data
             })
             
             logging.info(temp_df.head(10))
