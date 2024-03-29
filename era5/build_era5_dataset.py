@@ -41,19 +41,14 @@ def convert_dataset_to_dataframe(ds, short_name):
             
             # Use xarray to convert to DataFrame, which keeps latitude and longitude intact
             slice_df = slice_data.to_dataframe().reset_index()
-            logging.info(slice_df.head())
-            exit()
-    #         # Add time and level columns based on the current slice
-    #         slice_df['time'] = time_value
-    #         slice_df['pressure'] = level_value
-            
-    #         # Keep only needed columns and rename the variable column
-    #         slice_df = slice_df[['time', 'pressure', 'latitude', 'longitude', short_name]].copy()
-    #         data_list.append(slice_df)
+
+            # Re-order DataFrame columns
+            slice_df = slice_df[['time', 'pressure', 'latitude', 'longitude', short_name]]
+            data_list.append(slice_df)
     
-    # # Concatenate all DataFrames in the list into a single DataFrame
-    # all_data = pd.concat(data_list, ignore_index=True)
-    return
+    # Concatenate all DataFrames in the list into a single DataFrame
+    all_data = pd.concat(data_list, ignore_index=True)
+    return all_data
 
 def save_reduced_fields_to_netcdf(output_file, ds=None):
     # Write to new NetCDF file
