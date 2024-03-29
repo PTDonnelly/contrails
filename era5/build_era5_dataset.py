@@ -6,6 +6,8 @@ import pandas as pd
 from pathlib import Path
 import xarray as xr
 
+import snoop
+
 logging.basicConfig(level=logging.INFO, format='%(asctime)s - %(levelname)s - %(message)s')
 
 def reduce_fields(input_file, short_name):
@@ -25,20 +27,45 @@ def reduce_fields(input_file, short_name):
     
     return ds_daily
 
+@snoop
+def convert_dataset_to_dataframe(ds, short_name):
+    # Preparing an empty DataFrame to hold all the data
+    columns = ['time', 'altitude', 'latitude', 'longitude', short_name]
+    all_data = pd.DataFrame(columns=columns)
+
+    for time_idx in range(len(ds.time)):
+        for level_idx in range(len(ds.level)):
+            # Extracting a specific time and altitude slice
+            slice_data = ds.isel(time=time_idx, level=level_idx)
+            
+            # Flatten the latitude and longitude dimensions and prepare data for DataFrame
+            flattened_data = slice_data.cc.values.flatten()
+            lat, lon = [coord.flatten() for coord in np.meshgrid(slice_data.latitude, slice_data.longitude, indexing='ij')]
+            
+            # Create a temporary DataFrame for the current slice
+            temp_df = pd.DataFrame({
+                'time': np.repeat(slice_data.time.values, len(flattened_data)),
+                'altitude': np.repeat(slice_data.level.values, len(flattened_data)),
+                'latitude': np.tile(lat, 1),
+                'longitude': np.tile(lon, 1),
+                'value': flattened_data
+            })
+            
+            # Append the temporary DataFrame to the main DataFrame
+            all_data = pd.concat([all_data, temp_df], ignore_index=True)
+    
+    return all_data
+
 def save_reduced_fields_to_netcdf(output_file, ds=None):
     # Write to new NetCDF file
     logging.info(f"Saving: {output_file}.nc")
     logging.info(ds.shape)
     ds.to_netcdf(f"{output_file}.nc")
 
-def save_reduced_fields_to_csv(output_file, ds=None):
-    if not ds:
-        # Read the saved NetCDF file
-        ds = xr.open_dataset(f"{output_file}.nc")
-    logging.info(ds.shape)
-    
+def save_reduced_fields_to_csv(output_file, df):
+    logging.info(df.shape)
+
     # Convert to DataFrame and write to a CSV file
-    df = ds.to_dataframe().reset_index()
     logging.info(f"Saving: {output_file}.csv")
     df.to_csv(f"{output_file}.csv", sep='\t', index=False)
     
@@ -56,11 +83,13 @@ def process_era5_files(variables_dict, start_year, end_year, start_month, end_mo
                     
 
                 if input_file.exists():
-                    # Read and reduce atmospheric data
-                    ds_reduced = reduce_fields(input_file, short_name)
+                    # Read and reduce atmospheric data, store in xarray DataSet
+                    ds = reduce_fields(input_file, short_name)
+                    # save_reduced_fields_to_netcdf(output_file, ds)
 
-                    save_reduced_fields_to_netcdf(output_file, ds_reduced)
-                    save_reduced_fields_to_csv(output_file, ds_reduced)
+                    # Convert xarray Dataset into pandas DataFrame
+                    df = convert_dataset_to_dataframe(ds, short_name)
+                    save_reduced_fields_to_csv(output_file, df)
                         
                     logging.info(f"Processed {output_file}")
                     
