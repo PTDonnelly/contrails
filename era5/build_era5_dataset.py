@@ -9,7 +9,7 @@ import xarray as xr
 logging.basicConfig(level=logging.INFO, format='%(asctime)s - %(levelname)s - %(message)s')
 
 def reduce_fields(input_file, short_name):
-    ds = xr.open_dataset(input_file, chunks={'time':1, 'level':10, 'longitude':720, 'latitude':180})
+    ds = xr.open_dataset(input_file, chunks={'time':1, 'level':10, 'longitude':720, 'latitude':360})
     
     # Select upper-tropospheric pressures where contrails form and focus on the North Atlantic Ocean (NAO)
     ds_selected = ds[short_name].sel(level=[200, 250, 300], latitude=slice(60, 30), longitude=slice(300, 360), drop=True)
