@@ -32,7 +32,7 @@ def reduce_fields(input_file, short_name):
     return ds_daily
 
 @snoop
-def convert_dataset_to_dataframe_vectorized(ds, short_name):
+def convert_dataset_to_dataframe(ds, short_name):
     # Stack the 'time' and 'level' dimensions to a single dimension ('samples')
     # while keeping 'latitude' and 'longitude' as they are.
     stacked_ds = ds.stack(samples=('time', 'level'))
