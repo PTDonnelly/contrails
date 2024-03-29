@@ -42,12 +42,8 @@ def convert_dataset_to_dataframe(ds, short_name):
     latitude = ds['latitude'].values
     longitude = ds['longitude'].values
 
-    print(ds.attrs, ds.dims)
-
-    exit()
-
     # Get the variable of interest as a numpy array
-    variable_data = ds[short_name].values
+    variable_data = ds.values
 
     # Create meshgrids for each pair of coordinates, resulting in arrays
     # that have the same shape as the variable_data
