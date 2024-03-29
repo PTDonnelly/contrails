@@ -42,7 +42,7 @@ def convert_dataset_to_dataframe(ds, short_name):
     latitude = ds['latitude'].values
     longitude = ds['longitude'].values
 
-    print(type(ds))
+    print(ds.attrs)
 
     exit()
 
