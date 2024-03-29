@@ -27,34 +27,31 @@ def reduce_fields(input_file, short_name):
     
     return ds_daily
 
-# @snoop
+@snoop
 def convert_dataset_to_dataframe(ds, short_name):
-    # Preparing an empty DataFrame to hold all the data
-    columns = ['time', 'altitude', 'latitude', 'longitude', short_name]
-    all_data = pd.DataFrame(columns=columns)
-
-    for time_idx in range(len(ds.time)):
-        for level_idx in range(len(ds.level)):
-            # Extracting a specific time and altitude slice
-            slice_data = ds.isel(time=time_idx, level=level_idx)
-            
-            # Flatten the latitude and longitude dimensions and prepare data for DataFrame
-            flattened_data = slice_data.values.flatten()
-            lat, lon = [coord.flatten() for coord in np.meshgrid(slice_data.latitude, slice_data.longitude, indexing='ij')]
-            
-            # Create a temporary DataFrame for the current slice
-            temp_df = pd.DataFrame({
-                'time': np.repeat(slice_data.time.values, len(flattened_data)),
-                'altitude': np.repeat(slice_data.level.values, len(flattened_data)),
-                'latitude': np.tile(lat, 1),
-                'longitude': np.tile(lon, 1),
-                short_name: flattened_data
-            })
-            
-            logging.info(temp_df.head(10))
-            # Append the temporary DataFrame to the main DataFrame
-            all_data = pd.concat([all_data, temp_df], ignore_index=True)
+    logging.info("Converting xarray DataSet to pandas DataFrame")
     
+    # List to hold data before creating DataFrame
+    data_list = []
+
+    # Directly iterate over time and level dimensions
+    for time_value in ds.time.values:
+        for level_value in ds.level.values:
+            slice_data = ds.sel(time=time_value, level=level_value)
+            
+            # Use xarray to convert to DataFrame, which keeps latitude and longitude intact
+            slice_df = slice_data.to_dataframe().reset_index()
+            
+            # Add time and level columns based on the current slice
+            slice_df['time'] = time_value
+            slice_df['pressure'] = level_value
+            
+            # Keep only needed columns and rename the variable column
+            slice_df = slice_df[['time', 'pressure', 'latitude', 'longitude', short_name]].copy()
+            data_list.append(slice_df)
+    
+    # Concatenate all DataFrames in the list into a single DataFrame
+    all_data = pd.concat(data_list, ignore_index=True)
     return all_data
 
 def save_reduced_fields_to_netcdf(output_file, ds=None):
