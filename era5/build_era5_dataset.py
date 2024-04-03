@@ -24,7 +24,7 @@ def extract_data_slice(dataset, variable_name, time_idx, target_level, latitudes
     
     # Extract the slice
     variable_slice = dataset.variables[variable_name][time_idx, level_index, lat_indices[0]:lat_indices[-1]+1, lon_indices[0]:lon_indices[-1]+1]
-    
+    print(variable_slice.shape)
     return variable_slice
 
 def create_target_grid(latitudes, longitudes, target_resolution):
