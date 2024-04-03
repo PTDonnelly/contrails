@@ -1,3 +1,4 @@
+from datetime import date
 import logging
 import netCDF4 as nc
 import numpy as np
@@ -115,9 +116,12 @@ def prepare_dataset(dataset, target_level, lat_bounds, lon_bounds):
 def process_dataset(dataset, variable_name, level_index, slice_lats, slice_lons, lat_bounds, lon_bounds, target_resolution):
     # Convert time variable to datetime objects
     times = nc.num2date(dataset.variables['time'][:], dataset.variables['time'].units)
-    
+    print(times)
     # Determine the unique dates in your dataset
     dates = np.unique([(time.year, time.month, time.day) for time in times])
+    print(dates)
+    # Convert cftime DatetimeGregorian objects to datetime.date
+    dates = np.unique([date(time.year, time.month, time.day) for time in times])
     print(dates)
     input()
     daily_averages = []
