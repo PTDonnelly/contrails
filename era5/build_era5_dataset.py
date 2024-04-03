@@ -63,8 +63,6 @@ def create_target_grid(slice_data, slice_lats, slice_lons, target_resolution):
 def regrid_data(points, values, target_lon_mesh, target_lat_mesh, method='nearest'):
     # Interpolate to the new grid
     regridded_data = griddata(points, values, (target_lat_mesh, target_lon_mesh), method=method)
-    test = regridded_data[regridded_data != 0]
-    print(test, len(test))
     return regridded_data
 
 def save_daily_average_to_csv(daily_average, target_lon_mesh, target_lat_mesh, variable_name, date, output_file):
@@ -124,8 +122,10 @@ def create_daily_average_dataset(dataset, variable_name, output_file, level_inde
 
             # Downscale data in slice on to lower-resolution grid
             points, values, target_lat_mesh, target_lon_mesh = create_target_grid(slice_data, slice_lats, slice_lons, target_resolution)
-            regridded_slice = regrid_data(points, values,target_lat_mesh, target_lon_mesh)
+            regridded_slice = regrid_data(points, values, target_lat_mesh, target_lon_mesh)
             day_slices.append(regridded_slice)
+
+            print(np.shape(regridded_slice))
 
             # Create meshgrid for plotting
             lon, lat = np.meshgrid(target_lon_mesh, target_lat_mesh)
@@ -137,8 +137,7 @@ def create_daily_average_dataset(dataset, variable_name, output_file, level_inde
             plt.ylabel('Latitude')
             plt.title('2D Grid of Values')
             plt.show()
-
-            print(regridded_slice)
+        
             input()
         
         print(day_slices)
