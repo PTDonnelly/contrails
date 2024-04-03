@@ -90,7 +90,7 @@ def create_daily_average_dataset(dataset, variable_name, output_file, level_inde
 
     for date in dates:
         print(f"Day: {date}")
-        print(f"{output_file}_{date}.csv")
+        print(f"{output_file}_{date.year}_{date.month}_{date.day}.csv")
         
         # Find time indices for the current day
         time_indices = [i for i, time in enumerate(times) if dt.datetime(time.year, time.month, time.day).date() == date]
