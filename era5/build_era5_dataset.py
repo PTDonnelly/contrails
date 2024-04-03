@@ -62,14 +62,17 @@ def regrid_data(points, values, target_lon_mesh, target_lat_mesh, method='linear
     # Interpolate to the new grid
     return griddata(points, values, (target_lat_mesh, target_lon_mesh), method=method)
 
-def save_daily_average_to_csv(daily_averages, days, latitudes, longitudes, output_csv, variable_name):
+def save_daily_average_to_csv(daily_average, variable_name, date, output_file):
+    # 
+    
     # Assuming daily_averages shape: (days, latitudes, longitudes)
     # Flatten latitude and longitude for DataFrame format
     Lat, Lon = np.meshgrid(latitudes, longitudes, indexing='ij')
     Lat_flat = Lat.flatten()
     Lon_flat = Lon.flatten()
     
-    with open(output_csv, 'w') as csvfile:
+    file_name = f"{output_file}_{date}.csv"
+    with open(file_name, 'w') as csvfile:
         # Write header
         csvfile.write("date,pressure,latitude,longitude,{}\n".format(variable_name))
         
@@ -90,7 +93,7 @@ def create_daily_average_dataset(dataset, variable_name, output_file, level_inde
 
     for date in dates:
         print(f"Day: {date}")
-        print(f"{output_file}_{date.year}_{date.month}_{date.day}.csv")
+        print(f"{output_file}_{date}.csv")
         
         # Find time indices for the current day
         time_indices = [i for i, time in enumerate(times) if dt.datetime(time.year, time.month, time.day).date() == date]
@@ -108,9 +111,12 @@ def create_daily_average_dataset(dataset, variable_name, output_file, level_inde
         
         # Compute the daily average
         daily_average = np.mean(day_slices, axis=0)
-        
-        # # Convert daily averages to DataFrame and save to CSV
-        # save_daily_average_to_csv(daily_average, variable_name, date, output_root)
+
+        print(np.shape(day_slices))
+        print(np.shape(daily_average))
+        exit()
+        # Convert daily averages to DataFrame and save to CSV
+        save_daily_average_to_csv(daily_average, variable_name, date, output_file)
     
     return
 
