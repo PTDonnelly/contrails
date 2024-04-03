@@ -63,6 +63,8 @@ def regrid_data(points, values, target_lon_mesh, target_lat_mesh, method='linear
     return griddata(points, values, (target_lat_mesh, target_lon_mesh), method=method)
 
 def save_daily_average_to_csv(daily_average, slice_lats, slice_lons, variable_name, date, output_file):
+    print(np.shape(daily_average), np.shape(slice_lats), np.shape(slice_lons))
+    
     # Flatten the latitude and longitude grids
     lat_flat = slice_lats.ravel()
     lon_flat = slice_lons.ravel()
@@ -94,8 +96,6 @@ def create_daily_average_dataset(dataset, variable_name, output_file, level_inde
     dates = np.unique([dt.date(time.year, time.month, time.day) for time in times])
 
     for date in dates:
-        print(f"Day: {date}")
-        
         # Find time indices for the current day
         time_indices = [i for i, time in enumerate(times) if dt.datetime(time.year, time.month, time.day).date() == date]
     
