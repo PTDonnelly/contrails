@@ -28,7 +28,7 @@ def extract_data_slice(dataset, variable_name, time_idx, target_level, latitudes
     
     return variable_slice
 
-def custom_regrid(data_slice, lat, lon, target_resolution=1):
+def custom_regrid(data_slice, latitudes, longitudes, target_resolution=1):
     """
     Aggregate data to a coarser grid.
 
@@ -43,14 +43,15 @@ def custom_regrid(data_slice, lat, lon, target_resolution=1):
     """   
     
     # Determine new grid size
-    lat_bins = np.arange(np.floor(lat.min()), np.ceil(lat.max()), target_resolution)
-    lon_bins = np.arange(np.floor(lon.min()), np.ceil(lon.max()), target_resolution)
+    lat_bins = np.arange(np.floor(latitudes.min()), np.ceil(latitudes.max()), target_resolution)
+    lon_bins = np.arange(np.floor(longitudes.min()), np.ceil(longitudes.max()), target_resolution)
 
     print(lat_bins, lon_bins)
-    
+
     # Bin the latitudes and longitudes
-    lat_idxs = np.digitize(lat, bins=lat_bins) - 1
-    lon_idxs = np.digitize(lon, bins=lon_bins) - 1
+    lat_idxs = np.digitize(latitudes, bins=lat_bins) - 1
+    lon_idxs = np.digitize(longitudes, bins=lon_bins) - 1
+    print(lat_idxs, lon_idxs)
 
     # Create an empty array for the coarser grid
     coarse_grid = np.zeros((len(lat_bins) - 1, len(lon_bins) - 1))
@@ -140,14 +141,11 @@ def daily_averaging(data, times):
     return np.array(daily_avg_data), days
 
 
-def process_and_aggregate(input_file, output_file, variable_name, target_level=250, lat_bounds=(30, 60), lon_bounds=(300, 360)):
+def process_and_aggregate(input_file, output_file, variable_name, target_level, lat_bounds, lon_bounds):
     
     # Open the NetCDF dataset
     dataset = nc.Dataset(input_file, 'r')
     
-    # Define geographic region (for the North Atlantic Ocean in this example)
-    lat_bounds=(30, 60)
-    lon_bounds=(320, 360)
     # Get latitude and longitude arrays
     latitudes = dataset.variables['latitude'][:]
     longitudes = dataset.variables['longitude'][:]
@@ -189,7 +187,7 @@ def process_era5_files(variables_dict, start_year, end_year, start_month, end_mo
                 output_file = output_directory / f"{short_name}_daily_{year}{month:02d}_1x1.csv"
                     
                 if input_file.exists():
-                    process_and_aggregate(input_file, output_file, short_name)
+                    process_and_aggregate(input_file, output_file, short_name, target_level=250, lat_bounds=(30, 60), lon_bounds=(300, 360))
 
                     logging.info(f"Processed {output_file}")
                     
