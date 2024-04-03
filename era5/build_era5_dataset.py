@@ -61,7 +61,7 @@ def create_target_grid(slice_data, slice_lats, slice_lons, target_resolution):
 def regrid_data(points, values, target_lon_mesh, target_lat_mesh, method='linear'):
     # Interpolate to the new grid
     regridded_data = griddata(points, values, (target_lat_mesh, target_lon_mesh), method=method)
-    print(regridded_data)
+    print(regridded_data, np.shape(target_lat_mesh), np.shape(target_lon_mesh))
     return regridded_data
 
 def save_daily_average_to_csv(daily_average, target_lon_mesh, target_lat_mesh, variable_name, date, output_file):
