@@ -56,7 +56,7 @@ def create_target_grid(slice_data, slice_lats, slice_lons, target_resolution):
     target_lon_mesh, target_lat_mesh = np.meshgrid(target_lon, target_lat)
     return points, values,target_lat_mesh, target_lon_mesh
 
-def regrid_data(points, values, target_lon_mesh, target_lat_mesh, method='cubic'):
+def regrid_data(points, values, target_lon_mesh, target_lat_mesh, method='nearest'):
     # # RBF Interpolation
     # rbfi = RBFInterpolator(points, values)
 
@@ -67,10 +67,7 @@ def regrid_data(points, values, target_lon_mesh, target_lat_mesh, method='cubic'
     # regridded_data_rbf = rbfi(target_points).reshape(target_lat_mesh.shape)
 
     # Interpolate to the new grid
-    for point, value in zip(points, values):
-        print(point, value)
-        input()
-    regridded_data = griddata(points, values, (target_lat_mesh, target_lon_mesh), fill_value=0, method=method)
+    regridded_data = griddata(points, values, (target_lon_mesh, target_lat_mesh),method=method)
     return regridded_data
 
 def save_daily_average_to_csv(daily_average, target_lon_mesh, target_lat_mesh, variable_name, date, output_file):
