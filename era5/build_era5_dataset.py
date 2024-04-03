@@ -62,15 +62,17 @@ def regrid_data(points, values, target_lon_mesh, target_lat_mesh, method='linear
     # Interpolate to the new grid
     return griddata(points, values, (target_lat_mesh, target_lon_mesh), method=method)
 
-def save_daily_average_to_csv(daily_average, slice_lats, slice_lons, variable_name, date, output_file):
-    print(np.shape(daily_average), np.shape(slice_lats), np.shape(slice_lons))
-    print(slice_lats)
+def save_daily_average_to_csv(daily_average, target_lon_mesh, target_lat_mesh, variable_name, date, output_file):
+    print(np.shape(daily_average), np.shape(target_lat_mesh), np.shape(target_lon_mesh))
+
     # Flatten the latitude and longitude grids
-    lat_flat = slice_lats.ravel()
-    lon_flat = slice_lons.ravel()
+    lat_flat = np.tile(target_lat_mesh, len(target_lon_mesh)).ravel()
+    lon_flat = np.repeat(target_lon_mesh, len(target_lat_mesh)).ravel()
     
     # Flatten the daily average data
     data_flat = daily_average.ravel()
+
+    print(np.shape(lat_flat), np.shape(lon_flat), np.shape(data_flat))
     
     # Create a DataFrame
     df = pd.DataFrame({
@@ -114,7 +116,7 @@ def create_daily_average_dataset(dataset, variable_name, output_file, level_inde
         daily_average = np.mean(day_slices, axis=0)
         
         # Convert daily averages to DataFrame and save to CSV
-        save_daily_average_to_csv(daily_average, slice_lats, slice_lons, variable_name, date, output_file)
+        save_daily_average_to_csv(daily_average, target_lon_mesh, target_lat_mesh, variable_name, date, output_file)
     exit()
     return
 
