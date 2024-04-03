@@ -86,50 +86,21 @@ def regrid_data(slice_data, slice_lats, slice_lons, target_resolution, method='l
     regridded_data = griddata(points, values, (target_lat_mesh, target_lon_mesh), method=method)
     return regridded_data
 
-def daily_averaging(data, times):
-    """
-    Compute daily averages from hourly data.
-
-    Args:
-        data (np.array): The 3D array of data (time, lat, lon).
-        times (list): List of datetime objects corresponding to each time step in data.
-
-    Returns:
-        np.array: Daily averaged data.
-    """
-    # Convert times to pandas Series to utilize resample functionality
-    time_series = pd.Series(times)
-
-    # Find unique days
-    days = time_series.dt.floor('D').unique()
-
-    # Initialize an empty list to hold daily averages
-    daily_avg_data = []
-
-    for day in days:
-        # Find indices for the current day
-        idxs = time_series.dt.floor('D') == day
-        # Average the data for the current day
-        daily_avg = np.mean(data[idxs], axis=0)
-        daily_avg_data.append(daily_avg)
-
-    return np.array(daily_avg_data), days
-
-def save_daily_averages_to_csv(daily_averages, days, latitudes, longitudes, output_csv, variable_name):
-    # Assuming daily_averages shape: (days, latitudes, longitudes)
-    # Flatten latitude and longitude for DataFrame format
-    Lat, Lon = np.meshgrid(latitudes, longitudes, indexing='ij')
-    Lat_flat = Lat.flatten()
-    Lon_flat = Lon.flatten()
+# def save_daily_averages_to_csv(daily_averages, days, latitudes, longitudes, output_csv, variable_name):
+#     # Assuming daily_averages shape: (days, latitudes, longitudes)
+#     # Flatten latitude and longitude for DataFrame format
+#     Lat, Lon = np.meshgrid(latitudes, longitudes, indexing='ij')
+#     Lat_flat = Lat.flatten()
+#     Lon_flat = Lon.flatten()
     
-    with open(output_csv, 'w') as csvfile:
-        # Write header
-        csvfile.write("date,pressure,latitude,longitude,{}\n".format(variable_name))
+#     with open(output_csv, 'w') as csvfile:
+#         # Write header
+#         csvfile.write("date,pressure,latitude,longitude,{}\n".format(variable_name))
         
-        for day, daily_avg in zip(days, daily_averages):
-            date_str = day.strftime('%Y-%m-%d')
-            for lat, lon, value in zip(Lat_flat, Lon_flat, daily_avg.flatten()):
-                csvfile.write("{},{},{},{},{}\n".format(date_str, target_level, lat, lon, value))
+#         for day, daily_avg in zip(days, daily_averages):
+#             date_str = day.strftime('%Y-%m-%d')
+#             for lat, lon, value in zip(Lat_flat, Lon_flat, daily_avg.flatten()):
+#                 csvfile.write("{},{},{},{},{}\n".format(date_str, target_level, lat, lon, value))
 
 
 def prepare_dataset(dataset, target_level, lat_bounds, lon_bounds):    
@@ -144,9 +115,11 @@ def prepare_dataset(dataset, target_level, lat_bounds, lon_bounds):
 def process_dataset(dataset, variable_name, level_index, slice_lats, slice_lons, lat_bounds, lon_bounds, target_resolution):
     # Convert time variable to datetime objects
     times = nc.num2date(dataset.variables['time'][:], dataset.variables['time'].units)
-    # Determine the unique dates in your dataset
-    dates = np.unique([time.date() for time in times])
     
+    # Determine the unique dates in your dataset
+    dates = np.unique([(time.year, time.month, time.day) for time in times])
+    print(dates)
+    input()
     daily_averages = []
     for date in dates:
         # Find indices for the current day
