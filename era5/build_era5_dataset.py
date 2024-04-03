@@ -70,18 +70,14 @@ def regrid_data(slice_data, slice_lats, slice_lons, target_resolution, method='l
     # Flatten the meshgrid for interpolation
     points = np.column_stack((lat_mesh.ravel(), lon_mesh.ravel()))
     values = slice_data.ravel()
-
-    print(len(points), len(values))
     
     # Generate the target grid
     target_lat = np.arange(slice_lats.min(), slice_lats.max(), target_resolution)
     target_lon = np.arange(slice_lons.min(), slice_lons.max(), target_resolution)
     target_lon_mesh, target_lat_mesh = np.meshgrid(target_lon, target_lat)
-    
-    print(lon_mesh.shape, lat_mesh.shape, target_lon_mesh.shape, target_lat_mesh.shape)
+
     # Interpolate to the new grid
     regridded_data = griddata(points, values, (target_lat_mesh, target_lon_mesh), method=method)
-    
     return regridded_data
 
 
@@ -181,6 +177,8 @@ def process_and_aggregate(input_file, output_file, variable_name, target_level, 
         # Keep track of times for daily averaging
         time_value = nc.num2date(dataset.variables['time'][time_idx], dataset.variables['time'].units)
         times.append(time_value)
+
+        print(time_idx, time_value)
     
     # Apply daily averaging
     daily_averages, days = daily_averaging(np.array(regridded_slices), times)
