@@ -88,6 +88,7 @@ def regrid_data(data, latitudes, longitudes, target_resolution, method='linear')
     target_lon = np.arange(longitudes.min(), longitudes.max(), target_resolution)
     target_lon_mesh, target_lat_mesh = np.meshgrid(target_lon, target_lat)
     
+    print(lon_mesh.shape, lat_mesh.shape, target_lon_mesh.shape, target_lat_mesh.shape)
     # Interpolate to the new grid
     regridded_data = griddata(points, values, (target_lat_mesh, target_lon_mesh), method=method)
     
