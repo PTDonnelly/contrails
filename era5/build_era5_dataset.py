@@ -126,12 +126,9 @@ def create_daily_average_dataset(dataset, variable_name, output_file, level_inde
             day_slices.append(regridded_slice)
 
             print(np.shape(regridded_slice))
-
-            # Create meshgrid for plotting
-            lon, lat = np.meshgrid(target_lon_mesh, target_lat_mesh)
             # Create a basic heatmap using pcolormesh
             plt.figure(figsize=(10, 6))
-            plt.pcolormesh(lon, lat, regridded_slice, shading='auto')
+            plt.pcolormesh(target_lon_mesh, target_lat_mesh, regridded_slice, shading='auto')
             plt.colorbar(label='Values')  # Add a color bar to the side
             plt.xlabel('Longitude')
             plt.ylabel('Latitude')
