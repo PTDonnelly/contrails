@@ -66,8 +66,8 @@ def save_daily_average_to_csv(daily_average, target_lon_mesh, target_lat_mesh, v
     print(np.shape(daily_average), np.shape(target_lat_mesh), np.shape(target_lon_mesh))
 
     # Flatten the latitude and longitude grids
-    lat_flat = np.tile(target_lat_mesh, len(target_lon_mesh)).ravel()
-    lon_flat = np.repeat(target_lon_mesh, len(target_lat_mesh)).ravel()
+    lat_flat = target_lat_mesh.ravel()
+    lon_flat = target_lon_mesh.ravel()
     
     # Flatten the daily average data
     data_flat = daily_average.ravel()
