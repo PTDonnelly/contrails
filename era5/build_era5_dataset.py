@@ -31,43 +31,55 @@ def extract_data_slice(dataset, variable_name, time_idx, target_level, latitudes
 
 def create_target_grid(latitudes, longitudes, target_resolution):
     """
-    Creates a target grid for regridding.
+    Generate target latitude and longitude arrays based on target resolution.
 
     Args:
-        lat_min, lat_max (float): Minimum and maximum latitude.
-        lon_min, lon_max (float): Minimum and maximum longitude.
-        target_resolution (float): The target resolution in degrees.
+    - latitudes (numpy array): Array of original latitude values.
+    - longitudes (numpy array): Array of original longitude values.
+    - target_resolution (float): The desired resolution for the target grid.
 
     Returns:
-        xarray.Dataset: The target grid as an xarray Dataset.
+    - (numpy array, numpy array): Target latitude and longitude arrays.
     """
-    # Calculate the bin edges for latitudes and longitudes
-    lat_edges = np.arange(np.min(latitudes), np.max(latitudes) + target_resolution, target_resolution)
-    lon_edges = np.arange(np.min(longitudes), np.max(longitudes) + target_resolution, target_resolution)
-    
-    # Calculate center of bins to represent the lat/lon values
-    lat_centers = (lat_edges[:-1] + lat_edges[1:]) / 2
-    lon_centers = (lon_edges[:-1] + lon_edges[1:]) / 2
-    
-    target_grid = xr.Dataset({
-        'lat': (['lat'], lat_centers),
-        'lon': (['lon'], lon_centers),
-    })
-    
-    return target_grid
+    lat_min, lat_max = np.min(latitudes), np.max(latitudes)
+    lon_min, lon_max = np.min(longitudes), np.max(longitudes)
 
-def regrid_data(dataset, variable_name, latitudes, longitudes, target_resolution):
-    # Create target grid in xESMF format
-    target_grid = create_target_grid(latitudes, longitudes, target_resolution)
+    target_lats = np.arange(lat_min, lat_max + target_resolution, target_resolution)
+    target_lons = np.arange(lon_min, lon_max + target_resolution, target_resolution)
+    
+    return target_lats, target_lons
 
-    # Create the regridder object
-    regridder = xe.Regridder(dataset, target_grid, 'bilinear')
+def regrid_data(data, lat, lon, target_resolution, method='linear'):
+    """
+    Regrid data using scipy's griddata interpolation.
+
+    Args:
+    - data (numpy array): 2D array of the original data to regrid.
+    - lat (numpy array): 1D array of latitude values for the original data.
+    - lon (numpy array): 1D array of longitude values for the original data.
+    - target_resolution (float): The target resolution in degrees.
+    - method (str): Interpolation method ('linear', 'nearest', 'cubic').
+
+    Returns:
+    - numpy array: The regridded data on the target grid.
+    """
+    # Generate the target grid
+    target_lat, target_lon = create_target_grid(lat, lon, target_resolution)
+
+    # Create a meshgrid for the original coordinates
+    lon_mesh, lat_mesh = np.meshgrid(lon, lat)
     
-    # Perform the regridding
-    regridded_var = regridder(dataset[variable_name])
+    # Flatten the meshgrid for interpolation
+    points = np.column_stack((lat_mesh.ravel(), lon_mesh.ravel()))
+    values = data.ravel()
     
-    print(regridded_var.shape)
-    return regridded_var
+    # Create a meshgrid for the target coordinates
+    target_lon_mesh, target_lat_mesh = np.meshgrid(target_lon, target_lat)
+    
+    # Interpolate to the new grid
+    regridded_data = griddata(points, values, (target_lat_mesh, target_lon_mesh), method=method)
+    
+    return regridded_data
 
 
 
