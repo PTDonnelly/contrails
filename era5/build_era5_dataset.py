@@ -47,7 +47,7 @@ def create_target_grid(latitudes, longitudes, target_resolution):
     
     return target_lats, target_lons
 
-def regrid_data(data, lat, lon, target_resolution, method='linear'):
+def regrid_data(data, latitudes, longitudes, target_resolution, method='linear'):
     """
     Regrid data using scipy's griddata interpolation.
 
@@ -61,18 +61,32 @@ def regrid_data(data, lat, lon, target_resolution, method='linear'):
     Returns:
     - numpy array: The regridded data on the target grid.
     """
-    # Generate the target grid
-    target_lat, target_lon = create_target_grid(lat, lon, target_resolution)
+    # # Generate the target grid
+    # target_lat, target_lon = create_target_grid(latitudes, longitudes, target_resolution)
+
+    # # Create a meshgrid for the original coordinates
+    # lon_mesh, lat_mesh = np.meshgrid(longitudes, latitudes)
+    
+    # # Flatten the meshgrid for interpolation
+    # points = np.column_stack((lat_mesh.ravel(), lon_mesh.ravel()))
+    # values = data.ravel()
+    
+    # # Create a meshgrid for the target coordinates
+    # target_lon_mesh, target_lat_mesh = np.meshgrid(target_lon, target_lat)
 
     # Create a meshgrid for the original coordinates
-    lon_mesh, lat_mesh = np.meshgrid(lon, lat)
+    lon_mesh, lat_mesh = np.meshgrid(longitudes, latitudes)
     
     # Flatten the meshgrid for interpolation
     points = np.column_stack((lat_mesh.ravel(), lon_mesh.ravel()))
     values = data.ravel()
     
-    # Create a meshgrid for the target coordinates
+    # Generate the target grid
+    target_lat = np.arange(latitudes.min(), latitudes.max(), target_resolution)
+    target_lon = np.arange(longitudes.min(), longitudes.max(), target_resolution)
     target_lon_mesh, target_lat_mesh = np.meshgrid(target_lon, target_lat)
+
+
     
     # Interpolate to the new grid
     regridded_data = griddata(points, values, (target_lat_mesh, target_lon_mesh), method=method)
