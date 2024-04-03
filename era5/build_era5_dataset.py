@@ -15,6 +15,63 @@ logging.basicConfig(level=logging.INFO, format='%(asctime)s - %(levelname)s - %(
 # # Set Dask to use the 'processes' scheduler globally
 # dask.config.set(scheduler='processes')
 
+def adjust_longitude_bounds(longitudes, lon_bounds):
+    if np.any(longitudes > 180):  # Assuming longitudes are in 0 to 360
+        lon_bounds = [(lon + 360) % 360 for lon in lon_bounds]  # Adjust bounds to 0-360
+    return longitudes, lon_bounds
+
+def extract_data_slice(dataset, variable_name, time_idx, target_level, latitudes, longitudes, lat_bounds, lon_bounds):
+  
+    # Find indices for latitude and longitude bounds
+    lat_indices = np.where((latitudes >= lat_bounds[0]) & (latitudes <= lat_bounds[1]))[0]
+    lon_indices = np.where((longitudes >= lon_bounds[0]) & (longitudes <= lon_bounds[1]))[0]
+    
+    # Assume level index is already determined outside this function
+    level_index = np.where(dataset.variables['level'][:] == target_level)[0][0]
+    
+    # Extract the slice
+    variable_slice = dataset.variables[variable_name][time_idx, level_index, lat_indices[0]:lat_indices[-1]+1, lon_indices[0]:lon_indices[-1]+1]
+    
+    return variable_slice
+
+def custom_regrid(data_slice, lat, lon, target_resolution=1):
+    """
+    Aggregate data to a coarser grid.
+
+    Args:
+        data_slice (np.array): The 2D array of data for a specific time and level.
+        lat (np.array): 1D array of latitude values corresponding to data_slice.
+        lon (np.array): 1D array of longitude values corresponding to data_slice.
+        target_resolution (int): The target resolution in degrees for regridding.
+
+    Returns:
+        np.array: The regridded 2D array.
+    """   
+    
+    # Determine new grid size
+    lat_bins = np.arange(np.floor(lat.min()), np.ceil(lat.max()), target_resolution)
+    lon_bins = np.arange(np.floor(lon.min()), np.ceil(lon.max()), target_resolution)
+
+    # Bin the latitudes and longitudes
+    lat_idxs = np.digitize(lat, bins=lat_bins) - 1
+    lon_idxs = np.digitize(lon, bins=lon_bins) - 1
+
+    # Create an empty array for the coarser grid
+    coarse_grid = np.zeros((len(lat_bins) - 1, len(lon_bins) - 1))
+
+    # Aggregate data into the coarser grid
+    for i in range(len(lat_bins) - 1):
+        for j in range(len(lon_bins) - 1):
+            # Find data points within the current coarse grid cell
+            mask = (lat_idxs == i) & (lon_idxs == j)
+            # Average these data points
+            coarse_grid[i, j] = np.mean(data_slice[mask])
+
+    return coarse_grid
+
+
+
+
 def save_slice_to_csv(time_value, level_value, latitudes, longitudes, variable_slice, variable_name, output_file):
     """
     Converts a data slice to a DataFrame and appends it to a CSV file.
@@ -41,30 +98,6 @@ def save_slice_to_csv(time_value, level_value, latitudes, longitudes, variable_s
     df.to_csv(output_file, mode='a', header=header, index=False)
     logging.info(f"Appended data to {output_file}")
 
-
-def adjust_longitude_bounds(longitudes, lon_bounds):
-    if np.any(longitudes > 180):  # Assuming longitudes are in 0 to 360
-        lon_bounds = [(lon + 360) % 360 for lon in lon_bounds]  # Adjust bounds to 0-360
-    return longitudes, lon_bounds
-
-
-def extract_data_slice(dataset, variable_name, time_idx, target_level, lat_bounds, lon_bounds):
-    latitudes = dataset.variables['latitude'][:]
-    longitudes, adjusted_lon_bounds = adjust_longitude_bounds(dataset.variables['longitude'][:], lon_bounds)
-    
-    # Find indices for latitude and longitude bounds
-    lat_indices = np.where((latitudes >= lat_bounds[0]) & (latitudes <= lat_bounds[1]))[0]
-    lon_indices = np.where((longitudes >= adjusted_lon_bounds[0]) & (longitudes <= adjusted_lon_bounds[1]))[0]
-    
-    # Assume level index is already determined outside this function
-    level_index = np.where(dataset.variables['level'][:] == target_level)[0][0]
-    
-    # Extract the slice
-    variable_slice = dataset.variables[variable_name][time_idx, level_index, lat_indices[0]:lat_indices[-1]+1, lon_indices[0]:lon_indices[-1]+1]
-    
-    return variable_slice
-
-
 def save_daily_averages_to_csv(daily_averages, days, latitudes, longitudes, output_csv, variable_name):
     # Assuming daily_averages shape: (days, latitudes, longitudes)
     # Flatten latitude and longitude for DataFrame format
@@ -80,40 +113,6 @@ def save_daily_averages_to_csv(daily_averages, days, latitudes, longitudes, outp
             date_str = day.strftime('%Y-%m-%d')
             for lat, lon, value in zip(Lat_flat, Lon_flat, daily_avg.flatten()):
                 csvfile.write("{},{},{},{},{}\n".format(date_str, target_level, lat, lon, value))
-
-def custom_regrid(data_slice, lat, lon, target_resolution=1):
-    """
-    Aggregate data to a coarser grid.
-
-    Args:
-        data_slice (np.array): The 2D array of data for a specific time and level.
-        lat (np.array): 1D array of latitude values corresponding to data_slice.
-        lon (np.array): 1D array of longitude values corresponding to data_slice.
-        target_resolution (int): The target resolution in degrees for regridding.
-
-    Returns:
-        np.array: The regridded 2D array.
-    """
-    # Determine new grid size
-    lat_bins = np.arange(np.floor(lat.min()), np.ceil(lat.max()), target_resolution)
-    lon_bins = np.arange(np.floor(lon.min()), np.ceil(lon.max()), target_resolution)
-
-    # Bin the latitudes and longitudes
-    lat_idxs = np.digitize(lat, bins=lat_bins) - 1
-    lon_idxs = np.digitize(lon, bins=lon_bins) - 1
-
-    # Create an empty array for the coarser grid
-    coarse_grid = np.zeros((len(lat_bins) - 1, len(lon_bins) - 1))
-
-    # Aggregate data into the coarser grid
-    for i in range(len(lat_bins) - 1):
-        for j in range(len(lon_bins) - 1):
-            # Find data points within the current coarse grid cell
-            mask = (lat_idxs == i) & (lon_idxs == j)
-            # Average these data points
-            coarse_grid[i, j] = np.mean(data_slice[mask])
-
-    return coarse_grid
 
 def daily_averaging(data, times):
     """
@@ -144,6 +143,7 @@ def daily_averaging(data, times):
 
     return np.array(daily_avg_data), days
 
+
 def process_and_aggregate(input_file, output_file, variable_name, target_level=250, lat_bounds=(30, 60), lon_bounds=(300, 360)):
     
     # Open the NetCDF dataset
@@ -159,15 +159,13 @@ def process_and_aggregate(input_file, output_file, variable_name, target_level=2
 
     # Adjust longitude bounds if your dataset uses a different convention (e.g., 0 to 360)
     longitudes, lon_bounds = adjust_longitude_bounds(longitudes, lon_bounds)
-    print(longitudes, lon_bounds)
-    exit()
-    
+
     # Process each time slice
     regridded_slices = []
     times = []
     for time_idx in range(dataset.dimensions['time'].size):
         # Extract the slice for the target level and geographic region
-        variable_slice = extract_data_slice(dataset, variable_name, time_idx, target_level, lat_bounds, lon_bounds)
+        variable_slice = extract_data_slice(dataset, variable_name, time_idx, target_level, latitudes, longitudes, lat_bounds, lon_bounds)
         
         # Apply regridding to the slice
         regridded_slice = custom_regrid(variable_slice, latitudes, longitudes, target_resolution=1)
