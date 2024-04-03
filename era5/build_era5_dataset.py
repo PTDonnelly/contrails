@@ -19,6 +19,8 @@ def extract_data_slice(dataset, variable_name, time_idx, target_level, latitudes
     # Find indices for latitude and longitude bounds
     lat_indices = np.where((latitudes >= lat_bounds[0]) & (latitudes <= lat_bounds[1]))[0]
     lon_indices = np.where((longitudes >= lon_bounds[0]) & (longitudes <= lon_bounds[1]))[0]
+
+    print(lat_indices, lon_indices)
     
     # Assume level index is already determined outside this function
     level_index = np.where(dataset.variables['level'][:] == target_level)[0][0]
