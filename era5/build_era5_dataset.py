@@ -57,14 +57,13 @@ def create_target_grid(slice_data, slice_lats, slice_lons, target_resolution):
     target_lon_mesh, target_lat_mesh = np.meshgrid(target_lon, target_lat)
 
     print(np.shape(points), np.shape(values), np.shape(target_lon_mesh), np.shape(target_lat_mesh))
-    test = values[values != 0]
-    print(test)
     return points, values,target_lat_mesh, target_lon_mesh
 
 def regrid_data(points, values, target_lon_mesh, target_lat_mesh, method='nearest'):
     # Interpolate to the new grid
     regridded_data = griddata(points, values, (target_lat_mesh, target_lon_mesh), method=method)
-    print(regridded_data)
+    test = regridded_data[regridded_data != 0]
+    print(test, len(test))
     return regridded_data
 
 def save_daily_average_to_csv(daily_average, target_lon_mesh, target_lat_mesh, variable_name, date, output_file):
