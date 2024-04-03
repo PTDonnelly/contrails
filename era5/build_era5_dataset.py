@@ -112,7 +112,6 @@ def create_daily_average_dataset(dataset, variable_name, output_file, level_inde
             
             # Create meshgrid for plotting
             lon, lat = np.meshgrid(slice_lons, slice_lats)
-
             # Create a basic heatmap using pcolormesh
             plt.figure(figsize=(10, 6))
             plt.pcolormesh(lon, lat, slice_data, shading='auto')
@@ -124,9 +123,20 @@ def create_daily_average_dataset(dataset, variable_name, output_file, level_inde
 
 
             # Downscale data in slice on to lower-resolution grid
-            points, values,target_lat_mesh, target_lon_mesh = create_target_grid(slice_data, slice_lats, slice_lons, target_resolution)
+            points, values, target_lat_mesh, target_lon_mesh = create_target_grid(slice_data, slice_lats, slice_lons, target_resolution)
             regridded_slice = regrid_data(points, values,target_lat_mesh, target_lon_mesh)
             day_slices.append(regridded_slice)
+
+            # Create meshgrid for plotting
+            lon, lat = np.meshgrid(target_lon_mesh, target_lat_mesh)
+            # Create a basic heatmap using pcolormesh
+            plt.figure(figsize=(10, 6))
+            plt.pcolormesh(lon, lat, regridded_slice, shading='auto')
+            plt.colorbar(label='Values')  # Add a color bar to the side
+            plt.xlabel('Longitude')
+            plt.ylabel('Latitude')
+            plt.title('2D Grid of Values')
+            plt.show()
 
             print(regridded_slice)
             input()
