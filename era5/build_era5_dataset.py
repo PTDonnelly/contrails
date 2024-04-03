@@ -1,4 +1,4 @@
-from datetime import date
+import datetime as dt
 import logging
 import netCDF4 as nc
 import numpy as np
@@ -12,8 +12,14 @@ import snoop
 # Set up logger
 logging.basicConfig(level=logging.INFO, format='%(asctime)s - %(levelname)s - %(message)s')
 
-# # Set Dask to use the 'processes' scheduler globally
-# dask.config.set(scheduler='processes')
+def prepare_dataset(dataset, target_level, lat_bounds, lon_bounds):    
+    # Get latitude and longitude arrays
+    latitudes = dataset.variables['latitude'][:]
+    longitudes = dataset.variables['longitude'][:]
+
+    # Get index location of data slices
+    level_index, slice_lats, slice_lons = find_data_slice(dataset, target_level, latitudes, lat_bounds, longitudes, lon_bounds)
+    return level_index, slice_lats, slice_lons
 
 def find_data_slice(dataset, target_level, latitudes, lat_bounds, longitudes, lon_bounds):
     # Find indices for latitude and longitude bounds
@@ -103,16 +109,6 @@ def regrid_data(slice_data, slice_lats, slice_lons, target_resolution, method='l
 #             for lat, lon, value in zip(Lat_flat, Lon_flat, daily_avg.flatten()):
 #                 csvfile.write("{},{},{},{},{}\n".format(date_str, target_level, lat, lon, value))
 
-
-def prepare_dataset(dataset, target_level, lat_bounds, lon_bounds):    
-    # Get latitude and longitude arrays
-    latitudes = dataset.variables['latitude'][:]
-    longitudes = dataset.variables['longitude'][:]
-
-    # Get index location of data slices
-    level_index, slice_lats, slice_lons = find_data_slice(dataset, target_level, latitudes, lat_bounds, longitudes, lon_bounds)
-    return level_index, slice_lats, slice_lons
-
 def process_dataset(dataset, variable_name, level_index, slice_lats, slice_lons, lat_bounds, lon_bounds, target_resolution):
     # Convert time variable to datetime objects
     times = nc.num2date(dataset.variables['time'][:], dataset.variables['time'].units)
@@ -121,7 +117,7 @@ def process_dataset(dataset, variable_name, level_index, slice_lats, slice_lons,
     dates = np.unique([(time.year, time.month, time.day) for time in times])
     print(dates)
     # Convert cftime DatetimeGregorian objects to datetime.date
-    dates = np.unique([date(time.year, time.month, time.day) for time in times])
+    dates = np.unique([dt.date(time.year, time.month, time.day) for time in times])
     print(dates)
     input()
     daily_averages = []
