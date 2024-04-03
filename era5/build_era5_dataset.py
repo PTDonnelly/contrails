@@ -112,18 +112,14 @@ def regrid_data(slice_data, slice_lats, slice_lons, target_resolution, method='l
 def process_dataset(dataset, variable_name, level_index, slice_lats, slice_lons, lat_bounds, lon_bounds, target_resolution):
     # Convert time variable to datetime objects
     times = nc.num2date(dataset.variables['time'][:], dataset.variables['time'].units)
-    print(times)
-    # Determine the unique dates in your dataset
-    dates = np.unique([(time.year, time.month, time.day) for time in times])
-    print(dates)
+
     # Convert cftime DatetimeGregorian objects to datetime.date
     dates = np.unique([dt.date(time.year, time.month, time.day) for time in times])
-    print(dates)
-    input()
+
     daily_averages = []
     for date in dates:
         # Find indices for the current day
-        day_indices = [i for i, time in enumerate(times) if time.date() == date]
+        day_indices = [i for i, time in enumerate(times) if dt.datetime(time.year, time.month, time.day).date() == date]
         
         print(date)
 
