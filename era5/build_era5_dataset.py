@@ -1,5 +1,6 @@
 import datetime as dt
 import logging
+import matplotlib.pyplot as plt
 import netCDF4 as nc
 import numpy as np
 import os
@@ -109,6 +110,19 @@ def create_daily_average_dataset(dataset, variable_name, output_file, level_inde
             # Extract slice (assuming a function that handles the extraction)
             slice_data = extract_data_slice(dataset, variable_name, time_index, level_index, lat_indices, lon_indices)
             
+            # Create meshgrid for plotting
+            lon, lat = np.meshgrid(slice_lons, slice_lats)
+
+            # Create a basic heatmap using pcolormesh
+            plt.figure(figsize=(10, 6))
+            plt.pcolormesh(lon, lat, values, shading='auto')
+            plt.colorbar(label='Values')  # Add a color bar to the side
+            plt.xlabel('Longitude')
+            plt.ylabel('Latitude')
+            plt.title('2D Grid of Values')
+            plt.show()
+
+
             # Downscale data in slice on to lower-resolution grid
             points, values,target_lat_mesh, target_lon_mesh = create_target_grid(slice_data, slice_lats, slice_lons, target_resolution)
             regridded_slice = regrid_data(points, values,target_lat_mesh, target_lon_mesh)
