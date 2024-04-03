@@ -134,11 +134,13 @@ def process_era5_files(variables_dict, start_year, end_year, start_month, end_mo
                     # Open the NetCDF dataset
                     dataset = nc.Dataset(input_file, 'r')
 
+                    # Get NetCDF index parameters
                     level_index, slice_lats, slice_lons = prepare_dataset(dataset, target_level, lat_bounds, lon_bounds)
                     
+                    # Do regional binning, grid downscaling, and daily averaging
                     create_daily_average_dataset(dataset, variable_name, output_file, level_index, slice_lats, slice_lons, lat_bounds, lon_bounds, target_resolution)
                     
-                    # Cleanup
+                    # Close NetCDF file
                     dataset.close()
 
                     logging.info(f"Processed {output_file}")
@@ -159,7 +161,7 @@ def main():
     }
 
     # Execute on specified date range
-    process_era5_files(variables_dict, 2019, 2023, 3, 5)
+    process_era5_files(variables_dict, 2018, 2023, 3, 5)
 
 if __name__ == "__main__":
     main()
