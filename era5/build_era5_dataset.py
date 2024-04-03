@@ -115,7 +115,7 @@ def create_daily_average_dataset(dataset, variable_name, output_file, level_inde
 
             # Create a basic heatmap using pcolormesh
             plt.figure(figsize=(10, 6))
-            plt.pcolormesh(lon, lat, values, shading='auto')
+            plt.pcolormesh(lon, lat, slice_data, shading='auto')
             plt.colorbar(label='Values')  # Add a color bar to the side
             plt.xlabel('Longitude')
             plt.ylabel('Latitude')
