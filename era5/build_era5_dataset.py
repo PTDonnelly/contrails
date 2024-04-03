@@ -19,14 +19,10 @@ def extract_data_slice(dataset, variable_name, time_idx, target_level, latitudes
     # Find indices for latitude and longitude bounds
     lat_indices = np.where((latitudes >= lat_bounds[0]) & (latitudes <= lat_bounds[1]))[0]
     lon_indices = np.where((longitudes >= lon_bounds[0]) & (longitudes <= lon_bounds[1]))[0]
-
-    print(lat_indices, lon_indices)
     
     # Assume level index is already determined outside this function
     level_index = np.where(dataset.variables['level'][:] == target_level)[0][0]
     
-    print(dataset.variables[variable_name].shape)
-    print(lat_indices[0], lat_indices[-1], lon_indices[0], lon_indices[-1])
     # Extract the slice
     variable_slice = dataset.variables[variable_name][time_idx, level_index, lat_indices[0]:lat_indices[-1]+1, lon_indices[0]:lon_indices[-1]+1]
     
@@ -50,6 +46,8 @@ def custom_regrid(data_slice, lat, lon, target_resolution=1):
     lat_bins = np.arange(np.floor(lat.min()), np.ceil(lat.max()), target_resolution)
     lon_bins = np.arange(np.floor(lon.min()), np.ceil(lon.max()), target_resolution)
 
+    print(lat_bins, lon_bins)
+    
     # Bin the latitudes and longitudes
     lat_idxs = np.digitize(lat, bins=lat_bins) - 1
     lon_idxs = np.digitize(lon, bins=lon_bins) - 1
