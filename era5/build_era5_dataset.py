@@ -60,7 +60,7 @@ def create_target_grid(slice_data, slice_lats, slice_lons, target_resolution):
     print(np.shape(points), np.shape(values), np.shape(target_lon_mesh), np.shape(target_lat_mesh))
     return points, values,target_lat_mesh, target_lon_mesh
 
-def regrid_data(points, values, target_lon_mesh, target_lat_mesh, method='nearest'):
+def regrid_data(points, values, target_lon_mesh, target_lat_mesh, method='cubic'):
     # Interpolate to the new grid
     regridded_data = griddata(points, values, (target_lat_mesh, target_lon_mesh), method=method)
     return regridded_data
@@ -124,8 +124,7 @@ def create_daily_average_dataset(dataset, variable_name, output_file, level_inde
             points, values, target_lat_mesh, target_lon_mesh = create_target_grid(slice_data, slice_lats, slice_lons, target_resolution)
             regridded_slice = regrid_data(points, values, target_lat_mesh, target_lon_mesh)
             day_slices.append(regridded_slice)
-
-            print(np.shape(regridded_slice))
+            
             # Create a basic heatmap using pcolormesh
             plt.figure(figsize=(10, 6))
             plt.pcolormesh(target_lon_mesh, target_lat_mesh, regridded_slice, shading='auto')
