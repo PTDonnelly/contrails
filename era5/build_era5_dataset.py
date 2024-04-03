@@ -6,9 +6,7 @@ import numpy as np
 import os
 import pandas as pd
 from pathlib import Path
-from scipy.interpolate import RBFInterpolator
-
-import snoop
+from scipy.interpolate import griddata, RBFInterpolator
 
 # Set up logger
 logging.basicConfig(level=logging.INFO, format='%(asctime)s - %(levelname)s - %(message)s')
@@ -59,18 +57,18 @@ def create_target_grid(slice_data, slice_lats, slice_lons, target_resolution):
     return points, values,target_lat_mesh, target_lon_mesh
 
 def regrid_data(points, values, target_lon_mesh, target_lat_mesh, method='cubic'):
-    # RBF Interpolation
-    rbfi = RBFInterpolator(points, values)
+    # # RBF Interpolation
+    # rbfi = RBFInterpolator(points, values)
 
-    # Prepare the target grid points as a 2D array
-    target_points = np.column_stack((target_lat_mesh.ravel(), target_lon_mesh.ravel()))
+    # # Prepare the target grid points as a 2D array
+    # target_points = np.column_stack((target_lat_mesh.ravel(), target_lon_mesh.ravel()))
 
-    # Perform the interpolation
-    regridded_data_rbf = rbfi(target_points).reshape(target_lat_mesh.shape)
+    # # Perform the interpolation
+    # regridded_data_rbf = rbfi(target_points).reshape(target_lat_mesh.shape)
 
-    # # Interpolate to the new grid
-    # regridded_data = griddata(points, values, (target_lat_mesh, target_lon_mesh), method=method)
-    return regridded_data_rbf
+    # Interpolate to the new grid
+    regridded_data = griddata(points, values, (target_lat_mesh, target_lon_mesh), fill_value=0, method=method)
+    return regridded_data
 
 def save_daily_average_to_csv(daily_average, target_lon_mesh, target_lat_mesh, variable_name, date, output_file):
     # Flatten the latitude and longitude grids
