@@ -22,10 +22,13 @@ def extract_data_slice(dataset, variable_name, time_idx, target_level, latitudes
     # Assume level index is already determined outside this function
     level_index = np.where(dataset.variables['level'][:] == target_level)[0][0]
     
-    # Extract the slice
-    variable_slice = dataset.variables[variable_name][time_idx, level_index, lat_indices[0]:lat_indices[-1]+1, lon_indices[0]:lon_indices[-1]+1]
-    print(variable_slice.shape)
-    return variable_slice
+    # Extract the data slice for the given variable
+    slice_data = dataset.variables[variable_name][time_idx, level_index, lat_indices[0]:lat_indices[-1]+1, lon_indices[0]:lon_indices[-1]+1]
+
+    # Extract latitude and longitude slices
+    slice_lats = dataset.variables['latitude'][lat_indices[0]:lat_indices[-1]+1]
+    slice_lons = dataset.variables['longitude'][lon_indices[0]:lon_indices[-1]+1]
+    return slice_data, slice_lats, slice_lons
 
 def create_target_grid(latitudes, longitudes, target_resolution):
     """
@@ -47,7 +50,7 @@ def create_target_grid(latitudes, longitudes, target_resolution):
     
     return target_lats, target_lons
 
-def regrid_data(data, latitudes, longitudes, target_resolution, method='linear'):
+def regrid_data(slice_data, slice_lats, slice_lons, target_resolution, method='linear'):
     """
     Regrid data using scipy's griddata interpolation.
 
@@ -61,31 +64,18 @@ def regrid_data(data, latitudes, longitudes, target_resolution, method='linear')
     Returns:
     - numpy array: The regridded data on the target grid.
     """
-    # # Generate the target grid
-    # target_lat, target_lon = create_target_grid(latitudes, longitudes, target_resolution)
-
-    # # Create a meshgrid for the original coordinates
-    # lon_mesh, lat_mesh = np.meshgrid(longitudes, latitudes)
-    
-    # # Flatten the meshgrid for interpolation
-    # points = np.column_stack((lat_mesh.ravel(), lon_mesh.ravel()))
-    # values = data.ravel()
-    
-    # # Create a meshgrid for the target coordinates
-    # target_lon_mesh, target_lat_mesh = np.meshgrid(target_lon, target_lat)
-
     # Create a meshgrid for the original coordinates
-    lon_mesh, lat_mesh = np.meshgrid(longitudes, latitudes)
+    lon_mesh, lat_mesh = np.meshgrid(slice_lons, slice_lats)
     
     # Flatten the meshgrid for interpolation
     points = np.column_stack((lat_mesh.ravel(), lon_mesh.ravel()))
-    values = data.ravel()
+    values = slice_data.ravel()
 
     print(len(points), len(values))
     
     # Generate the target grid
-    target_lat = np.arange(latitudes.min(), latitudes.max(), target_resolution)
-    target_lon = np.arange(longitudes.min(), longitudes.max(), target_resolution)
+    target_lat = np.arange(slice_lats.min(), slice_lats.max(), target_resolution)
+    target_lon = np.arange(slice_lons.min(), slice_lons.max(), target_resolution)
     target_lon_mesh, target_lat_mesh = np.meshgrid(target_lon, target_lat)
     
     print(lon_mesh.shape, lat_mesh.shape, target_lon_mesh.shape, target_lat_mesh.shape)
@@ -182,10 +172,10 @@ def process_and_aggregate(input_file, output_file, variable_name, target_level, 
     times = []
     for time_idx in range(dataset.dimensions['time'].size):
         # Extract the slice for the target level and geographic region
-        variable_slice = extract_data_slice(dataset, variable_name, time_idx, target_level, latitudes, lat_bounds, longitudes, lon_bounds)
+        slice_data, slice_lats, slice_lons = extract_data_slice(dataset, variable_name, time_idx, target_level, latitudes, lat_bounds, longitudes, lon_bounds)
         
         # Apply regridding to the slice
-        regridded_slice = regrid_data(variable_slice, latitudes, longitudes, target_resolution=1)
+        regridded_slice = regrid_data(slice_data, slice_lats, slice_lons, target_resolution=1)
         regridded_slices.append(regridded_slice)
         
         # Keep track of times for daily averaging
