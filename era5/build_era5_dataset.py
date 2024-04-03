@@ -109,6 +109,7 @@ def regrid_data(slice_data, slice_lats, slice_lons, target_resolution, method='l
 #             for lat, lon, value in zip(Lat_flat, Lon_flat, daily_avg.flatten()):
 #                 csvfile.write("{},{},{},{},{}\n".format(date_str, target_level, lat, lon, value))
 
+@snoop
 def process_dataset(dataset, variable_name, level_index, slice_lats, slice_lons, lat_bounds, lon_bounds, target_resolution):
     # Convert time variable to datetime objects
     times = nc.num2date(dataset.variables['time'][:], dataset.variables['time'].units)
@@ -118,7 +119,7 @@ def process_dataset(dataset, variable_name, level_index, slice_lats, slice_lons,
 
     daily_averages = []
     for date in dates:
-        print(f"Day: {date}")
+        # print(f"Day: {date}")
         
         # Find time indices for the current day
         time_indices = [i for i, time in enumerate(times) if dt.datetime(time.year, time.month, time.day).date() == date]
@@ -126,7 +127,7 @@ def process_dataset(dataset, variable_name, level_index, slice_lats, slice_lons,
         # Process each time slice for the day
         day_slices = []
         for time_index in time_indices:
-            print(f"Hour: {time_index}")
+            # print(f"Hour: {time_index}")
             # Extract slice (assuming a function that handles the extraction)
             slice_data = extract_data_slice(dataset, variable_name, time_index, level_index, slice_lats, slice_lons, lat_bounds, lon_bounds)
             # Regrid the slice
