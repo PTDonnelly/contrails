@@ -63,16 +63,14 @@ def regrid_data(points, values, target_lon_mesh, target_lat_mesh, method='linear
     return griddata(points, values, (target_lat_mesh, target_lon_mesh), method=method)
 
 def save_daily_average_to_csv(daily_average, target_lon_mesh, target_lat_mesh, variable_name, date, output_file):
-    print(np.shape(daily_average), np.shape(target_lat_mesh), np.shape(target_lon_mesh))
-
     # Flatten the latitude and longitude grids
     lat_flat = target_lat_mesh.ravel()
     lon_flat = target_lon_mesh.ravel()
     
     # Flatten the daily average data
     data_flat = daily_average.ravel()
-
-    print(np.shape(lat_flat), np.shape(lon_flat), np.shape(data_flat))
+    
+    print(data_flat)
     
     # Create a DataFrame
     df = pd.DataFrame({
@@ -85,7 +83,7 @@ def save_daily_average_to_csv(daily_average, target_lon_mesh, target_lat_mesh, v
     # Save the DataFrame to CSV
     file_name = f"{output_file}_{date}.csv"
     df.to_csv(file_name, sep='\t', index=False)
-    print(f"Data saved to {output_file}")
+    print(f"Data saved to {file_name}")
 
 def create_daily_average_dataset(dataset, variable_name, output_file, level_index, slice_lats, slice_lons, lat_bounds, lon_bounds, target_resolution):
     # Get indices of geographic region
