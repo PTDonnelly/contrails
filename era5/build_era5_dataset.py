@@ -132,37 +132,44 @@ def save_daily_averages_to_csv(daily_averages, days, latitudes, longitudes, outp
                 csvfile.write("{},{},{},{},{}\n".format(date_str, target_level, lat, lon, value))
 
 
-def process_and_aggregate(input_file, output_file, variable_name, target_level, lat_bounds, lon_bounds):
-    
-    # Open the NetCDF dataset
-    dataset = nc.Dataset(input_file, 'r')
-    
+def prepare_dataset(dataset, target_level, lat_bounds, lon_bounds):    
     # Get latitude and longitude arrays
     latitudes = dataset.variables['latitude'][:]
     longitudes = dataset.variables['longitude'][:]
 
-    # Get inedex location of data slices
+    # Get index location of data slices
     level_index, slice_lats, slice_lons = find_data_slice(dataset, target_level, latitudes, lat_bounds, longitudes, lon_bounds)
+    return level_index, slice_lats, slice_lons
 
-    # Process each time slice
-    regridded_slices = []
-    times = []
-    for time_index in range(dataset.dimensions['time'].size):
-        # Extract the slice for the target level and geographic region
-        slice_data = extract_data_slice(dataset, variable_name, time_index, level_index, slice_lats, slice_lons, lat_bounds, lon_bounds)
-        
-        # Apply regridding to the slice
-        regridded_slice = regrid_data(slice_data, slice_lats, slice_lons, target_resolution=1)
-        regridded_slices.append(regridded_slice)
-        
-        # Keep track of times for daily averaging
-        time_value = nc.num2date(dataset.variables['time'][time_index], dataset.variables['time'].units)
-        times.append(time_value)
-
-        print(time_index, time_value)
+def process_dataset(dataset, variable_name, level_index, slice_lats, slice_lons, lat_bounds, lon_bounds, target_resolution):
+    # Convert time variable to datetime objects
+    times = nc.num2date(dataset.variables['time'][:], dataset.variables['time'].units)
+    # Determine the unique dates in your dataset
+    dates = np.unique([time.date() for time in times])
     
-    # Apply daily averaging
-    daily_averages, days = daily_averaging(np.array(regridded_slices), times)
+    daily_averages = []
+    for date in dates:
+        # Find indices for the current day
+        day_indices = [i for i, time in enumerate(times) if time.date() == date]
+        
+        print(date)
+
+        # Process each time slice for the day
+        day_slices = []
+        for time_index in day_indices:
+            print(time_index)
+            # Extract slice (assuming a function that handles the extraction)
+            slice_data = extract_data_slice(dataset, variable_name, time_index, level_index, slice_lats, slice_lons, lat_bounds, lon_bounds)
+            # Regrid the slice
+            regridded_slice = regrid_data(slice_data, slice_lats, slice_lons, target_resolution)
+            day_slices.append(regridded_slice)
+        
+        
+        # Compute the daily average
+        daily_average = np.mean(day_slices, axis=0)
+        daily_averages.append(daily_average)
+    
+    return daily_averages
 
     # Convert daily averages to DataFrame and save to CSV
     save_daily_averages_to_csv(daily_averages, days, latitudes, longitudes, output_file, variable_name)
@@ -174,6 +181,11 @@ def process_era5_files(variables_dict, start_year, end_year, start_month, end_mo
     base_path = Path(f"/bdd/ECMWF/ERA5/NETCDF/GLOBAL_025/hourly/AN_PL/{start_year}")
     output_directory = Path(output_directory)
     output_directory.mkdir(parents=True, exist_ok=True)
+
+    target_level = 250
+    lat_bounds = (30, 60)
+    lon_bounds = (300, 360)
+    target_resolution = 1
     
     for short_name in variables_dict.values():
         for year in range(start_year, end_year + 1):
@@ -183,7 +195,15 @@ def process_era5_files(variables_dict, start_year, end_year, start_month, end_mo
                 output_file = output_directory / f"{short_name}_daily_{year}{month:02d}_1x1.csv"
                     
                 if input_file.exists():
-                    process_and_aggregate(input_file, output_file, short_name, target_level=250, lat_bounds=(30, 60), lon_bounds=(300, 360))
+                    # Open the NetCDF dataset
+                    dataset = nc.Dataset(input_file, 'r')
+
+                    level_index, slice_lats, slice_lons = prepare_dataset(input_file, target_level, lat_bounds, lon_bounds)
+                    
+                    daily_averages = process_dataset(dataset, short_name, level_index, slice_lats, slice_lons, lat_bounds, lon_bounds, target_resolution)
+                    
+                    print(len(daily_averages))
+                    # save_daily_averages_to_csv()
 
                     logging.info(f"Processed {output_file}")
                     
@@ -192,17 +212,21 @@ def process_era5_files(variables_dict, start_year, end_year, start_month, end_mo
 
                 exit()
 
-# Define ERA5 variables
-variables_dict = {
-    "cloud cover": "cc",
-    "temperature": "ta",
-    "specific humidity": "q",
-    "relative humidity": "r",
-    "geopotential": "geopt",
-    "eastward wind": "u",
-    "northward wind": "v",
-    "ozone mass mixing ratio": "o3",
-}
+def main():
+    # Define ERA5 variables
+    variables_dict = {
+        "cloud cover": "cc",
+        "temperature": "ta",
+        "specific humidity": "q",
+        "relative humidity": "r",
+        "geopotential": "geopt",
+        "eastward wind": "u",
+        "northward wind": "v",
+        "ozone mass mixing ratio": "o3",
+    }
 
-# Execute on specified date range
-process_era5_files(variables_dict, 2018, 2018, 3, 3)
+    # Execute on specified date range
+    process_era5_files(variables_dict, 2018, 2018, 3, 3)
+
+if __name__ == "__main__":
+    main()
