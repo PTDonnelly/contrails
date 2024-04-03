@@ -159,7 +159,7 @@ def main():
     }
 
     # Execute on specified date range
-    process_era5_files(variables_dict, 2018, 2018, 3, 5)
+    process_era5_files(variables_dict, 2019, 2023, 3, 5)
 
 if __name__ == "__main__":
     main()
