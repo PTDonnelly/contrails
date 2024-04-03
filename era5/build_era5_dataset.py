@@ -198,7 +198,7 @@ def process_era5_files(variables_dict, start_year, end_year, start_month, end_mo
                     # Open the NetCDF dataset
                     dataset = nc.Dataset(input_file, 'r')
 
-                    level_index, slice_lats, slice_lons = prepare_dataset(input_file, target_level, lat_bounds, lon_bounds)
+                    level_index, slice_lats, slice_lons = prepare_dataset(dataset, target_level, lat_bounds, lon_bounds)
                     
                     daily_averages = process_dataset(dataset, short_name, level_index, slice_lats, slice_lons, lat_bounds, lon_bounds, target_resolution)
                     
@@ -207,6 +207,8 @@ def process_era5_files(variables_dict, start_year, end_year, start_month, end_mo
 
                     logging.info(f"Processed {output_file}")
                     
+                    # Cleanup
+                    dataset.close()
                 else:
                     logging.info(f"File does not exist: {input_file}")
 
