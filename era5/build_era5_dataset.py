@@ -15,26 +15,7 @@ logging.basicConfig(level=logging.INFO, format='%(asctime)s - %(levelname)s - %(
 # # Set Dask to use the 'processes' scheduler globally
 # dask.config.set(scheduler='processes')
 
-def adjust_longitude_bounds(longitudes, lon_bounds):
-    if np.any(longitudes > 180):  # Assuming longitudes are in 0 to 360
-        lon_bounds = [(lon + 360) % 360 for lon in lon_bounds]  # Adjust bounds to 0-360
-        lon_bounds[1] = 360 if lon_bounds[1] == 0 else lon_bounds[1]
-    return (longitudes, lon_bounds)
-
-def get_spatial_grid(dataset, lat_bounds=(30, 60), lon_bounds=(-60, 0)):
-    # Get latitude and longitude arrays
-    latitudes = dataset.variables['latitude'][:]
-    longitudes = dataset.variables['longitude'][:]
-
-    # Adjust longitude bounds if your dataset uses a different convention (e.g., 0 to 360)
-    longitudes, lon_bounds = adjust_longitude_bounds(longitudes, lon_bounds)
-
-    return latitudes, lat_bounds, longitudes, lon_bounds
-
 def extract_data_slice(dataset, variable_name, time_idx, target_level, latitudes, lat_bounds, longitudes, lon_bounds):
-    
-    print(lat_bounds, lon_bounds)
-    print(latitudes, longitudes)
     # Find indices for latitude and longitude bounds
     lat_indices = np.where((latitudes >= lat_bounds[0]) & (latitudes <= lat_bounds[1]))[0]
     lon_indices = np.where((longitudes >= lon_bounds[0]) & (longitudes <= lon_bounds[1]))[0]
@@ -165,7 +146,11 @@ def process_and_aggregate(input_file, output_file, variable_name, target_level=2
     dataset = nc.Dataset(input_file, 'r')
     
     # Define geographic region (for the North Atlantic Ocean in this example)
-    latitudes, lat_bounds, longitudes, lon_bounds = get_spatial_grid(dataset)
+    lat_bounds=(30, 60)
+    lon_bounds=(320, 359)
+    # Get latitude and longitude arrays
+    latitudes = dataset.variables['latitude'][:]
+    longitudes = dataset.variables['longitude'][:]
 
     # Process each time slice
     regridded_slices = []
