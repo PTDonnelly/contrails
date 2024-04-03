@@ -62,24 +62,26 @@ def regrid_data(points, values, target_lon_mesh, target_lat_mesh, method='linear
     # Interpolate to the new grid
     return griddata(points, values, (target_lat_mesh, target_lon_mesh), method=method)
 
-def save_daily_average_to_csv(daily_average, variable_name, date, output_file):
-    # 
+def save_daily_average_to_csv(daily_average, slice_lats, slice_lons, variable_name, date, output_file):
+    # Flatten the latitude and longitude grids
+    lat_flat = slice_lats.ravel()
+    lon_flat = slice_lons.ravel()
     
-    # Assuming daily_averages shape: (days, latitudes, longitudes)
-    # Flatten latitude and longitude for DataFrame format
-    Lat, Lon = np.meshgrid(latitudes, longitudes, indexing='ij')
-    Lat_flat = Lat.flatten()
-    Lon_flat = Lon.flatten()
+    # Flatten the daily average data
+    data_flat = daily_average.ravel()
     
+    # Create a DataFrame
+    df = pd.DataFrame({
+        'Date': [date] * len(data_flat),  # Repeat the date for each row
+        'Latitude': lat_flat,
+        'Longitude': lon_flat,
+        variable_name: data_flat  # Use the variable name as the column name for data
+    })
+    
+    # Save the DataFrame to CSV
     file_name = f"{output_file}_{date}.csv"
-    with open(file_name, 'w') as csvfile:
-        # Write header
-        csvfile.write("date,pressure,latitude,longitude,{}\n".format(variable_name))
-        
-        for day, daily_avg in zip(days, daily_averages):
-            date_str = day.strftime('%Y-%m-%d')
-            for lat, lon, value in zip(Lat_flat, Lon_flat, daily_avg.flatten()):
-                csvfile.write("{},{},{},{},{}\n".format(date_str, target_level, lat, lon, value))
+    df.to_csv(file_name, sep='\t', index=False)
+    print(f"Data saved to {output_file}")
 
 def create_daily_average_dataset(dataset, variable_name, output_file, level_index, slice_lats, slice_lons, lat_bounds, lon_bounds, target_resolution):
     # Get indices of geographic region
@@ -93,7 +95,6 @@ def create_daily_average_dataset(dataset, variable_name, output_file, level_inde
 
     for date in dates:
         print(f"Day: {date}")
-        print(f"{output_file}_{date}.csv")
         
         # Find time indices for the current day
         time_indices = [i for i, time in enumerate(times) if dt.datetime(time.year, time.month, time.day).date() == date]
@@ -111,13 +112,10 @@ def create_daily_average_dataset(dataset, variable_name, output_file, level_inde
         
         # Compute the daily average
         daily_average = np.mean(day_slices, axis=0)
-
-        print(np.shape(day_slices))
-        print(np.shape(daily_average))
-        exit()
+        
         # Convert daily averages to DataFrame and save to CSV
-        save_daily_average_to_csv(daily_average, variable_name, date, output_file)
-    
+        save_daily_average_to_csv(daily_average, slice_lats, slice_lons, variable_name, date, output_file)
+    exit()
     return
 
 def process_era5_files(variables_dict, start_year, end_year, start_month, end_month, output_directory='/data/pdonnelly/era5/processed_files'):
