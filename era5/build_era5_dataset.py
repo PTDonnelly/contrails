@@ -118,23 +118,20 @@ def process_dataset(dataset, variable_name, level_index, slice_lats, slice_lons,
 
     daily_averages = []
     for date in dates:
-        print(date)
+        print(f"Day: {date}")
+        
         # Find indices for the current day
         day_indices = [i for i, time in enumerate(times) if dt.datetime(time.year, time.month, time.day).date() == date]
-        print(times, day_indices)
-
-        # # Process each time slice for the day
-        # day_slices = []
-        # for time_index in day_indices:
-        #     print(time_index)
-        #     # Extract slice (assuming a function that handles the extraction)
-        #     slice_data = extract_data_slice(dataset, variable_name, time_index, level_index, slice_lats, slice_lons, lat_bounds, lon_bounds)
-        #     # Regrid the slice
-        #     regridded_slice = regrid_data(slice_data, slice_lats, slice_lons, target_resolution)
-        #     day_slices.append(regridded_slice)
-
-        exit()
-        
+    
+        # Process each time slice for the day
+        day_slices = []
+        for time_index in day_indices:
+            print(f"Hour: {time_index}")
+            # Extract slice (assuming a function that handles the extraction)
+            slice_data = extract_data_slice(dataset, variable_name, time_index, level_index, slice_lats, slice_lons, lat_bounds, lon_bounds)
+            # Regrid the slice
+            regridded_slice = regrid_data(slice_data, slice_lats, slice_lons, target_resolution)
+            day_slices.append(regridded_slice)
         
         # Compute the daily average
         daily_average = np.mean(day_slices, axis=0)
