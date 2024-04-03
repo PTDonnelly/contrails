@@ -68,8 +68,6 @@ def save_daily_average_to_csv(daily_average, target_lon_mesh, target_lat_mesh, v
     # Flatten the daily average data
     data_flat = daily_average.ravel()
     
-    print(data_flat)
-    
     # Create a DataFrame
     df = pd.DataFrame({
         'Date': [date] * len(data_flat),  # Repeat the date for each row
