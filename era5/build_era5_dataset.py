@@ -1,12 +1,10 @@
-import dask
 import logging
 import netCDF4 as nc
 import numpy as np
 import os
 import pandas as pd
 from pathlib import Path
-import xarray as xr
-import xesmf as xe
+from scipy.interpolate import griddata
 
 import snoop
 
