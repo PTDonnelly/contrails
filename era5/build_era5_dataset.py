@@ -40,31 +40,31 @@ def custom_regrid(data_slice, latitudes, longitudes, target_resolution=1):
 
     Returns:
         np.array: The regridded 2D array.
-    """   
+    """
+    # Calculate the bin edges for latitudes and longitudes
+    lat_bins = np.arange(np.min(latitudes), np.max(latitudes) + target_resolution, target_resolution)
+    lon_bins = np.arange(np.min(longitudes), np.max(longitudes) + target_resolution, target_resolution)
+
+    # Digitize latitudes and longitudes to find their bin indexes
+    lat_bin_indices = np.digitize(latitudes, lat_bins) - 1
+    lon_bin_indices = np.digitize(longitudes, lon_bins) - 1
     
-    # Determine new grid size
-    lat_bins = np.arange(np.floor(latitudes.min()), np.ceil(latitudes.max()), target_resolution)
-    lon_bins = np.arange(np.floor(longitudes.min()), np.ceil(longitudes.max()), target_resolution)
-
-    print(lat_bins, lon_bins)
-
-    # Bin the latitudes and longitudes
-    lat_idxs = np.digitize(latitudes, bins=lat_bins) - 1
-    lon_idxs = np.digitize(longitudes, bins=lon_bins) - 1
-    print(lat_idxs, lon_idxs)
-
-    # Create an empty array for the coarser grid
-    coarse_grid = np.zeros((len(lat_bins) - 1, len(lon_bins) - 1))
+    # Initialize the regridded data array
+    regridded_data = np.zeros((len(lat_bins)-1, len(lon_bins)-1))
 
     # Aggregate data into the coarser grid
-    for i in range(len(lat_bins) - 1):
-        for j in range(len(lon_bins) - 1):
-            # Find data points within the current coarse grid cell
-            mask = (lat_idxs == i) & (lon_idxs == j)
-            # Average these data points
-            coarse_grid[i, j] = np.mean(data_slice[mask])
-
-    return coarse_grid
+    for i in range(len(lat_bins)-1):
+        for j in range(len(lon_bins)-1):
+            # Find the data points that fall into the current bin
+            in_bin = np.where((lat_bin_indices == i) & (lon_bin_indices == j))
+            
+            # Calculate the mean of those points
+            if len(in_bin[0]) > 0:  # Check if there are any points in the bin
+                regridded_data[i, j] = np.mean(data_slice[in_bin])
+            else:
+                regridded_data[i, j] = np.nan  # Or use another placeholder for empty bins
+                
+    return regridded_data
 
 
 
