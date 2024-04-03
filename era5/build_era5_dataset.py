@@ -80,13 +80,13 @@ def regrid_data(data, latitudes, longitudes, target_resolution, method='linear')
     # Flatten the meshgrid for interpolation
     points = np.column_stack((lat_mesh.ravel(), lon_mesh.ravel()))
     values = data.ravel()
+
+    print(len(points), len(values))
     
     # Generate the target grid
     target_lat = np.arange(latitudes.min(), latitudes.max(), target_resolution)
     target_lon = np.arange(longitudes.min(), longitudes.max(), target_resolution)
     target_lon_mesh, target_lat_mesh = np.meshgrid(target_lon, target_lat)
-
-
     
     # Interpolate to the new grid
     regridded_data = griddata(points, values, (target_lat_mesh, target_lon_mesh), method=method)
