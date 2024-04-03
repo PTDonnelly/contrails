@@ -30,7 +30,7 @@ def extract_data_slice(dataset, variable_name, time_idx, target_level, latitudes
     level_index = np.where(dataset.variables['level'][:] == target_level)[0][0]
     
     print(dataset.variables[variable_name].shape)
-    
+    print(time_idx, level_index, lat_indices[0], lat_indices[-1]+1, lon_indices[0], lon_indices[-1]+1)
     # Extract the slice
     variable_slice = dataset.variables[variable_name][time_idx, level_index, lat_indices[0]:lat_indices[-1]+1, lon_indices[0]:lon_indices[-1]+1]
     
