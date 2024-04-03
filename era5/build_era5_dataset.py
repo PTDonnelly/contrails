@@ -3,10 +3,9 @@ import logging
 import matplotlib.pyplot as plt
 import netCDF4 as nc
 import numpy as np
-import os
 import pandas as pd
 from pathlib import Path
-from scipy.interpolate import griddata, RBFInterpolator
+from scipy.interpolate import griddata
 
 # Set up logger
 logging.basicConfig(level=logging.INFO, format='%(asctime)s - %(levelname)s - %(message)s')
@@ -57,16 +56,7 @@ def create_target_grid(slice_data, slice_lats, slice_lons, target_resolution):
     return points, values,target_lat_mesh, target_lon_mesh
 
 def regrid_data(points, values, target_lon_mesh, target_lat_mesh, method='nearest'):
-    # # RBF Interpolation
-    # rbfi = RBFInterpolator(points, values)
-
-    # # Prepare the target grid points as a 2D array
-    # target_points = np.column_stack((target_lat_mesh.ravel(), target_lon_mesh.ravel()))
-
-    # # Perform the interpolation
-    # regridded_data_rbf = rbfi(target_points).reshape(target_lat_mesh.shape)
-
-    # Interpolate to the new grid
+        # Interpolate to the new grid
     regridded_data = griddata(points, values, (target_lon_mesh, target_lat_mesh),method=method)
     return regridded_data
 
@@ -138,10 +128,7 @@ def create_daily_average_dataset(dataset, variable_name, output_file, level_inde
             plt.ylabel('Latitude')
             plt.title('2D Grid of Values')
             plt.show()
-        
-            input()
-        
-        print(day_slices)
+
         # Compute the daily average
         daily_average = np.mean(day_slices, axis=0)
         
