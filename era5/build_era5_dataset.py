@@ -113,7 +113,6 @@ def create_daily_average_dataset(dataset, variable_name, output_file, level_inde
         
         # Convert daily averages to DataFrame and save to CSV
         save_daily_average_to_csv(daily_average, target_lon_mesh, target_lat_mesh, variable_name, date, output_file)
-    exit()
     return
 
 def process_era5_files(variables_dict, start_year, end_year, start_month, end_month, output_directory='/data/pdonnelly/era5/processed_files'):
@@ -140,17 +139,13 @@ def process_era5_files(variables_dict, start_year, end_year, start_month, end_mo
                     level_index, slice_lats, slice_lons = prepare_dataset(dataset, target_level, lat_bounds, lon_bounds)
                     
                     create_daily_average_dataset(dataset, variable_name, output_file, level_index, slice_lats, slice_lons, lat_bounds, lon_bounds, target_resolution)
-                
-                    # save_daily_averages_to_csv()
-
-                    logging.info(f"Processed {output_file}")
                     
                     # Cleanup
                     dataset.close()
+
+                    logging.info(f"Processed {output_file}")
                 else:
                     logging.info(f"File does not exist: {input_file}")
-
-                exit()
 
 def main():
     # Define ERA5 variables
@@ -166,7 +161,7 @@ def main():
     }
 
     # Execute on specified date range
-    process_era5_files(variables_dict, 2018, 2018, 3, 3)
+    process_era5_files(variables_dict, 2018, 2018, 3, 5)
 
 if __name__ == "__main__":
     main()
