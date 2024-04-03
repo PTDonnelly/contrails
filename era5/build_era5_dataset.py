@@ -144,7 +144,7 @@ def daily_averaging(data, times):
 
     return np.array(daily_avg_data), days
 
-def process_and_aggregate(input_file, variable_name, target_level=250, lat_bounds=(30, 60), lon_bounds=(300, 360)):
+def process_and_aggregate(input_file, output_file, variable_name, target_level=250, lat_bounds=(30, 60), lon_bounds=(300, 360)):
     
     # Open the NetCDF dataset
     dataset = nc.Dataset(input_file, 'r')
@@ -159,7 +159,9 @@ def process_and_aggregate(input_file, variable_name, target_level=250, lat_bound
 
     # Adjust longitude bounds if your dataset uses a different convention (e.g., 0 to 360)
     longitudes, lon_bounds = adjust_longitude_bounds(longitudes, lon_bounds)
-
+    print(longitudes, lon_bounds)
+    exit()
+    
     # Process each time slice
     regridded_slices = []
     times = []
@@ -179,7 +181,7 @@ def process_and_aggregate(input_file, variable_name, target_level=250, lat_bound
     daily_averages, days = daily_averaging(np.array(regridded_slices), times)
 
     # Convert daily averages to DataFrame and save to CSV
-    save_daily_averages_to_csv(daily_averages, days, latitudes, longitudes, output_csv, variable_name)
+    save_daily_averages_to_csv(daily_averages, days, latitudes, longitudes, output_file, variable_name)
 
     # Cleanup
     dataset.close()
@@ -196,19 +198,8 @@ def process_era5_files(variables_dict, start_year, end_year, start_month, end_mo
                 input_file = base_path / f"{short_name}.{year}{month:02d}.ap1e5.GLOBAL_025.nc"
                 output_file = output_directory / f"{short_name}_daily_{year}{month:02d}_1x1.csv"
                     
-
                 if input_file.exists():
-                    # Read and reduce atmospheric data, store in xarray DataSet
-                    # ds = reduce_fields(input_file, short_name)
-                    # # save_reduced_fields_to_netcdf(output_file, ds)
-
-                    # # Convert xarray Dataset into pandas DataFrame
-                    # # df = convert_dataset_to_dataframe(ds, short_name)
-                    # # save_reduced_fields_to_csv(output_file, df)
-
-                    # process_and_save_to_csv(ds, short_name, output_file)
-
-                    process_and_aggregate(input_file, short_name)
+                    process_and_aggregate(input_file, output_file, short_name)
 
                     logging.info(f"Processed {output_file}")
                     
