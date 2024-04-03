@@ -109,9 +109,13 @@ def create_daily_average_dataset(dataset, variable_name, output_file, level_inde
             points, values,target_lat_mesh, target_lon_mesh = create_target_grid(slice_data, slice_lats, slice_lons, target_resolution)
             regridded_slice = regrid_data(points, values,target_lat_mesh, target_lon_mesh)
             day_slices.append(regridded_slice)
+
+            print(regridded_slice)
+            input()
         
+        print(day_slices)
         # Compute the daily average
-        daily_average = np.nanmean(day_slices, axis=0)
+        daily_average = np.mean(day_slices, axis=0)
         
         # Convert daily averages to DataFrame and save to CSV
         save_daily_average_to_csv(daily_average, target_lon_mesh, target_lat_mesh, variable_name, date, output_file)
