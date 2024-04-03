@@ -21,7 +21,9 @@ def adjust_longitude_bounds(longitudes, lon_bounds):
     return longitudes, lon_bounds
 
 def extract_data_slice(dataset, variable_name, time_idx, target_level, latitudes, longitudes, lat_bounds, lon_bounds):
-  
+    
+    print(lat_bounds, lon_bounds)
+    print(latitudes, longitudes)
     # Find indices for latitude and longitude bounds
     lat_indices = np.where((latitudes >= lat_bounds[0]) & (latitudes <= lat_bounds[1]))[0]
     lon_indices = np.where((longitudes >= lon_bounds[0]) & (longitudes <= lon_bounds[1]))[0]
