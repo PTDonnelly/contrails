@@ -6,6 +6,7 @@ import os
 import pandas as pd
 from pathlib import Path
 import xarray as xr
+import xesmf as xe
 
 import snoop
 
@@ -28,44 +29,45 @@ def extract_data_slice(dataset, variable_name, time_idx, target_level, latitudes
     
     return variable_slice
 
-def custom_regrid(data_slice, latitudes, longitudes, target_resolution=1):
+def create_target_grid(latitudes, longitudes, target_resolution):
     """
-    Aggregate data to a coarser grid.
+    Creates a target grid for regridding.
 
     Args:
-        data_slice (np.array): The 2D array of data for a specific time and level.
-        lat (np.array): 1D array of latitude values corresponding to data_slice.
-        lon (np.array): 1D array of longitude values corresponding to data_slice.
-        target_resolution (int): The target resolution in degrees for regridding.
+        lat_min, lat_max (float): Minimum and maximum latitude.
+        lon_min, lon_max (float): Minimum and maximum longitude.
+        target_resolution (float): The target resolution in degrees.
 
     Returns:
-        np.array: The regridded 2D array.
+        xarray.Dataset: The target grid as an xarray Dataset.
     """
     # Calculate the bin edges for latitudes and longitudes
-    lat_bins = np.arange(np.min(latitudes), np.max(latitudes) + target_resolution, target_resolution)
-    lon_bins = np.arange(np.min(longitudes), np.max(longitudes) + target_resolution, target_resolution)
-
-    # Digitize latitudes and longitudes to find their bin indexes
-    lat_bin_indices = np.digitize(latitudes, lat_bins) - 1
-    lon_bin_indices = np.digitize(longitudes, lon_bins) - 1
+    lat_edges = np.arange(np.min(latitudes), np.max(latitudes) + target_resolution, target_resolution)
+    lon_edges = np.arange(np.min(longitudes), np.max(longitudes) + target_resolution, target_resolution)
     
-    # Initialize the regridded data array
-    regridded_data = np.zeros((len(lat_bins)-1, len(lon_bins)-1))
+    # Calculate center of bins to represent the lat/lon values
+    lat_centers = (lat_edges[:-1] + lat_edges[1:]) / 2
+    lon_centers = (lon_edges[:-1] + lon_edges[1:]) / 2
+    
+    target_grid = xr.Dataset({
+        'lat': (['lat'], lat_centers),
+        'lon': (['lon'], lon_centers),
+    })
+    
+    return target_grid
 
-    # Aggregate data into the coarser grid
-    for i in range(len(lat_bins)-1):
-        for j in range(len(lon_bins)-1):
-            # Find the data points that fall into the current bin
-            in_bin = np.where((lat_bin_indices == i) & (lon_bin_indices == j))
-            
-            # Calculate the mean of those points
-            if len(in_bin[0]) > 0:  # Check if there are any points in the bin
-                regridded_data[i, j] = np.mean(data_slice[in_bin])
-            else:
-                regridded_data[i, j] = np.nan  # Or use another placeholder for empty bins
-                
-    return regridded_data
+def regrid_data(dataset, variable_name, latitudes, longitudes, target_resolution):
+    # Create target grid in xESMF format
+    target_grid = create_target_grid(latitudes, longitudes, target_resolution)
 
+    # Create the regridder object
+    regridder = xe.Regridder(dataset, target_grid, 'bilinear')
+    
+    # Perform the regridding
+    regridded_var = regridder(dataset[variable_name])
+    
+    print(regridded_var.shape)
+    return regridded_var
 
 
 
@@ -158,7 +160,7 @@ def process_and_aggregate(input_file, output_file, variable_name, target_level, 
         variable_slice = extract_data_slice(dataset, variable_name, time_idx, target_level, latitudes, lat_bounds, longitudes, lon_bounds)
         
         # Apply regridding to the slice
-        regridded_slice = custom_regrid(variable_slice, latitudes, longitudes, target_resolution=1)
+        regridded_slice = regrid_data(variable_slice, latitudes, longitudes, target_resolution=1)
         regridded_slices.append(regridded_slice)
         
         # Keep track of times for daily averaging
