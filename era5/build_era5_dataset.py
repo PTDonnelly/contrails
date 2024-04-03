@@ -64,7 +64,7 @@ def regrid_data(points, values, target_lon_mesh, target_lat_mesh, method='linear
 
 def save_daily_average_to_csv(daily_average, slice_lats, slice_lons, variable_name, date, output_file):
     print(np.shape(daily_average), np.shape(slice_lats), np.shape(slice_lons))
-    
+    print(slice_lats)
     # Flatten the latitude and longitude grids
     lat_flat = slice_lats.ravel()
     lon_flat = slice_lons.ravel()
