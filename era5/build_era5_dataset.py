@@ -62,23 +62,23 @@ def regrid_data(points, values, target_lon_mesh, target_lat_mesh, method='linear
     # Interpolate to the new grid
     return griddata(points, values, (target_lat_mesh, target_lon_mesh), method=method)
 
-# def save_daily_averages_to_csv(daily_averages, days, latitudes, longitudes, output_csv, variable_name):
-#     # Assuming daily_averages shape: (days, latitudes, longitudes)
-#     # Flatten latitude and longitude for DataFrame format
-#     Lat, Lon = np.meshgrid(latitudes, longitudes, indexing='ij')
-#     Lat_flat = Lat.flatten()
-#     Lon_flat = Lon.flatten()
+def save_daily_average_to_csv(daily_averages, days, latitudes, longitudes, output_csv, variable_name):
+    # Assuming daily_averages shape: (days, latitudes, longitudes)
+    # Flatten latitude and longitude for DataFrame format
+    Lat, Lon = np.meshgrid(latitudes, longitudes, indexing='ij')
+    Lat_flat = Lat.flatten()
+    Lon_flat = Lon.flatten()
     
-#     with open(output_csv, 'w') as csvfile:
-#         # Write header
-#         csvfile.write("date,pressure,latitude,longitude,{}\n".format(variable_name))
+    with open(output_csv, 'w') as csvfile:
+        # Write header
+        csvfile.write("date,pressure,latitude,longitude,{}\n".format(variable_name))
         
-#         for day, daily_avg in zip(days, daily_averages):
-#             date_str = day.strftime('%Y-%m-%d')
-#             for lat, lon, value in zip(Lat_flat, Lon_flat, daily_avg.flatten()):
-#                 csvfile.write("{},{},{},{},{}\n".format(date_str, target_level, lat, lon, value))
+        for day, daily_avg in zip(days, daily_averages):
+            date_str = day.strftime('%Y-%m-%d')
+            for lat, lon, value in zip(Lat_flat, Lon_flat, daily_avg.flatten()):
+                csvfile.write("{},{},{},{},{}\n".format(date_str, target_level, lat, lon, value))
 
-def process_dataset(dataset, variable_name, level_index, slice_lats, slice_lons, lat_bounds, lon_bounds, target_resolution):
+def create_daily_average_dataset(dataset, variable_name, output_file, level_index, slice_lats, slice_lons, lat_bounds, lon_bounds, target_resolution):
     # Get indices of geographic region
     lat_indices, lon_indices = get_spatial_indices(slice_lats, slice_lons, lat_bounds, lon_bounds)
 
@@ -88,18 +88,16 @@ def process_dataset(dataset, variable_name, level_index, slice_lats, slice_lons,
     # Convert cftime DatetimeGregorian objects to datetime.date
     dates = np.unique([dt.date(time.year, time.month, time.day) for time in times])
 
-    daily_averages = []
     for date in dates:
         print(f"Day: {date}")
+        print(f"{output_file}_date.csv")
         
         # Find time indices for the current day
         time_indices = [i for i, time in enumerate(times) if dt.datetime(time.year, time.month, time.day).date() == date]
     
         # Process each time slice for the day
         day_slices = []
-        for time_index in time_indices:
-            print(f"Hour: {time_index}")
-            
+        for time_index in time_indices:            
             # Extract slice (assuming a function that handles the extraction)
             slice_data = extract_data_slice(dataset, variable_name, time_index, level_index, lat_indices, lon_indices)
             
@@ -110,16 +108,12 @@ def process_dataset(dataset, variable_name, level_index, slice_lats, slice_lons,
         
         # Compute the daily average
         daily_average = np.mean(day_slices, axis=0)
-        daily_averages.append(daily_average)
+        
+        # # Convert daily averages to DataFrame and save to CSV
+        # save_daily_average_to_csv(daily_average, variable_name, date, output_root)
     
-    return daily_averages
+    return
 
-    # Convert daily averages to DataFrame and save to CSV
-    save_daily_averages_to_csv(daily_averages, days, latitudes, longitudes, output_file, variable_name)
-
-    # Cleanup
-    dataset.close()
-    
 def process_era5_files(variables_dict, start_year, end_year, start_month, end_month, output_directory='/data/pdonnelly/era5/processed_files'):
     base_path = Path(f"/bdd/ECMWF/ERA5/NETCDF/GLOBAL_025/hourly/AN_PL/{start_year}")
     output_directory = Path(output_directory)
@@ -130,12 +124,12 @@ def process_era5_files(variables_dict, start_year, end_year, start_month, end_mo
     lon_bounds = (300, 360)
     target_resolution = 1
     
-    for short_name in variables_dict.values():
+    for variable_name in variables_dict.values():
         for year in range(start_year, end_year + 1):
             for month in range(start_month, end_month + 1):
                 # Define filenames
-                input_file = base_path / f"{short_name}.{year}{month:02d}.ap1e5.GLOBAL_025.nc"
-                output_file = output_directory / f"{short_name}_daily_{year}{month:02d}_1x1.csv"
+                input_file = base_path / f"{variable_name}.{year}{month:02d}.ap1e5.GLOBAL_025.nc"
+                output_file = output_directory / f"{variable_name}_daily_1x1"
                     
                 if input_file.exists():
                     # Open the NetCDF dataset
@@ -143,9 +137,8 @@ def process_era5_files(variables_dict, start_year, end_year, start_month, end_mo
 
                     level_index, slice_lats, slice_lons = prepare_dataset(dataset, target_level, lat_bounds, lon_bounds)
                     
-                    daily_averages = process_dataset(dataset, short_name, level_index, slice_lats, slice_lons, lat_bounds, lon_bounds, target_resolution)
-                    
-                    print(len(daily_averages))
+                    create_daily_average_dataset(dataset, variable_name, output_file, level_index, slice_lats, slice_lons, lat_bounds, lon_bounds, target_resolution)
+                
                     # save_daily_averages_to_csv()
 
                     logging.info(f"Processed {output_file}")
