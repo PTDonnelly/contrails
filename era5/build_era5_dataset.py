@@ -57,7 +57,7 @@ def create_target_grid(slice_data, slice_lats, slice_lons, target_resolution):
     target_lon_mesh, target_lat_mesh = np.meshgrid(target_lon, target_lat)
 
     print(np.shape(points), np.shape(values), np.shape(target_lon_mesh), np.shape(target_lat_mesh))
-    print(values)
+    print(len(values != 0))
     return points, values,target_lat_mesh, target_lon_mesh
 
 def regrid_data(points, values, target_lon_mesh, target_lat_mesh, method='nearest'):
