@@ -24,7 +24,7 @@ def extract_data_slice(dataset, variable_name, time_idx, target_level, latitudes
     level_index = np.where(dataset.variables['level'][:] == target_level)[0][0]
     
     print(dataset.variables[variable_name].shape)
-    print(time_idx, level_index, lat_indices[0], lat_indices[-1]+1, lon_indices[0], lon_indices[-1]+1)
+    print(lat_indices[0], lat_indices[-1], lon_indices[0], lon_indices[-1])
     # Extract the slice
     variable_slice = dataset.variables[variable_name][time_idx, level_index, lat_indices[0]:lat_indices[-1]+1, lon_indices[0]:lon_indices[-1]+1]
     
@@ -147,7 +147,7 @@ def process_and_aggregate(input_file, output_file, variable_name, target_level=2
     
     # Define geographic region (for the North Atlantic Ocean in this example)
     lat_bounds=(30, 60)
-    lon_bounds=(320, 359)
+    lon_bounds=(320, 360)
     # Get latitude and longitude arrays
     latitudes = dataset.variables['latitude'][:]
     longitudes = dataset.variables['longitude'][:]
