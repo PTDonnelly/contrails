@@ -120,12 +120,12 @@ def process_dataset(dataset, variable_name, level_index, slice_lats, slice_lons,
     for date in dates:
         print(f"Day: {date}")
         
-        # Find indices for the current day
-        day_indices = [i for i, time in enumerate(times) if dt.datetime(time.year, time.month, time.day).date() == date]
+        # Find time indices for the current day
+        time_indices = [i for i, time in enumerate(times) if dt.datetime(time.year, time.month, time.day).date() == date]
     
         # Process each time slice for the day
         day_slices = []
-        for time_index in day_indices:
+        for time_index in time_indices:
             print(f"Hour: {time_index}")
             # Extract slice (assuming a function that handles the extraction)
             slice_data = extract_data_slice(dataset, variable_name, time_index, level_index, slice_lats, slice_lons, lat_bounds, lon_bounds)
