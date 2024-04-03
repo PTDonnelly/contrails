@@ -111,7 +111,7 @@ def create_daily_average_dataset(dataset, variable_name, output_file, level_inde
             day_slices.append(regridded_slice)
         
         # Compute the daily average
-        daily_average = np.mean(day_slices, axis=0)
+        daily_average = np.nanmean(day_slices, axis=0)
         
         # Convert daily averages to DataFrame and save to CSV
         save_daily_average_to_csv(daily_average, target_lon_mesh, target_lat_mesh, variable_name, date, output_file)
