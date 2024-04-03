@@ -67,6 +67,9 @@ def regrid_data(points, values, target_lon_mesh, target_lat_mesh, method='cubic'
     # regridded_data_rbf = rbfi(target_points).reshape(target_lat_mesh.shape)
 
     # Interpolate to the new grid
+    for point, value in zip(points, values):
+        print(point, value)
+        input()
     regridded_data = griddata(points, values, (target_lat_mesh, target_lon_mesh), fill_value=0, method=method)
     return regridded_data
 
