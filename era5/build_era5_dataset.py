@@ -79,7 +79,7 @@ def save_daily_average_to_csv(daily_average, target_lon_mesh, target_lat_mesh, v
     # Save the DataFrame to CSV
     file_name = f"{output_file}_{date}.csv"
     df.to_csv(file_name, sep='\t', index=False)
-    print(f"Data saved to {file_name}")
+    logging.info(f"Data saved to {file_name}")
 
 def create_daily_average_dataset(dataset, variable_name, output_file, level_index, slice_lats, slice_lons, lat_bounds, lon_bounds, target_resolution):
     # Get indices of geographic region
@@ -124,7 +124,6 @@ def process_single_variable(args):
         level_index, slice_lats, slice_lons = prepare_dataset(dataset, target_level, lat_bounds, lon_bounds)
         create_daily_average_dataset(dataset, variable_name, output_file, level_index, slice_lats, slice_lons, lat_bounds, lon_bounds, target_resolution)
         dataset.close()
-        logging.info(f"Processed {output_file}")
     else:
         logging.info(f"File does not exist: {input_file}")
 
@@ -159,4 +158,4 @@ variables_dict = {
 }
 
 if __name__ == '__main__':
-    process_era5_files(variables_dict, 2018, 2018, 3, 3)
+    process_era5_files(variables_dict, 2018, 2019, 3, 3)
