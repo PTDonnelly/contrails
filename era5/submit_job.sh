@@ -1,9 +1,9 @@
 #!/bin/bash
 #SBATCH --job-name=ERA5
 #SBATCH --output=/data/pdonnelly/era5/build_era5.log
-#SBATCH --time=12:00:00
+#SBATCH --time=01:00:00
 #SBATCH --ntasks=1
-#SBATCH --mem=12GB
+#SBATCH --mem=16GB
 
 # Purge all modules to prevent conflict with current environnement
 module purge
