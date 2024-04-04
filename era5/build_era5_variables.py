@@ -60,7 +60,7 @@ def regrid_data(points, values, target_lon_mesh, target_lat_mesh, method='neares
     regridded_data = griddata(points, values, (target_lon_mesh, target_lat_mesh),method=method)
     return regridded_data
 
-def save_daily_average_to_csv(daily_average, target_lon_mesh, target_lat_mesh, variable_name, date, output_file):
+def save_daily_average_to_csv(daily_average, target_lon_mesh, target_lat_mesh, variable_name, target_level, date, output_file):
     # Flatten the latitude and longitude grids
     lat_flat = target_lat_mesh.ravel()
     lon_flat = target_lon_mesh.ravel()
@@ -68,12 +68,15 @@ def save_daily_average_to_csv(daily_average, target_lon_mesh, target_lat_mesh, v
     # Flatten the daily average data
     data_flat = daily_average.ravel()
     
+    # Tag the variabel with its pressure level
+    variable_column_header = f"{variable_name}_{target_level}"
+    
     # Create a DataFrame
     df = pd.DataFrame({
         'Date': [date] * len(data_flat),  # Repeat the date for each row
         'Latitude': lat_flat,
         'Longitude': lon_flat,
-        variable_name: data_flat  # Use the variable name as the column name for data
+        variable_column_header: data_flat  # Use the variable name as the column name for data
     })
     
     # Save the DataFrame to CSV
@@ -81,7 +84,7 @@ def save_daily_average_to_csv(daily_average, target_lon_mesh, target_lat_mesh, v
     df.to_csv(file_name, sep='\t', index=False)
     logging.info(f"Data saved to {file_name}")
 
-def create_daily_average_dataset(dataset, variable_name, output_file, level_index, slice_lats, slice_lons, lat_bounds, lon_bounds, target_resolution):
+def create_daily_average_dataset(dataset, variable_name, output_file, target_level, level_index, slice_lats, slice_lons, lat_bounds, lon_bounds, target_resolution):
     # Get indices of geographic region
     lat_indices, lon_indices = get_spatial_indices(slice_lats, slice_lons, lat_bounds, lon_bounds)
 
@@ -114,7 +117,8 @@ def create_daily_average_dataset(dataset, variable_name, output_file, level_inde
         daily_average = np.mean(day_slices, axis=0)
         
         # Convert daily averages to DataFrame and save to CSV
-        save_daily_average_to_csv(daily_average, target_lon_mesh, target_lat_mesh, variable_name, date, output_file)
+        date = date_time.date()
+        save_daily_average_to_csv(daily_average, target_lon_mesh, target_lat_mesh, variable_name, target_level, date, output_file)
     return
 
 def process_single_variable(args):
@@ -126,7 +130,7 @@ def process_single_variable(args):
     if input_file.exists():
         dataset = nc.Dataset(input_file, 'r')
         level_index, slice_lats, slice_lons = prepare_dataset(dataset, target_level, lat_bounds, lon_bounds)
-        create_daily_average_dataset(dataset, variable_name, output_file, level_index, slice_lats, slice_lons, lat_bounds, lon_bounds, target_resolution)
+        create_daily_average_dataset(dataset, variable_name, output_file, target_level, level_index, slice_lats, slice_lons, lat_bounds, lon_bounds, target_resolution)
         dataset.close()
     else:
         logging.info(f"File does not exist: {input_file}")
@@ -164,4 +168,4 @@ variables_dict = {
 }
 
 if __name__ == '__main__':
-    process_era5_files(variables_dict, 2018, 2023, 3, 5)
+    process_era5_files(variables_dict, 2018, 2018, 3, 3)
