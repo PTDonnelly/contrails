@@ -89,11 +89,15 @@ def create_daily_average_dataset(dataset, variable_name, output_file, level_inde
     times = nc.num2date(dataset.variables['time'][:], dataset.variables['time'].units)
 
     # Convert cftime DatetimeGregorian objects to datetime.date
-    dates = np.unique([dt.date(time.year, time.month, time.day) for time in times])
+    date_times = np.unique([dt.date(time.year, time.month, time.day) for time in times])
 
-    for date in dates:
+    for date_time in date_times:
         # Find time indices for the current day
-        time_indices = [i for i, time in enumerate(times) if dt.datetime(time.year, time.month, time.day).date() == date]
+        print(date_time)
+        # time_indices = [i for i, time in enumerate(times) if dt.datetime(time.year, time.month, time.day).date() == date]
+        time_indices = [i for i, time in enumerate(times) if dt.datetime(time.year, time.month, time.day).date() == date_time and 6 <= time.hour <= 18]
+        print(time_indices)
+        exit()
     
         # Process each time slice for the day
         day_slices = []

@@ -19,6 +19,7 @@ def gather_daily_data(processed_files_dir):
     daily_data = {}
     for file in Path(processed_files_dir).glob('**/*.csv'):
         date_str = extract_date_from_filename(file.name)
+        print(file.name)
         if date_str:
             if date_str not in daily_data:
                 daily_data[date_str] = []

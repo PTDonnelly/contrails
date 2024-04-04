@@ -30,42 +30,50 @@ c = cdsapi.Client()
 
 # Define the start and end dates
 start_date = datetime(2014, 3, 1)
-end_date = datetime(2014, 5, 31)
+end_date = datetime(2017, 5, 31)
 
 # Define the geographic regions
 regions = {
-    "GMCS": {"lat": [0, 45], "lon": [-60, -100]}, # Gulf of Mexico / Carribean Sea
-    "NAO": {"lat": [30, 60], "lon": [0, -60]}, # North Atlantic Ocean
-    "NPO": {"lat": [30, 60], "lon": [-180, -120]}, # North Pacific Ocean
-    "SCS": {"lat": [0, 30], "lon": [90, 150]} # South Schina Sea
+    # "GMCS": {"lat": [0, 45], "lon": [-60, -100]}, # Gulf of Mexico / Carribean Sea
+    # "NAO": {"lat": [30, 60], "lon": [0, -60]}, # North Atlantic Ocean
+    "NPO": {"lat": [30, 60], "lon": [-180, -120]} # North Pacific Ocean
+    # "SCS": {"lat": [0, 30], "lon": [90, 150]} # South Schina Sea
 }
+
+# Define atmospheric variables to extract
+variables = ['clwc', 'ciwc', 'cc', 'd', 'w', 'vo']
 
 # Iterate over each date and location
 for single_date in daterange(start_date, end_date):
+    print(single_date)
+    print(single_date.year, single_date.month)
+    print(datetime(single_date).year, datetime(single_date).month)
+    exit()
     for region, coordinates in regions.items():
-        # output_file = f'C:\\Users\\donnelly\\Documents\\projects\\data\\era5\\{single_date.strftime("%Y%m%d")}_{region}.nc'
-        output_file = f"/data/pdonnelly/era5/{single_date.strftime('%Y%m%d')}_{region}.nc"
-        
-        # Format region co-ordinates for API (North, West, South, East)
-        west, east = min(coordinates["lon"]), max(coordinates["lon"])
-        south, north = min(coordinates["lat"]), max(coordinates["lat"])
+        for variable in variables:
+            # output_file = f'C:\\Users\\donnelly\\Documents\\projects\\data\\era5\\{single_date.strftime("%Y%m%d")}_{region}.nc'
+            output_file = f"/data/pdonnelly/era5/{variable}.{single_date.strftime('%Y%m%d')}_{region}.nc"
+            
+            # Format region co-ordinates for API (North, West, South, East)
+            west, east = min(coordinates["lon"]), max(coordinates["lon"])
+            south, north = min(coordinates["lat"]), max(coordinates["lat"])
 
-        data_retrieval = {
-            'product_type': 'reanalysis',
-            'format': 'netcdf',
-            'variable': ['t', 'u', 'v', 'q', 'clwc', 'ciwc', 'cc'],
-            'pressure_level': ['200', '250', '300'],
-            'year': single_date.strftime("%Y"),
-            'month': single_date.strftime("%m"),
-            'day': single_date.strftime("%d"),
-            'time': ['06:00', '07:00', '08:00', '09:00', '10:00', '11:00', '12:00', '13:00', '14:00', '15:00', '16:00', '17:00', '18:00'],
-            'area': [north, west, south, east],
-            'grid': [1, 1]
-        }
-        
-        # Send the API request
-        c.retrieve(
-            'reanalysis-era5-pressure-levels',
-            data_retrieval,
-            output_file
-        )
+            data_retrieval = {
+                'product_type': 'reanalysis',
+                'format': 'netcdf',
+                'variable': variable,
+                'pressure_level': ['200', '300'],
+                'year': single_date.strftime("%Y"),
+                'month': single_date.strftime("%m"),
+                'day': single_date.strftime("%d"),
+                'time': ['06:00', '07:00', '08:00', '09:00', '10:00', '11:00', '12:00', '13:00', '14:00', '15:00', '16:00', '17:00', '18:00'],
+                'area': [north, west, south, east],
+                'grid': [1, 1]
+            }
+            
+            # Send the API request
+            c.retrieve(
+                'reanalysis-era5-pressure-levels',
+                data_retrieval,
+                output_file
+            )
