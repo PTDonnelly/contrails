@@ -13,8 +13,10 @@ def extract_date_from_filename(filename):
 def load_and_tag_data(filepath):
     """Loads CSV data and tags it with the variable name."""
     df = pd.read_csv(filepath)
+    print(df.head())
     variable_name = filepath.name.split('_')[0]
     df['variable'] = variable_name
+    print(df.head())
     return df
 
 def gather_daily_data(processed_files_dir):
@@ -22,11 +24,12 @@ def gather_daily_data(processed_files_dir):
     daily_data = {}
     for file in Path(processed_files_dir).glob('**/*.csv'):
         date_str = extract_date_from_filename(file.name)
-        print(date_str)
         if date_str:
             if date_str not in daily_data:
                 daily_data[date_str] = []
             daily_data[date_str].append(load_and_tag_data(file))
+            input()
+    exit()
     return daily_data
 
 def pivot_and_save_daily_data(daily_data, output_dir_path):
