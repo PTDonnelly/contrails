@@ -10,12 +10,9 @@ def extract_date_from_filename(filename):
         return f"{match.group(1)}-{match.group(2)}-{match.group(3)}"
     return None
 
-def load_and_tag_data(filepath):
-    """Loads CSV data and tags it with the variable name."""
-    df = pd.read_csv(filepath, sep='\t')
-    variable_name = filepath.name.split('_')[0]
-    df['variable'] = variable_name
-    return df
+def get_data(filepath):
+    """Loads CSV data."""
+    return pd.read_csv(filepath, sep='\t')
 
 def gather_daily_data(processed_files_dir):
     """Gathers data for each unique date from all CSV files."""
@@ -25,17 +22,13 @@ def gather_daily_data(processed_files_dir):
         if date_str:
             if date_str not in daily_data:
                 daily_data[date_str] = []
-            daily_data[date_str].append(load_and_tag_data(file))
+            daily_data[date_str].append(get_data(file))
     return daily_data
 
 def pivot_and_save_daily_data(daily_data, output_dir_path):
     """Pivots data to have variables as columns and saves the daily data to CSV files."""
     for date_str, dfs in daily_data.items():
-        print(date_str)
-        for df in dfs:
-            print(df.head())
-            input()
-        day_df = pd.concat(dfs)
+        day_df = pd.concat(dfs, axis=1)
         print(day_df.head())
         exit()
         pivoted_df = day_df.pivot_table(index=['latitude', 'longitude', 'date'], columns='variable', values='value').reset_index()
