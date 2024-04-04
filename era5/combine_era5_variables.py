@@ -18,7 +18,6 @@ def get_data(filepath):
 def gather_daily_data(processed_files_dir):
     """Gathers data for each unique date from all CSV files."""
     files = Path(processed_files_dir).glob('**/*.csv')
-    print(f"Gathering {len(files)} files")
     
     daily_data = {}
     for file in tqdm(files):
