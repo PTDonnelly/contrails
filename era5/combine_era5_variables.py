@@ -51,6 +51,6 @@ def process_era5_files(processed_files_dir, output_dir):
     pivot_and_save_daily_data(daily_data, output_dir_path)
 
 # Example usage
-processed_files_dir = '/data/pdonnelly/era5/processed_files_test'
+processed_files_dir = '/data/pdonnelly/era5/processed_files'
 output_dir = '/data/pdonnelly/era5/daily_combined'
 process_era5_files(processed_files_dir, output_dir)
