@@ -24,14 +24,12 @@ def gather_daily_data(processed_files_dir):
     daily_data = {}
     for file in Path(processed_files_dir).glob('**/*.csv'):
         date_str = extract_date_from_filename(file.name)
-        print(date_str)
+        print(file.name)
         if date_str:
             if date_str not in daily_data:
                 daily_data[date_str] = []
             daily_data[date_str].append(load_and_tag_data(file))
-            input()
     print(daily_data.keys)
-    exit()
     return daily_data
 
 def pivot_and_save_daily_data(daily_data, output_dir_path):
@@ -49,6 +47,7 @@ def process_era5_files(processed_files_dir, output_dir):
     output_dir_path = Path(output_dir)
     output_dir_path.mkdir(parents=True, exist_ok=True)
     daily_data = gather_daily_data(processed_files_dir)
+    exit()
     pivot_and_save_daily_data(daily_data, output_dir_path)
 
 # Example usage
