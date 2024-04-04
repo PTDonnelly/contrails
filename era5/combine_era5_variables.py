@@ -28,6 +28,19 @@ def gather_daily_data(processed_files_dir):
             daily_data[date_str].append(get_data(file))
     return daily_data
 
+
+def custom_sort(col):
+    # Basic columns that don't need sorting
+    if col in ['Date', 'Latitude', 'Longitude']:
+        return (0, col)
+
+    # Extract variable and level from column name
+    variable, level = col.rsplit('_', 1)
+    # Convert level to integer for proper numeric sorting
+    level = int(level)
+    # Return a tuple that first sorts by level, then by variable name
+    return (level, variable)
+
 def pivot_and_save_daily_data(daily_data, output_dir_path):
     """Pivots data to have variables as columns and saves the daily data to CSV files."""
     for date_str, dfs in tqdm(daily_data.items()):
@@ -37,10 +50,15 @@ def pivot_and_save_daily_data(daily_data, output_dir_path):
         for df in dfs[1:]:
             combined_df = combined_df.merge(df, on=['Date', 'Latitude', 'Longitude'], how='outer')
         
+        # Sort columns using the custom sort key
+        sorted_columns = sorted(combined_df.columns, key=custom_sort)
+
+        # Reindex DataFrame with sorted columns
+        combined_df_sorted = combined_df[sorted_columns]
+
         # Save combined DataFrame to CSV
         output_filename = output_dir_path / f"daily_1x1_{date_str}.csv"
-        combined_df.to_csv(output_filename, sep='\t', index=False)
-        print(f"Data saved to {output_filename}")
+        combined_df_sorted.to_csv(output_filename, sep='\t', index=False)
 
 def process_era5_files(processed_files_dir, output_dir):
     """Main function to orchestrate the processing of ERA5 files."""
