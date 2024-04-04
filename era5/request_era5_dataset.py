@@ -46,8 +46,7 @@ variables = ['clwc', 'ciwc', 'cc', 'd', 'w', 'vo']
 # Iterate over each date and location
 for single_date in daterange(start_date, end_date):
     print(single_date)
-    print(single_date.year, single_date.month)
-    print(datetime(single_date).year, datetime(single_date).month)
+    print(single_date.year, single_date.hour)
     exit()
     for region, coordinates in regions.items():
         for variable in variables:
