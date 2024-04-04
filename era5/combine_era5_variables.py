@@ -13,10 +13,8 @@ def extract_date_from_filename(filename):
 def load_and_tag_data(filepath):
     """Loads CSV data and tags it with the variable name."""
     df = pd.read_csv(filepath, sep='\t')
-    print(df.head())
     variable_name = filepath.name.split('_')[0]
     df['variable'] = variable_name
-    print(df.head())
     return df
 
 def gather_daily_data(processed_files_dir):
@@ -24,19 +22,19 @@ def gather_daily_data(processed_files_dir):
     daily_data = {}
     for file in Path(processed_files_dir).glob('**/*.csv'):
         date_str = extract_date_from_filename(file.name)
-        print(file.name)
         if date_str:
             if date_str not in daily_data:
                 daily_data[date_str] = []
             daily_data[date_str].append(load_and_tag_data(file))
-    print(daily_data.keys)
     return daily_data
 
 def pivot_and_save_daily_data(daily_data, output_dir_path):
     """Pivots data to have variables as columns and saves the daily data to CSV files."""
     for date_str, dfs in daily_data.items():
+        print(date_str)
         day_df = pd.concat(dfs)
         print(day_df.head())
+        input()
         pivoted_df = day_df.pivot_table(index=['latitude', 'longitude', 'date'], columns='variable', values='value').reset_index()
         output_filename = output_dir_path / f"daily_1x1_{date_str}.csv"
         pivoted_df.to_csv(output_filename, index=False)
@@ -47,7 +45,6 @@ def process_era5_files(processed_files_dir, output_dir):
     output_dir_path = Path(output_dir)
     output_dir_path.mkdir(parents=True, exist_ok=True)
     daily_data = gather_daily_data(processed_files_dir)
-    exit()
     pivot_and_save_daily_data(daily_data, output_dir_path)
 
 # Example usage
