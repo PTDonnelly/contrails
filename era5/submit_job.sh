@@ -1,13 +1,9 @@
 """#!/bin/bash
 #SBATCH --job-name=ERA5
-#SBATCH --output=build_era5.log
+#SBATCH --output=/data/pdonnelly/era5/build_era5.log
 #SBATCH --time=12:00:00
 #SBATCH --ntasks=1
 #SBATCH --mem=8GB
-
-echo "PATH: $PATH"
-module list
-which python
 
 # Purge all modules to prevent conflict with current environnement
 module purge
