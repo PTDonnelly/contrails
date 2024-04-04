@@ -45,9 +45,6 @@ variables = ['clwc', 'ciwc', 'cc', 'd', 'w', 'vo']
 
 # Iterate over each date and location
 for single_date in daterange(start_date, end_date):
-    print(single_date)
-    print(single_date.year, single_date.hour)
-    exit()
     for region, coordinates in regions.items():
         for variable in variables:
             # output_file = f'C:\\Users\\donnelly\\Documents\\projects\\data\\era5\\{single_date.strftime("%Y%m%d")}_{region}.nc'
