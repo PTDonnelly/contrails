@@ -28,7 +28,6 @@ def gather_daily_data(processed_files_dir):
             daily_data[date_str].append(get_data(file))
     return daily_data
 
-
 def custom_sort(col):
     # Basic columns that don't need sorting
     if col in ['Date', 'Latitude', 'Longitude']:
