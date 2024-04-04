@@ -32,14 +32,14 @@ def gather_daily_data(processed_files_dir):
 def custom_sort(col):
     # Basic columns that don't need sorting
     if col in ['Date', 'Latitude', 'Longitude']:
-        return (0, col)
+        return (col, 0)
 
     # Extract variable and level from column name
     variable, level = col.rsplit('_', 1)
     # Convert level to integer for proper numeric sorting
     level = int(level)
     # Return a tuple that first sorts by level, then by variable name
-    return (level, variable)
+    return (variable, level)
 
 def pivot_and_save_daily_data(daily_data, output_dir_path):
     """Pivots data to have variables as columns and saves the daily data to CSV files."""
