@@ -33,7 +33,6 @@ def pivot_and_save_daily_data(daily_data, output_dir_path):
         # Iteratively merge the rest of the DataFrames on 'Date', 'Latitude', and 'Longitude' (because merge() only works on two DataFrames at a time)
         for df in dfs[1:]:
             combined_df = combined_df.merge(df, on=['Date', 'Latitude', 'Longitude'], how='outer')
-        print(combined_df.head())
         
         # Save combined DataFrame to CSV
         output_filename = output_dir_path / f"daily_1x1_{date_str}.csv"
