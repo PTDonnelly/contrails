@@ -117,7 +117,7 @@ def process_single_variable(args):
     variable_name, year, month, output_directory, target_level, lat_bounds, lon_bounds, target_resolution = args
     base_path = Path(f"/bdd/ECMWF/ERA5/NETCDF/GLOBAL_025/hourly/AN_PL/{year}")
     input_file = base_path / f"{variable_name}.{year}{month:02d}.ap1e5.GLOBAL_025.nc"
-    output_file = output_directory / f"{variable_name}_daily_1x1"
+    output_file = output_directory / f"{variable_name}_{target_level}_daily_1x1"
 
     if input_file.exists():
         dataset = nc.Dataset(input_file, 'r')
@@ -131,31 +131,33 @@ def process_era5_files(variables_dict, start_year, end_year, start_month, end_mo
     output_directory = Path(output_directory)
     output_directory.mkdir(parents=True, exist_ok=True)
 
-    target_level = 250
     lat_bounds = (30, 60)
     lon_bounds = (300, 360)
     target_resolution = 1
 
     tasks = []
-    for variable_name in variables_dict.values():
-        for year in range(start_year, end_year + 1):
-            for month in range(start_month, end_month + 1):
-                tasks.append((variable_name, year, month, output_directory, target_level, lat_bounds, lon_bounds, target_resolution))
+    for values in variables_dict.values():
+        short_name = values['short_name']
+        target_levels = values['target_level']
+        for target_level in target_levels:
+            for year in range(start_year, end_year + 1):
+                for month in range(start_month, end_month + 1):
+                    tasks.append((short_name, year, month, output_directory, target_level, lat_bounds, lon_bounds, target_resolution))
 
     with Pool() as pool:
         pool.map(process_single_variable, tasks)
 
 # Define ERA5 variables
 variables_dict = {
-    "cloud cover": "cc",
-    "temperature": "ta",
-    "specific humidity": "q",
-    "relative humidity": "r",
-    "geopotential": "geopt",
-    "eastward wind": "u",
-    "northward wind": "v",
-    "ozone mass mixing ratio": "o3",
+    "cloud cover": {"short_name": "cc", "target_level": [200, 300]},
+    "temperature": {"short_name": "ta", "target_level": [200, 300]},
+    "specific humidity": {"short_name": "q", "target_level": [200, 300]},
+    "relative humidity": {"short_name": "r", "target_level": [200, 300]},
+    "geopotential": {"short_name": "geopt", "target_level": [250, 500]},
+    "eastward wind": {"short_name": "u", "target_level": [200, 300]},
+    "northward wind": {"short_name": "v", "target_level": [200, 300]},
+    "ozone mass mixing ratio": {"short_name": "o3", "target_level": [200, 300]},
 }
 
 if __name__ == '__main__':
-    process_era5_files(variables_dict, 2018, 2023, 3, 3)
+    process_era5_files(variables_dict, 2018, 2023, 3, 5)

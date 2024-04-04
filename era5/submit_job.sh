@@ -11,4 +11,4 @@ module purge
 # Load necessary modules
 module load python/meso-3.8
 
-python /data/pdonnelly/github/contrails/era5/build_era5_dataset.py
+python /data/pdonnelly/github/contrails/era5/build_era5_variables.py
