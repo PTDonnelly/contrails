@@ -12,7 +12,7 @@ def extract_date_from_filename(filename):
 
 def load_and_tag_data(filepath):
     """Loads CSV data and tags it with the variable name."""
-    df = pd.read_csv(filepath)
+    df = pd.read_csv(filepath, sep='\t')
     print(df.head())
     variable_name = filepath.name.split('_')[0]
     df['variable'] = variable_name
