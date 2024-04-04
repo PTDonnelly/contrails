@@ -92,15 +92,11 @@ def create_daily_average_dataset(dataset, variable_name, output_file, target_lev
     times = nc.num2date(dataset.variables['time'][:], dataset.variables['time'].units)
 
     # Convert cftime DatetimeGregorian objects to datetime.date
-    date_times = np.unique([dt.date(time.year, time.month, time.day) for time in times])
+    dates = np.unique([dt.date(time.year, time.month, time.day) for time in times])
 
-    for date_time in date_times:
-        # Find time indices for the current day
-        print(date_time)
-        # time_indices = [i for i, time in enumerate(times) if dt.datetime(time.year, time.month, time.day).date() == date]
-        time_indices = [i for i, time in enumerate(times) if dt.datetime(time.year, time.month, time.day).date() == date_time and 6 <= time.hour <= 18]
-        print(time_indices)
-        exit()
+    for date in dates:
+        # Find time indices for the current day (only considering daytime values)
+        time_indices = [i for i, time in enumerate(times) if dt.datetime(time.year, time.month, time.day).date() == date and 6 <= time.hour <= 18]
     
         # Process each time slice for the day
         day_slices = []
@@ -117,7 +113,6 @@ def create_daily_average_dataset(dataset, variable_name, output_file, target_lev
         daily_average = np.mean(day_slices, axis=0)
         
         # Convert daily averages to DataFrame and save to CSV
-        date = date_time.date()
         save_daily_average_to_csv(daily_average, target_lon_mesh, target_lat_mesh, variable_name, target_level, date, output_file)
     return
 
