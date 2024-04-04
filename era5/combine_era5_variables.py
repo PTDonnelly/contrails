@@ -37,7 +37,7 @@ def pivot_and_save_daily_data(daily_data, output_dir_path):
         
         # Save combined DataFrame to CSV
         output_filename = output_dir_path / f"daily_1x1_{date_str}.csv"
-        combined_df.to_csv(output_filename, index=False)
+        combined_df.to_csv(output_filename, sep='\t', index=False)
         print(f"Data saved to {output_filename}")
 
 def process_era5_files(processed_files_dir, output_dir):
