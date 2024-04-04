@@ -48,7 +48,7 @@ for single_date in daterange(start_date, end_date):
     for region, coordinates in regions.items():
         for variable in variables:
             # output_file = f'C:\\Users\\donnelly\\Documents\\projects\\data\\era5\\{single_date.strftime("%Y%m%d")}_{region}.nc'
-            output_file = f"/data/pdonnelly/era5/{variable}.{single_date.strftime('%Y%m%d')}_{region}.nc"
+            output_file = f"/data/pdonnelly/era5/requested_data/{variable}.{single_date.strftime('%Y%m%d')}_{region}.nc"
             
             # Format region co-ordinates for API (North, West, South, East)
             west, east = min(coordinates["lon"]), max(coordinates["lon"])
