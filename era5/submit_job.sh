@@ -5,6 +5,10 @@
 #SBATCH --ntasks=1
 #SBATCH --mem=8GB
 
+echo "PATH: $PATH"
+module list
+which python
+
 # Purge all modules to prevent conflict with current environnement
 module purge
 
