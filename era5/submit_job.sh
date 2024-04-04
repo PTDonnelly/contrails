@@ -1,4 +1,4 @@
-"""#!/bin/bash
+#!/bin/bash
 #SBATCH --job-name=ERA5
 #SBATCH --output=/data/pdonnelly/era5/build_era5.log
 #SBATCH --time=12:00:00
@@ -12,4 +12,3 @@ module purge
 module load python/meso-3.8
 
 python /data/pdonnelly/github/contrails/era5/build_era5_dataset.py
-"""
