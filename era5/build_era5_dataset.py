@@ -1,5 +1,6 @@
 import datetime as dt
 import logging
+from multiprocessing import Pool
 import netCDF4 as nc
 import numpy as np
 import pandas as pd
@@ -112,8 +113,22 @@ def create_daily_average_dataset(dataset, variable_name, output_file, level_inde
         save_daily_average_to_csv(daily_average, target_lon_mesh, target_lat_mesh, variable_name, date, output_file)
     return
 
+def process_single_variable(args):
+    variable_name, year, month, output_directory, target_level, lat_bounds, lon_bounds, target_resolution = args
+    base_path = Path(f"/bdd/ECMWF/ERA5/NETCDF/GLOBAL_025/hourly/AN_PL/{year}")
+    input_file = base_path / f"{variable_name}.{year}{month:02d}.ap1e5.GLOBAL_025.nc"
+    output_file = output_directory / f"{variable_name}_daily_{year}{month:02d}_1x1.nc"
+
+    if input_file.exists():
+        dataset = nc.Dataset(input_file, 'r')
+        level_index, slice_lats, slice_lons = prepare_dataset(dataset, target_level, lat_bounds, lon_bounds)
+        create_daily_average_dataset(dataset, variable_name, output_file, level_index, slice_lats, slice_lons, lat_bounds, lon_bounds, target_resolution)
+        dataset.close()
+        logging.info(f"Processed {output_file}")
+    else:
+        logging.info(f"File does not exist: {input_file}")
+
 def process_era5_files(variables_dict, start_year, end_year, start_month, end_month, output_directory='/data/pdonnelly/era5/processed_files'):
-    base_path = Path(f"/bdd/ECMWF/ERA5/NETCDF/GLOBAL_025/hourly/AN_PL/{start_year}")
     output_directory = Path(output_directory)
     output_directory.mkdir(parents=True, exist_ok=True)
 
@@ -121,46 +136,27 @@ def process_era5_files(variables_dict, start_year, end_year, start_month, end_mo
     lat_bounds = (30, 60)
     lon_bounds = (300, 360)
     target_resolution = 1
-    
+
+    tasks = []
     for variable_name in variables_dict.values():
         for year in range(start_year, end_year + 1):
             for month in range(start_month, end_month + 1):
-                # Define filenames
-                input_file = base_path / f"{variable_name}.{year}{month:02d}.ap1e5.GLOBAL_025.nc"
-                output_file = output_directory / f"{variable_name}_daily_1x1"
-                    
-                if input_file.exists():
-                    # Open the NetCDF dataset
-                    dataset = nc.Dataset(input_file, 'r')
+                tasks.append((variable_name, year, month, output_directory, target_level, lat_bounds, lon_bounds, target_resolution))
 
-                    # Get NetCDF index parameters
-                    level_index, slice_lats, slice_lons = prepare_dataset(dataset, target_level, lat_bounds, lon_bounds)
-                    
-                    # Do regional binning, grid downscaling, and daily averaging
-                    create_daily_average_dataset(dataset, variable_name, output_file, level_index, slice_lats, slice_lons, lat_bounds, lon_bounds, target_resolution)
-                    
-                    # Close NetCDF file
-                    dataset.close()
+    with Pool() as pool:
+        pool.map(process_single_variable, tasks)
 
-                    logging.info(f"Processed {output_file}")
-                else:
-                    logging.info(f"File does not exist: {input_file}")
+# Define ERA5 variables
+variables_dict = {
+    "cloud cover": "cc",
+    "temperature": "ta",
+    "specific humidity": "q",
+    "relative humidity": "r",
+    "geopotential": "geopt",
+    "eastward wind": "u",
+    "northward wind": "v",
+    "ozone mass mixing ratio": "o3",
+}
 
-def main():
-    # Define ERA5 variables
-    variables_dict = {
-        "cloud cover": "cc",
-        "temperature": "ta",
-        "specific humidity": "q",
-        "relative humidity": "r",
-        "geopotential": "geopt",
-        "eastward wind": "u",
-        "northward wind": "v",
-        "ozone mass mixing ratio": "o3",
-    }
-
-    # Execute on specified date range
-    process_era5_files(variables_dict, 2019, 2023, 3, 5)
-
-if __name__ == "__main__":
-    main()
+if __name__ == '__main__':
+    process_era5_files(variables_dict, 2018, 2018, 3, 3)
