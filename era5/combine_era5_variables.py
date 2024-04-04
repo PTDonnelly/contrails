@@ -1,7 +1,7 @@
 import pandas as pd
 from pathlib import Path
 import re
-import tqdm
+from tqdm import tqdm
 
 def extract_date_from_filename(filename):
     """Extracts the date string from a filename."""
