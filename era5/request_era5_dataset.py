@@ -1,10 +1,13 @@
+from datetime import datetime
 import cdsapi
-from datetime import datetime, timedelta
+import calendar
 
-def daterange(start_date, end_date):
-    """Generate a range of dates from start_date to end_date."""
-    for n in range(int((end_date - start_date).days) + 1):
-        yield start_date + timedelta(n)
+# Initialize the CDS API client
+c = cdsapi.Client()
+
+# Define the start and end dates
+start_year, end_year = 2014, 2017
+start_month, end_month = 3, 5
 
 variables = [
     {"name": "Specific rain water content", "short_name": "crwc", "paramID": 75},
@@ -25,13 +28,6 @@ variables = [
     {"name": "Fraction of cloud cover", "short_name": "cc", "paramID": 248},
 ]
 
-# Initialize the CDS API client
-c = cdsapi.Client()
-
-# Define the start and end dates
-start_date = datetime(2014, 3, 1)
-end_date = datetime(2017, 5, 31)
-
 # Define the geographic regions
 regions = {
     # "GMCS": {"lat": [0, 45], "lon": [-60, -100]}, # Gulf of Mexico / Carribean Sea
@@ -43,33 +39,36 @@ regions = {
 # Define atmospheric variables to extract
 variables = ['clwc', 'ciwc', 'cc', 'd', 'w', 'vo']
 
-# Iterate over each date and location
-for single_date in daterange(start_date, end_date):
-    for region, coordinates in regions.items():
-        for variable in variables:
-            # output_file = f'C:\\Users\\donnelly\\Documents\\projects\\data\\era5\\{single_date.strftime("%Y%m%d")}_{region}.nc'
-            output_file = f"/data/pdonnelly/era5/requested_data/{variable}.{single_date.strftime('%Y%m%d')}_{region}.nc"
-            
-            # Format region co-ordinates for API (North, West, South, East)
-            west, east = min(coordinates["lon"]), max(coordinates["lon"])
-            south, north = min(coordinates["lat"]), max(coordinates["lat"])
+# Iterate over years and months
+for year in range(start_year, end_year + 1):
+    for month in range(start_month, end_month + 1 if year < end_year else end_month + 1):
+        days_in_month = calendar.monthrange(year, month)[1]
+        days = [str(day).zfill(2) for day in range(1, days_in_month + 1)]
 
-            data_retrieval = {
-                'product_type': 'reanalysis',
-                'format': 'netcdf',
-                'variable': variable,
-                'pressure_level': ['200', '300'],
-                'year': single_date.strftime("%Y"),
-                'month': single_date.strftime("%m"),
-                'day': single_date.strftime("%d"),
-                'time': ['06:00', '07:00', '08:00', '09:00', '10:00', '11:00', '12:00', '13:00', '14:00', '15:00', '16:00', '17:00', '18:00'],
-                'area': [north, west, south, east],
-                'grid': [1, 1]
-            }
-            
-            # Send the API request
-            c.retrieve(
-                'reanalysis-era5-pressure-levels',
-                data_retrieval,
-                output_file
-            )
+        for region, coordinates in regions.items():
+            for variable in variables:
+                output_file = f"/data/pdonnelly/era5/requested_data/{variable}.{year}{str(month).zfill(2)}_{region}.nc"
+                
+                # Format region co-ordinates for API (North, West, South, East)
+                west, east = min(coordinates["lon"]), max(coordinates["lon"])
+                south, north = min(coordinates["lat"]), max(coordinates["lat"])
+
+                data_retrieval = {
+                    'product_type': 'reanalysis',
+                    'format': 'netcdf',
+                    'variable': variable,
+                    'pressure_level': ['200', '300'],
+                    'year': str(year),
+                    'month': str(month).zfill(2),
+                    'day': days,
+                    'time': ['06:00', '07:00', '08:00', '09:00', '10:00', '11:00', '12:00', '13:00', '14:00', '15:00', '16:00', '17:00', '18:00'],
+                    'area': [north, west, south, east],
+                    'grid': [1, 1]
+                }
+                
+                # Send the API request
+                c.retrieve(
+                    'reanalysis-era5-pressure-levels',
+                    data_retrieval,
+                    output_file
+                )

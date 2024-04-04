@@ -1,6 +1,7 @@
 import pandas as pd
 from pathlib import Path
 import re
+import tqdm
 
 def extract_date_from_filename(filename):
     """Extracts the date string from a filename."""
@@ -20,7 +21,7 @@ def gather_daily_data(processed_files_dir):
     print(f"Gathering {len(files)} files")
     
     daily_data = {}
-    for file in files:
+    for file in tqdm(files):
         date_str = extract_date_from_filename(file.name)
         if date_str:
             if date_str not in daily_data:
@@ -30,7 +31,7 @@ def gather_daily_data(processed_files_dir):
 
 def pivot_and_save_daily_data(daily_data, output_dir_path):
     """Pivots data to have variables as columns and saves the daily data to CSV files."""
-    for date_str, dfs in daily_data.items():
+    for date_str, dfs in tqdm(daily_data.items()):
         # Initialize the combined DataFrame with the first DataFrame in the list
         combined_df = dfs[0]
         # Iteratively merge the rest of the DataFrames on 'Date', 'Latitude', and 'Longitude' (because merge() only works on two DataFrames at a time)
