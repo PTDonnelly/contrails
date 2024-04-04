@@ -117,7 +117,7 @@ def process_single_variable(args):
     variable_name, year, month, output_directory, target_level, lat_bounds, lon_bounds, target_resolution = args
     base_path = Path(f"/bdd/ECMWF/ERA5/NETCDF/GLOBAL_025/hourly/AN_PL/{year}")
     input_file = base_path / f"{variable_name}.{year}{month:02d}.ap1e5.GLOBAL_025.nc"
-    output_file = output_directory / f"{variable_name}_daily_1x1.nc"
+    output_file = output_directory / f"{variable_name}_daily_1x1"
 
     if input_file.exists():
         dataset = nc.Dataset(input_file, 'r')
