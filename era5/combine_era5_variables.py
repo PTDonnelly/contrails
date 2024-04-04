@@ -28,12 +28,16 @@ def gather_daily_data(processed_files_dir):
 def pivot_and_save_daily_data(daily_data, output_dir_path):
     """Pivots data to have variables as columns and saves the daily data to CSV files."""
     for date_str, dfs in daily_data.items():
-        day_df = pd.concat(dfs, axis=1)
-        print(day_df.head())
-        exit()
-        pivoted_df = day_df.pivot_table(index=['latitude', 'longitude', 'date'], columns='variable', values='value').reset_index()
+        # Initialize the combined DataFrame with the first DataFrame in the list
+        combined_df = dfs[0]
+        # Iteratively merge the rest of the DataFrames on 'Date', 'Latitude', and 'Longitude' (because merge() only works on two DataFrames at a time)
+        for df in dfs[1:]:
+            combined_df = combined_df.merge(df, on=['Date', 'Latitude', 'Longitude'], how='outer')
+        print(combined_df.head())
+        
+        # Save combined DataFrame to CSV
         output_filename = output_dir_path / f"daily_1x1_{date_str}.csv"
-        pivoted_df.to_csv(output_filename, index=False)
+        combined_df.to_csv(output_filename, index=False)
         print(f"Data saved to {output_filename}")
 
 def process_era5_files(processed_files_dir, output_dir):
