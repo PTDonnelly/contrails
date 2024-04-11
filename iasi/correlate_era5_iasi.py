@@ -16,7 +16,7 @@ def read_and_combine_daily_data(iasi_base_path, era5_base_path, start_date, end_
         date_str = current_date.strftime('%Y-%m-%d')
 
         # Construct file paths
-        iasi_file_path = os.path.join(iasi_base_path, year, month, day, 'data_binned.csv')
+        iasi_file_path = os.path.join(iasi_base_path, year, month, day, 'spectra_and_cloud_products.csv')
         era5_file_path = os.path.join(era5_base_path, f'daily_1x1_{date_str}.csv')
 
         if os.path.exists(iasi_file_path) and os.path.exists(era5_file_path):
