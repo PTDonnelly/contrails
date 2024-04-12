@@ -48,54 +48,79 @@ def read_and_combine_daily_data(iasi_base_path, era5_base_path, start_date, end_
 
         current_date += timedelta(days=1)
 
-    return pd.concat(combined_data, ignore_index=True) if combined_data else pd.DataFrame()
-
-def fix_outliers(X, columns):
-    # Define a function that replaces values more than 5 stds from the mean with the mean
-    def replace_outliers_with_mean(series):
-        mean = series.mean()
-        std = series.std()
-        cutoff = std * 2
-        lower, upper = mean - cutoff, mean + cutoff
-        series = np.where(np.abs(series - mean) > cutoff, mean, series)
-        return pd.Series(series, index=X.index)
-
-    # Apply the function to the specified columns
-    X[columns] = X[columns].apply(replace_outliers_with_mean)
-    return X
-
-
-def plot_era5_fields_by_olr_quintiles(X, y):
+    combined_df = pd.concat(combined_data, ignore_index=True) if combined_data else pd.DataFrame()
     
+    # Define training and testing sets
+    era5_fields = [col for col in combined_df.columns if col not in ['Date', 'Latitude', 'Longitude', 'OLR_mean', 'OLR_icy', 'OLR_clear']]
+    X = combined_df[era5_fields]
+    y = combined_df['OLR_mean']
+
+    return X, y, era5_fields
+
+def standardise_data(X, y):
     # Calculate quintiles for 'OLR_mean'
     X = X.copy()
     X['OLR_quintile'] = pd.qcut(y, 5, labels=False)
 
-    # Select ERA5 fields
-    era5_fields = [col for col in X.columns if col not in ['Date', 'Latitude', 'Longitude', 'OLR_quintile']]
-    
     # Define a pipeline that first imputes missing values, then scales the data, and finally fits RidgeCV
     pipeline = make_pipeline(
         SimpleImputer(strategy='mean'),  # Fill NaN values with the mean of each column
         StandardScaler()
     )
     # Transform, convert back to DataFrame
-    X_processed = pipeline.fit_transform(X)
-    X_processed_df = pd.DataFrame(X_processed, index=X.index, columns=X.columns)
+    X_scaled = pipeline.fit_transform(X)
+    X_scaled_df = pd.DataFrame(X_scaled, index=X.index, columns=X.columns)
+    return X_scaled_df
 
-    # Randomly sample the data set
-    rng = np.random.RandomState(42)
-    indices = rng.choice(X_processed_df.shape[0], size=500, replace=False)
-    subset = X_processed_df.iloc[indices]
+def remove_outliers(X, y, columns):
+    # # Define a function that replaces values more than 5 stds from the mean with the mean
+    # def replace_outliers_with_mean(series):
+    #     mean = np.nan#series.mean()
+    #     std = series.std()
+    #     cutoff = std * 2
+    #     lower, upper = mean - cutoff, mean + cutoff
+    #     series = np.where(np.abs(series - mean) > cutoff, mean, series)
+    #     return pd.Series(series, index=X.index)
+
+    # # Apply the function to the specified columns
+    # X[columns] = X[columns].apply(replace_outliers_with_mean)
+
+    # Initialize a filter for rows to keep
+    mask = pd.Series(True, index=X.index)
+    
+    for column in columns:
+        # Compute the mean and standard deviation for the column
+        mean = X[column].mean()
+        std = X[column].std()
+        cutoff = std * 0.5
+
+        # print(column, mean, std)
+
+        # Update the mask to keep only data within +- cutoff
+        mask &= X[column].between(mean - cutoff, mean + cutoff)
+    
+    # Apply the mask to X and y to filter out outlier rows
+    X_filtered = X[mask]
+    y_filtered = y[mask]
+
+    return X_filtered, y_filtered
+
+def plot_era5_fields_by_olr_quintiles(X, y, base_path, era5_fields):
+    # Add quintile category to ERA5 fields
+    data_fields = era5_fields.copy()
+    data_fields.append('OLR_quintile')
+
+    # # Randomly sample the data set
+    # rng = np.random.RandomState(42)
+    # indices = rng.choice(X.shape[0], size=500, replace=False)
+    # subset = X.iloc[indices]
 
     # # Create pair plot
     # pair_plot = sns.pairplot(subset,
-    #                          vars=era5_fields,
+    #                          vars=data_fields,
     #                          hue='OLR_quintile',
     #                          palette='coolwarm')
     # plt.show()
-
-    features = X_processed_df[era5_fields].columns
     
     # Draw and flatten the axes
     _, axes = plt.subplots(4, 4, figsize=(10, 10), dpi=300)
@@ -103,14 +128,15 @@ def plot_era5_fields_by_olr_quintiles(X, y):
     fontsize = 7
 
     # Loop through the features and axes to plot each feature's KDE on its subplot
+    features = X[era5_fields].columns
     for i, feature in enumerate(features):
-        sns.kdeplot(data=X_processed_df,
+        sns.kdeplot(data=X,
                     x=feature,
                     hue='OLR_quintile',
                     fill=False,
                     linewidth=1, 
                     ax=axes[i],
-                    palette='viridis',
+                    palette='coolwarm',
                     legend=False)
         
         axes[i].set_title(feature)
@@ -119,40 +145,36 @@ def plot_era5_fields_by_olr_quintiles(X, y):
 
     # Adjust layout to prevent overlap
     plt.tight_layout()
-    plt.savefig('G:/My Drive/Research/Postdoc_2_CNRS_LATMOS/data/iasi/olr_era5_correlation_kde.png', bbox_inches='tight', dpi=300)
-    # plt.show()
+    plt.savefig(f"{base_path}/iasi/olr_era5_correlation_kde.png", bbox_inches='tight', dpi=300)
 
-
-def preprocess_and_fit(X, y):
-    alphas=np.logspace(-6, 6, 13)
-
+def preprocess_and_fit(X, y, base_path, era5_fields):
     # Define a pipeline that first imputes missing values, then scales the data, and finally fits RidgeCV
     pipeline = make_pipeline(
         SimpleImputer(strategy='mean'),  # Fill NaN values with the mean of each column
         StandardScaler(),
-        RidgeCV(alphas=alphas)
+        RidgeCV(alphas=np.logspace(-6, 6, 13))
     )
 
     # Define cross-validation strategy
     cv = RepeatedKFold(n_splits=5, n_repeats=3, random_state=42)
 
     # Perform cross-validation and fit the model
-    scores = cross_validate(pipeline, X, y, scoring='r2', cv=cv, return_estimator=True)
+    scores = cross_validate(pipeline, X[era5_fields], y, scoring='r2', cv=cv, return_estimator=True)
 
-    # If you need to access the RidgeCV models or their coefficients after fitting:
-    for est in scores['estimator']:
-        print(est[-1].alpha_)  # Access the chosen alpha for RidgeCV
-        print(est[-1].coef_)   # Access the coefficients
+    # # If you need to access the RidgeCV models or their coefficients after fitting:
+    # for est in scores['estimator']:
+    #     print(est[-1].alpha_)  # Access the chosen alpha for RidgeCV
+    #     print(est[-1].coef_)   # Access the coefficients
 
-    mean_r2 = np.mean(scores['test_score'])
-    std_r2 = np.std(scores['test_score'])
-    print(f"Average R2 score across all folds: {mean_r2:.3f}")
-    print(f"Standard deviation of R2 scores across all folds: {std_r2:.3f}")
+    # mean_r2 = np.mean(scores['test_score'])
+    # std_r2 = np.std(scores['test_score'])
+    # print(f"Average R2 score across all folds: {mean_r2:.3f}")
+    # print(f"Standard deviation of R2 scores across all folds: {std_r2:.3f}")
 
-        # Extract coefficients from each estimator in the cross-validation
+    # Extract coefficients from each estimator in the cross-validation
     coefs = pd.DataFrame(
         [est[-1].coef_ for est in scores['estimator']],
-        columns=era5_columns,
+        columns=era5_fields,
     )
 
     # Calculate the median value of coefficients for each feature
@@ -172,18 +194,17 @@ def preprocess_and_fit(X, y):
 
     # Set the title and show the plot
     plt.title("Coefficients of Ridge Models via Cross-Validation")
-    plt.show()
+    plt.savefig(f"{base_path}/iasi/ridge_coefficients.png", bbox_inches='tight', dpi=300)
 
     return
 
-
-def plot_ridge(X, y):
+def plot_ridge(X, y, base_path, era5_fields):
     alphas = np.logspace(-6, 6, 61)
     coefs = []
 
     # Impute and scale X before the loop since these steps do not depend on alpha
-    imputer = SimpleImputer(strategy='mean').fit(X)
-    X_imputed = imputer.transform(X)
+    imputer = SimpleImputer(strategy='mean').fit(X[era5_fields])
+    X_imputed = imputer.transform(X[era5_fields])
     scaler = StandardScaler().fit(X_imputed)
     X_scaled = scaler.transform(X_imputed)
 
@@ -191,9 +212,8 @@ def plot_ridge(X, y):
         ridge = Ridge(alpha=alpha).fit(X_scaled, y)
         coefs.append(ridge.coef_)
 
-    coefs = pd.DataFrame(coefs, index=alphas, columns=era5_columns)  # Assuming era5_columns is defined
-
-    plt.figure(figsize=(10, 8))
+    coefs = pd.DataFrame(coefs, index=alphas, columns=era5_fields)
+    plt.figure(figsize=(10, 8), dpi=300)
     for column in coefs.columns:
         plt.plot(coefs.index, coefs[column], label=column)
 
@@ -202,26 +222,26 @@ def plot_ridge(X, y):
     plt.ylabel('Coefficient')
     plt.title('Coefficient Paths')
     plt.legend()
-    plt.show()
+    plt.savefig(f"{base_path}/iasi/ridge_testing.png", bbox_inches='tight', dpi=300)
 
-# Example usage
-iasi_base_path = 'G:/My Drive/Research/Postdoc_2_CNRS_LATMOS/data/iasi/binned_olr'
-era5_base_path = 'G:/My Drive/Research/Postdoc_2_CNRS_LATMOS/data/era5/daily_combined'
-start_date = datetime(2018, 3, 1)
-end_date = datetime(2023, 5, 31)
-combined_data = read_and_combine_daily_data(iasi_base_path, era5_base_path, start_date, end_date)
+def main():
+    base_path = 'G:/My Drive/Research/Postdoc_2_CNRS_LATMOS/data/'
+    start_date = datetime(2018, 3, 1)
+    end_date = datetime(2023, 5, 31)
+    
+    # Define training and testing sets
+    X, y, era5_fields = read_and_combine_daily_data(f"{base_path}iasi/binned_olr/", f"{base_path}era5/daily_combined/", start_date, end_date)
+    
+    # Convert true data values to Z-score values
+    X_scaled = standardise_data(X, y)
 
-# Define training and testing sets
-era5_columns = [col for col in combined_data.columns if col not in ['Date', 'Latitude', 'Longitude', 'OLR_mean', 'OLR_icy', 'OLR_clear', 'OLR_quintile']]
-X = combined_data[era5_columns]
-y = combined_data['OLR_mean']
+    # Impute outliers down to mean
+    columns = ['cc_200', 'cc_300']
+    X_clean, y_clean = X_scaled, y#remove_outliers(X_scaled, y, columns)
 
-# # Impute outliers down to mean
-# columns = X.columns#['cc_200', 'cc_300']
-# X_fixed = fix_outliers(X, columns)
+    plot_era5_fields_by_olr_quintiles(X_clean, y_clean, base_path, era5_fields)
+    preprocess_and_fit(X_clean, y_clean, base_path, era5_fields)
+    plot_ridge(X_clean, y_clean, base_path, era5_fields)
 
-plot_era5_fields_by_olr_quintiles(X, y)
-
-# preprocess_and_fit(X, y)
-
-# plot_ridge(X, y)
+if __name__ == "__main__":
+    main()
