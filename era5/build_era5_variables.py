@@ -146,7 +146,6 @@ def process_era5_files(variables_dict, start_year, end_year, start_month, end_mo
             for year in range(start_year, end_year + 1):
                 for month in range(start_month, end_month + 1):
                     tasks.append((short_name, year, month, output_directory, target_level, lat_bounds, lon_bounds, target_resolution))
-
     with Pool() as pool:
         pool.map(process_single_variable, tasks)
 
