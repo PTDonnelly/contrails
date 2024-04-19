@@ -152,15 +152,15 @@ def process_era5_files(variables_dict, start_year, end_year, start_month, end_mo
 
 # Define ERA5 variables
 variables_dict = {
-    "cloud cover": {"short_name": "cc", "target_level": [200, 500, 750, 950]},
-    "temperature": {"short_name": "ta", "target_level": [200, 500, 750, 950]},
-    "specific humidity": {"short_name": "q", "target_level": [200, 500, 750, 950]},
-    "relative humidity": {"short_name": "r", "target_level": [200, 500, 750, 950]},
-    "geopotential": {"short_name": "geopt", "target_level": [200, 500, 750, 950]},
-    "eastward wind": {"short_name": "u", "target_level": [200, 500, 750, 950]},
-    "northward wind": {"short_name": "v", "target_level": [200, 500, 750, 950]},
-    "ozone mass mixing ratio": {"short_name": "o3", "target_level": [200, 500, 750, 950]},
+    "cloud cover": {"short_name": "cc", "target_level": [200, 300, 500, 750, 950]},
+    "temperature": {"short_name": "ta", "target_level": [200, 300, 500, 750, 950]},
+    "specific humidity": {"short_name": "q", "target_level": [200, 300, 500, 750, 950]},
+    "relative humidity": {"short_name": "r", "target_level": [200, 300, 500, 750, 950]},
+    "geopotential": {"short_name": "geopt", "target_level": [200, 300, 500, 750, 950]},
+    "eastward wind": {"short_name": "u", "target_level": [200, 300, 500, 750, 950]},
+    "northward wind": {"short_name": "v", "target_level": [200, 300, 500, 750, 950]},
+    "ozone mass mixing ratio": {"short_name": "o3", "target_level": [200, 300, 500, 750, 950]},
 }
 
 if __name__ == '__main__':
-    process_era5_files(variables_dict, 2023, 2023, 3, 5)
+    process_era5_files(variables_dict, 2018, 2023, 3, 5)
