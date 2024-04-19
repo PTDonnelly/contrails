@@ -51,11 +51,11 @@ class Dataset:
 
     def categorise_data(self, categorical_feature):
         # Calculate quintiles for the target feature and categorize
-        self.input[categorical_feature] = pd.qcut(self.target, 5, labels=False)
+        categorical_values = pd.qcut(self.target, 5, labels=False)
+        self.input.loc[:, categorical_feature] = categorical_values
         return
 
     def standardise_data(self):
-        
         if self.scaling_method == "standard":
             scaler = StandardScaler()
         elif self.scaling_method == "robust":
@@ -89,186 +89,126 @@ class Dataset:
         self.categorise_data(categorical_feature='OLR_quintile')
         self.standardise_data()
 
-def remove_outliers(X, y, columns):
-    # # Define a function that replaces values more than 5 stds from the mean with the mean
-    # def replace_outliers_with_mean(series):
-    #     mean = np.nan#series.mean()
-    #     std = series.std()
-    #     cutoff = std * 2
-    #     lower, upper = mean - cutoff, mean + cutoff
-    #     series = np.where(np.abs(series - mean) > cutoff, mean, series)
-    #     return pd.Series(series, index=X.index)
+class DataAnalysis:
+    def __init__(self, dataset: Dataset):
+        self.dataset = dataset
 
-    # # Apply the function to the specified columns
-    # X[columns] = X[columns].apply(replace_outliers_with_mean)
-
-    # Initialize a filter for rows to keep
-    mask = pd.Series(True, index=X.index)
-    
-    for column in columns:
-        # Compute the mean and standard deviation for the column
-        mean = X[column].mean()
-        std = X[column].std()
-        cutoff = std * 1
-
-        # Update the mask to keep only data within +- cutoff
-        mask &= X[column].between(mean - cutoff, mean + cutoff)
-    
-    # Apply the mask to X and y to filter out outlier rows
-    X_filtered = X[mask]
-    y_filtered = y[mask]
-
-    return X_filtered, y_filtered
-
-def plot_era5_fields_by_olr_quintiles(X, y, base_path, era5_fields, scaling_method):
-    # Add quintile category to ERA5 fields
-    data_fields = era5_fields.copy()
-    data_fields.append('OLR_quintile')
-    
-    # Draw and flatten the axes
-    _, axes = plt.subplots(4, 4, figsize=(10, 10), dpi=300)
-    axes = axes.flatten()
-    fontsize = 7
-
-    # Loop through the features and axes to plot each feature's KDE on its subplot
-    features = X[era5_fields].columns
-    for i, feature in enumerate(features):
-        sns.kdeplot(data=X,
-                    x=feature,
-                    hue='OLR_quintile',
-                    fill=False,
-                    linewidth=1, 
-                    ax=axes[i],
-                    palette='coolwarm',
-                    legend=False)
-
-        axes[i].set_title(feature)
-        axes[i].set_xlabel("")
-        if i // 4 == 3:
-            axes[i].set_xlabel("Z-score")
-
-    # Adjust layout to prevent overlap
-    plt.tight_layout()
-    plt.savefig(os.path.join(base_path, f"olr_era5_correlation_kde_{scaling_method}.png"), bbox_inches='tight', dpi=300)
-
-def plot_qq(X, y, base_path, era5_fields, scaling_method):
-    # Add quintile category to ERA5 fields
-    data_fields = era5_fields.copy()
-    data_fields.append('OLR_quintile')
-    
-    # Draw and flatten the axes
-    _, axes = plt.subplots(4, 4, figsize=(10, 10), dpi=300)
-    axes = axes.flatten()
-    fontsize = 7
-
-    # Loop through the features and axes to plot each feature's KDE on its subplot
-    features = X[era5_fields].columns
-    for i, feature in enumerate(features):        
-        qqplot(X[feature],
-               line='s',
-               ax=axes[i])
+    def plot_era5_fields_by_olr_quintiles(self):
+        # Assuming 'OLR_quintile' is already computed and added to self.dataset.input
+        _, axes = plt.subplots(4, 4, figsize=(10, 10), dpi=300)
+        axes = axes.flatten()
+        features = self.dataset.feature_names
         
-        axes[i].set_title(feature)
-        axes[i].set_xlabel("")
-        if i // 4 == 3:
-            axes[i].set_xlabel("Theroetical Quantities")
+        for i, feature in enumerate(features):
+            ax = axes[i]
+            sns.kdeplot(data=self.dataset.input, x=feature, hue='OLR_quintile', fill=False, linewidth=1, ax=ax, palette='coolwarm', legend=False)
+            ax.set_title(feature, fontsize=10)
+            ax.set_xlabel("")
+            ax.set_ylabel("")
+            if i % 4 == 3:
+                ax.set_xlabel("Z-score", fontsize=8)
+            if i // 4 == 0:
+                ax.set_ylabel("Density", fontsize=8)
 
-    # Adjust layout to prevent overlap
-    plt.tight_layout()
-    plt.savefig(os.path.join(base_path, f"olr_era5_correlation_qq_{scaling_method}.png"), bbox_inches='tight', dpi=300)
+        plt.tight_layout()
+        plt.savefig(os.path.join(self.dataset.base_path, f"olr_era5_correlation_kde_{self.dataset.scaling_method}.png"), bbox_inches='tight')
+        plt.close()
+        return
 
-def preprocess_and_fit(X, y, base_path, era5_fields, scaling_method):
-    # Define a pipeline that first imputes missing values, then scales the data, and finally fits RidgeCV
-    pipeline = make_pipeline(
-        RidgeCV(alphas=np.logspace(-6, 6, 13))
-    )
+    def plot_qq(self):
+        _, axes = plt.subplots(4, 4, figsize=(10, 10), dpi=300)
+        axes = axes.flatten()
+        features = self.dataset.feature_names
+        
+        for i, feature in enumerate(features):
+            ax = axes[i]
+            qqplot(self.dataset.input[feature], line='s', ax=ax)
+            ax.set_title(feature, fontsize=10)
+            ax.set_xlabel("")
+            ax.set_ylabel("")
+            if i % 4 == 3:
+                ax.set_xlabel("Theoretical Quantities", fontsize=8)
+            if i // 4 == 0:
+                ax.set_ylabel("Sample Quantities", fontsize=8)
 
-    # Define cross-validation strategy
-    cv = RepeatedKFold(n_splits=5, n_repeats=3, random_state=42)
+        plt.tight_layout()
+        plt.savefig(os.path.join(self.dataset.base_path, f"olr_era5_correlation_qq_{self.dataset.scaling_method}.png"), bbox_inches='tight')
+        plt.close()
+        return
+    
+    def preprocess_and_fit(self):
+        # Define a pipeline that includes RidgeCV
+        pipeline = make_pipeline(RidgeCV(alphas=np.logspace(-6, 6, 13)))
 
-    # Perform cross-validation and fit the model
-    scores = cross_validate(pipeline, X[era5_fields], y, scoring='r2', cv=cv, return_estimator=True)
+        # Define cross-validation strategy
+        cv = RepeatedKFold(n_splits=5, n_repeats=3, random_state=42)
 
-    # # If you need to access the RidgeCV models or their coefficients after fitting:
-    # for est in scores['estimator']:
-    #     print(est[-1].alpha_)  # Access the chosen alpha for RidgeCV
-    #     print(est[-1].coef_)   # Access the coefficients
+        # Perform cross-validation and fit the model
+        scores = cross_validate(pipeline, self.dataset.input[self.dataset.feature_names], self.dataset.target, scoring='r2', cv=cv, return_estimator=True)
 
-    # mean_r2 = np.mean(scores['test_score'])
-    # std_r2 = np.std(scores['test_score'])
-    # print(f"Average R2 score across all folds: {mean_r2:.3f}")
-    # print(f"Standard deviation of R2 scores across all folds: {std_r2:.3f}")
+        # Extract coefficients from each estimator in the cross-validation
+        coefs = pd.DataFrame([est[-1].coef_ for est in scores['estimator']], columns=self.dataset.feature_names)
+        # Calculate the median value of coefficients for each feature
+        medians = coefs.median().sort_values()
+        # Reorder the dataframe columns based on the sorted median values
+        coefs = coefs[medians.index]
 
-    # Extract coefficients from each estimator in the cross-validation
-    coefs = pd.DataFrame(
-        [est[-1].coef_ for est in scores['estimator']],
-        columns=era5_fields,
-    )
+        # Create the box plot with reordered features
+        color = {"whiskers": "black", "medians": "black", "caps": "black"}
+        coefs.plot.box(vert=False, color=color, figsize=(10, 8))
+        plt.axvline(x=0, color="black", linestyle="--")
+        plt.title("Coefficients of Ridge Models via Cross-Validation")
+        plt.savefig(os.path.join(self.dataset.base_path, f"ridge_coefficients_{self.dataset.scaling_method}.png"), bbox_inches='tight')
+        plt.close()
+        return
 
-    # Calculate the median value of coefficients for each feature
-    medians = coefs.median().sort_values()
+    def plot_ridge(self):
+        alphas = np.logspace(-6, 6, 61)
+        coefs = []
+        
+        # Set up and fit RidgeCV to find the optimal alpha
+        ridge_cv = RidgeCV(alphas=alphas, store_cv_values=True).fit(self.dataset.input[self.dataset.feature_names], self.dataset.target)
+        optimal_alpha = ridge_cv.alpha_  # This is the optimal alpha found by RidgeCV
 
-    # Reorder the dataframe columns based on the sorted median values
-    coefs = coefs[medians.index]
+        # Fit Ridge model for each alpha to track coefficient paths
+        for alpha in alphas:
+            ridge = Ridge(alpha=alpha).fit(self.dataset.input[self.dataset.feature_names], self.dataset.target)
+            coefs.append(ridge.coef_)
 
-    # Define color settings for the box plot
-    color = {"whiskers": "black", "medians": "black", "caps": "black"}
+        # Plotting the coefficient paths
+        coefs_df = pd.DataFrame(coefs, index=alphas, columns=self.dataset.feature_names)
+        plt.figure(figsize=(10, 8), dpi=300)
+        for column in coefs_df.columns:
+            plt.plot(coefs_df.index, coefs_df[column], label=column)
 
-    # Create the box plot with reordered features
-    coefs.plot.box(vert=False, color=color, figsize=(10, 8))
-
-    # Add a vertical line at x=0 for reference
-    plt.axvline(x=0, color="black", linestyle="--")
-
-    # Set the title and show the plot
-    plt.title("Coefficients of Ridge Models via Cross-Validation")
-    plt.savefig(os.path.join(base_path, f"ridge_coefficients_{scaling_method}.png"), bbox_inches='tight', dpi=300)
-
-    return
-
-def plot_ridge(X, y, base_path, era5_fields, scaling_method):
-    alphas = np.logspace(-6, 6, 61)
-    coefs = []
-
-    for alpha in alphas:
-        ridge = Ridge(alpha=alpha).fit(X[era5_fields], y)
-        coefs.append(ridge.coef_)
-
-    coefs = pd.DataFrame(coefs, index=alphas, columns=era5_fields)
-    plt.figure(figsize=(10, 8), dpi=300)
-    for column in coefs.columns:
-        plt.plot(coefs.index, coefs[column], label=column)
-
-    plt.xscale('log')
-    plt.xlabel('Alpha')
-    plt.ylabel('Coefficient')
-    plt.title('Coefficient Paths')
-    plt.legend()
-    plt.savefig(os.path.join(base_path, f"ridge_testing_{scaling_method}.png"), bbox_inches='tight', dpi=300)
+        plt.axvline(x=optimal_alpha, linewidth=0.75, color='k')
+        plt.text(0.5*optimal_alpha, 0.75*plt.ylim()[1], f'{optimal_alpha:.3}', rotation=90, verticalalignment='baseline')
+        plt.xscale('log')
+        plt.xlabel('Alpha')
+        plt.ylabel('Coefficient')
+        plt.title('Coefficient Paths')
+        plt.legend()
+        plt.savefig(os.path.join(self.dataset.base_path, f"ridge_paths_{self.dataset.scaling_method}.png"), bbox_inches='tight')
+        plt.close()
+        return
 
 def main():
     # Usage
     base_path = 'G:/My Drive/Research/Postdoc_2_CNRS_LATMOS/data/machine_learning/'
     start_date = datetime(2018, 3, 1)
     end_date = datetime(2023, 5, 31)
-    
-    # Testing
-    scaling_method = "standard"
 
     # Initialise the Dataset class with your parameters
-    data = Dataset(base_path, start_date, end_date, scaling_method)
+    data = Dataset(base_path, start_date, end_date, scaling_method='standard')
 
-    # Access the input features and target variable
-    X = data.input
-    y = data.target
+    # Initialise the DataAnalysis class with the Dataset instance
+    analysis = DataAnalysis(data)
 
-    columns = data.feature_names#['cc_200', 'cc_300']
-    X_clean, y_clean = X, y #remove_outliers(X, y, columns)
-    
-    plot_era5_fields_by_olr_quintiles(X_clean, y_clean, base_path, data.feature_names, data.scaling_method)
-    plot_qq(X, y, base_path, data.feature_names, data.scaling_method)
-    preprocess_and_fit(X_clean, y_clean, base_path, data.feature_names, data.scaling_method)
-    plot_ridge(X_clean, y_clean, base_path, data.feature_names, data.scaling_method)
+    # Use the methods of the DataAnalysis class to generate plots and perform other analysis
+    analysis.plot_era5_fields_by_olr_quintiles()
+    analysis.plot_qq()
+    analysis.preprocess_and_fit()
+    analysis.plot_ridge()
 
 if __name__ == "__main__":
     main()
