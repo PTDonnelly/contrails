@@ -2,7 +2,7 @@ import os
 import datetime
 
 # Define the directory to scan
-directory = "/path/to/directory"
+directory = "/data/pdonnelly/era5/processed_files"
 
 # Define the range of dates
 start_year = 2018
