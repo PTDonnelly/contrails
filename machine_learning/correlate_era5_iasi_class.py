@@ -87,7 +87,8 @@ class Dataset:
         self.get_era5_fields()
         self.split_data(target_feature='OLR_mean')
         self.categorise_data(categorical_feature='OLR_quintile')
-        self.standardise_data()
+        if not self.scaling_method == 'raw':
+            self.standardise_data()
 
 class DataAnalysis:
     def __init__(self, dataset: Dataset):
@@ -192,6 +193,34 @@ class DataAnalysis:
         plt.close()
         return
 
+    def plot_correlation_matrix(self):
+        # Concatenate the input features and target variable to form a new DataFrame
+        data_for_corr = pd.concat([self.dataset.input[self.dataset.feature_names], self.dataset.target.rename('Target')], axis=1)
+        
+        # Calculate the correlation matrix
+        corr_matrix = data_for_corr.corr()
+
+        # Create a mask to display only the lower triangle of the matrix, as it is symmetrical
+        mask = np.triu(np.ones_like(corr_matrix, dtype=bool))
+
+        # Set up the matplotlib figure
+        plt.figure(figsize=(12, 10))
+
+        # Draw the heatmap with the mask and correct aspect ratio
+        sns.heatmap(corr_matrix, mask=mask, cmap='coolwarm', vmax=.3, center=0,
+                    square=True, linewidths=.5, cbar_kws={"shrink": .5}, annot=True, fmt=".2f")
+
+        # Fix the issue with the top and bottom cutting of the heatmap
+        plt.ylim(len(corr_matrix), 0)
+        plt.xlim(0, len(corr_matrix))
+
+        # Adjust the layout to prevent overlap
+        plt.tight_layout()
+
+        # Save the figure
+        plt.savefig(os.path.join(self.dataset.base_path, f"correlation_matrix_{self.dataset.scaling_method}.png"), bbox_inches='tight', dpi=300)
+        plt.close()
+
 def main():
     # Usage
     base_path = 'G:/My Drive/Research/Postdoc_2_CNRS_LATMOS/data/machine_learning/'
@@ -199,16 +228,17 @@ def main():
     end_date = datetime(2023, 5, 31)
 
     # Initialise the Dataset class with your parameters
-    data = Dataset(base_path, start_date, end_date, scaling_method='standard')
+    data = Dataset(base_path, start_date, end_date, scaling_method='raw')
 
     # Initialise the DataAnalysis class with the Dataset instance
     analysis = DataAnalysis(data)
 
     # Use the methods of the DataAnalysis class to generate plots and perform other analysis
-    analysis.plot_era5_fields_by_olr_quintiles()
-    analysis.plot_qq()
-    analysis.preprocess_and_fit()
-    analysis.plot_ridge()
+    # analysis.plot_era5_fields_by_olr_quintiles()
+    # analysis.plot_qq()
+    # analysis.preprocess_and_fit()
+    # analysis.plot_ridge()
+    analysis.plot_correlation_matrix()
 
 if __name__ == "__main__":
     main()

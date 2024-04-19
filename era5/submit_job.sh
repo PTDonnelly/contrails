@@ -1,7 +1,7 @@
 #!/bin/bash
 #SBATCH --job-name=ERA5
 #SBATCH --output=/data/pdonnelly/era5/build_era5.log
-#SBATCH --time=01:00:00
+#SBATCH --time=04:00:00
 #SBATCH --ntasks=1
 #SBATCH --mem=16GB
 
