@@ -48,3 +48,5 @@ for variable, info in variables_dict.items():
 # Print missing files
 for missing_file in missing_files:
     print(missing_file)
+
+print(len(missing_files))
