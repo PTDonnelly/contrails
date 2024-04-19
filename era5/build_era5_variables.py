@@ -163,4 +163,4 @@ variables_dict = {
 }
 
 if __name__ == '__main__':
-    process_era5_files(variables_dict, 2018, 2023, 3, 5)
+    process_era5_files(variables_dict, 2023, 2023, 3, 5)
