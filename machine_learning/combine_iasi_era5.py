@@ -18,6 +18,8 @@ def read_and_combine_daily_data(base_path, start_date, end_date):
     # Generate date range
     current_date = start_date
     while current_date <= end_date:
+        print(current_date)
+        
         year = current_date.strftime('%Y')
         month = current_date.strftime('%m')
         day = current_date.strftime('%d')

@@ -115,18 +115,6 @@ def plot_era5_fields_by_olr_quintiles(X, y, base_path, era5_fields):
     # Add quintile category to ERA5 fields
     data_fields = era5_fields.copy()
     data_fields.append('OLR_quintile')
-
-    # # Randomly sample the data set
-    # rng = np.random.RandomState(42)
-    # indices = rng.choice(X.shape[0], size=500, replace=False)
-    # subset = X.iloc[indices]
-
-    # # Create pair plot
-    # pair_plot = sns.pairplot(subset,
-    #                          vars=data_fields,
-    #                          hue='OLR_quintile',
-    #                          palette='coolwarm')
-    # plt.show()
     
     # Draw and flatten the axes
     _, axes = plt.subplots(4, 4, figsize=(10, 10), dpi=300)
