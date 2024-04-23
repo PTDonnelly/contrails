@@ -3,6 +3,7 @@ import numpy as np
 import pandas as pd
 import matplotlib.pyplot as plt
 import seaborn as sns
+from scipy.stats import iqr
 from datetime import datetime, timedelta
 from pathlib import Path
 from statsmodels.tsa.seasonal import seasonal_decompose
@@ -34,18 +35,79 @@ class Dataset:
         
         self.data = pd.DataFrame(daily_averages)
         self.data.set_index('Date', inplace=True)
+        self.data.rename(columns={'OLR_mean': 'OLR'}, inplace=True)
         return
 
     @staticmethod
-    def make_date_axis_continuous(df, number_of_months=3, number_of_days=0):
-        """For converting a Date index in DataFrame to a continuous numerical axis for plotting."""
-        df['Year-Month-Day'] = df.index.year + ((df.index.month - number_of_months) / number_of_months) + ((df.index.day - number_of_days)/ 100)
+    def robust_z_score(df):
+        # Calculate median and IQR
+        median = df['OLR'].median()
+        iqr = df['OLR'].quantile(0.75) - df['OLR'].quantile(0.25)
+        
+        # Calculate the robust Z-score
+        df['Z-score'] = (df['OLR'] - median) / iqr
         return df
 
     @staticmethod
-    def prepare_and_resample_data(self):
+    def normalize_fractional_time(df, time_unit):
         """
-        Prepares and resamples data to generate weekly and monthly averages.
+        Normalize the time to be between March 1 and May 31, expressed as a fraction of the year.
+        Args:
+        df (DataFrame): Data with 'Year' and either 'Week' or 'Month'.
+        time_unit (str): 'week' or 'month' to specify the unit of time aggregation.
+        """
+        # Constants for day of year for March 1 and May 31
+        march_1_doy = pd.Timestamp(year=2020, month=3, day=1).dayofyear - 1
+        may_31_doy = pd.Timestamp(year=2020, month=5, day=31).dayofyear - 1
+
+        if time_unit == 'Day':
+            # Convert date to day of year
+            df['approx_day'] = df['Day']
+        elif time_unit == 'Week':
+            # Approximate day of year from week number, considering March 1 as start of week 9
+            df['approx_day'] = (df['Week'] - 9) * 7 + march_1_doy
+        elif time_unit == 'Month':
+            # Approximate day by assigning mid-point to each month
+            month_to_midpoint_doy = {
+                3: pd.Timestamp(year=2020, month=3, day=15).dayofyear,
+                4: pd.Timestamp(year=2020, month=4, day=15).dayofyear,
+                5: pd.Timestamp(year=2020, month=5, day=15).dayofyear
+            }
+            df['approx_day'] = df['Month'].map(month_to_midpoint_doy)
+        elif time_unit == 'Year':
+            df['Date_continuous'] = df['Year'] + 0.5
+            return df
+        
+        # Normalize the day of year to a fraction between 0 and 1
+        df['Date_continuous'] = df['Year'] + ((df['approx_day'] - march_1_doy) / (may_31_doy - march_1_doy))
+
+        return df
+     
+    @staticmethod
+    def group_and_aggregate(df, group):
+        # Group along time domain and aggregate OLR
+        df = df.groupby(group)[['OLR', 'Z-score']].agg(['median'])
+        
+        # Reset index to format group labels as regular columns
+        df = df.reset_index()
+
+        # Apply continuous date transformation for plotting
+        if len(group) > 1:
+            df = Dataset.normalize_fractional_time(df, group[1])
+        else:
+            df = Dataset.normalize_fractional_time(df, group[0])
+        
+        # Drop NaNs
+        df.dropna(inplace=True)
+
+        # Rename OLR column back to OLR
+        df.rename(columns={'mean': 'OLR'}, inplace=True)
+        return df
+    
+    @staticmethod
+    def resample_data(df):
+        """
+        Resamples data to generate straigtforward weekly, monthly, and yearly averages.
         
         Parameters:
         - df (pd.DataFrame): DataFrame with a datetime index.
@@ -53,68 +115,122 @@ class Dataset:
         Returns:
         - Tuple containing DataFrames for weekly and monthly resampled data.
         """
-        df = DataPlotter.make_date_axis_continuous(self.df)
+        # Extracting year, month, and week number directly from the datetime index
         df['Year'] = df.index.year
-        df['Year-Month'] = df.index.strftime('%Y-%m')
+        df['Month'] = df.index.month
+        df['Week'] = df.index.isocalendar().week
+        df['Day'] = df.index.dayofyear
 
-        # Drop non-numeric columns before resampling
-        numeric_df = df.select_dtypes(include=[np.number])
-        
-        # Resample and aggregate only numeric columns
-        weekly_mean_df = numeric_df.resample('W').agg(['min', 'mean', 'max'])
-        monthly_mean_df = numeric_df.resample('M').agg(['min', 'mean', 'max'])
-        
-        # Apply continuous date transformation for plotting
-        weekly_mean_df = DataPlotter.make_date_axis_continuous(weekly_mean_df, number_of_days=0)
-        monthly_mean_df = DataPlotter.make_date_axis_continuous(monthly_mean_df, number_of_days=15)
+        # Calculate Z-score for all daily OLR measurements with respect to the long-term median and IQR
+        df = Dataset.robust_z_score(df)
 
-        # Optionally, drop NaNs to avoid gaps in the plot
-        weekly_mean_df.dropna(inplace=True)
-        monthly_mean_df.dropna(inplace=True)
+        # Calculate the z-score for all daily measurements with respect to the long-term average
+        daily_df = Dataset.group_and_aggregate(df, group=['Year', 'Day'])
+        weekly_df = Dataset.group_and_aggregate(df, group=['Year', 'Week'])
+        monthly_df = Dataset.group_and_aggregate(df, group=['Year', 'Month'])
+        yearly_df = Dataset.group_and_aggregate(df, group=['Year'])
 
-        return weekly_mean_df, monthly_mean_df
+        return daily_df, weekly_df, monthly_df, yearly_df
     
     @staticmethod
-    def weekday_averages(df):
-        # Assuming 'df' has a DateTime index
-        df['Weekday'] = df.index.day_name()  # Assign the weekday names
-        df['Year'] = df.index.year  # Capture the year
-        df['Month'] = df.index.month  # Capture the month
+    def restructure_data_weekdays(df):
+        """
+        Restructures data to generate more complicated temporal averages.
+        
+        Parameters:
+        - df (pd.DataFrame): DataFrame with a datetime index.
+        
+        Returns:
+        - Tuple containing DataFrames for weekly and monthly resampled data.
+        """
+        df = df.reset_index()
+        # Ensure 'Date' is a datetime type if not already
+        df['Date'] = pd.to_datetime(df['Date'])
+        df['Year'] = df['Date'].dt.year
+        df['Month'] = df['Date'].dt.month
+        df['Weekday'] = df['Date'].dt.weekday
 
-        # Convert 'Weekday' to an ordered categorical type
-        day_order = ['Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday', 'Sunday']
-        df['Weekday'] = pd.Categorical(df['Weekday'], categories=day_order, ordered=True)
-        # Now you can sort by 'Weekday' and it will use the logical order specified
-        df = df.sort_values(by='Weekday')
+        # Calculate median and IQR for each Month-Weekday bin across all years
+        grouped_stats = df.groupby(['Month', 'Weekday'])['OLR'].agg(['median', lambda x: x.quantile(0.75) - x.quantile(0.25)]).rename(columns={'<lambda_0>': 'IQR'}).reset_index()
 
-        # Group by Year, Month, and Weekday to calculate mean
-        grouped = df.groupby(['Year', 'Month', 'Weekday']).mean()
-        return grouped.reset_index()
+        # Merge the statistical data back to the original DataFrame to compute Z-scores
+        df = df.merge(grouped_stats, on=['Month', 'Weekday'])
 
+        # Calculate robust Z-scores
+        df['Z-score'] = (df['OLR'] - df['median']) / df['IQR']
+
+        # Group by Year, Month, and Weekday and calculate the mean or median OLR
+        grouped = df.groupby(['Year', 'Month', 'Weekday'])[['OLR', 'Z-score']].agg(['median']).reset_index()
+
+        return grouped
+    
     @staticmethod
-    def weekly_averages(df):
-        # Ensure the 'Date' column is in datetime format and set as the index
-        # Group by year and week number, then calculate the mean
-        df['Year'] = df.index.year
-        df['Week'] = df.index.isocalendar().week
-        weekly_avg = df.groupby(['Year', 'Week']).mean()
+    def restructure_data_weeks_in_month(df):
+        """
+        Restructures data to generate more complicated temporal averages.
+        
+        Parameters:
+        - df (pd.DataFrame): DataFrame with a datetime index.
+        
+        Returns:
+        - Tuple containing DataFrames for weekly and monthly resampled data.
+        """
+        df = df.reset_index()
+        # Ensure 'Date' is a datetime type if not already
+        df['Date'] = pd.to_datetime(df['Date'])
+        df['Year'] = df['Date'].dt.year
+        df['Month'] = df['Date'].dt.month
+        # df['Week'] = df['Date'].dt.isocalendar().week
 
-        # Calculate the overall weekly mean across all years
-        overall_weekly_mean = df.groupby('Week').mean()
+        df['Day'] = df['Date'].dt.day
+        df['Weekday'] = df['Date'].dt.weekday
+        df['Week'] = df.groupby(['Year', 'Month'])['Day'].transform(lambda x: ((x - 1) // 7) + 1)
 
-        # Compute anomalies by subtracting the overall weekly mean from each year's weekly data
-        for week in overall_weekly_mean.index:
-            weekly_avg.loc[weekly_avg.index.get_level_values('Week') == week] -= overall_weekly_mean.loc[week]
+        # Calculate median and IQR for each Month-Week bin across all years
+        grouped_stats = df.groupby(['Month'])['OLR'].agg(['median', lambda x: x.quantile(0.75) - x.quantile(0.25)]).rename(columns={'<lambda_0>': 'IQR'}).reset_index()
 
-        return weekly_avg
+        # Merge the statistical data back to the original DataFrame to compute Z-scores
+        df = df.merge(grouped_stats, on=['Month'])
 
+        # Calculate robust Z-scores
+        df['Z-score'] = (df['OLR'] - df['median']) / df['IQR']
+
+        # Group by Year, Month, and Week and calculate the mean or median OLR
+        grouped = df.groupby(['Year', 'Month', 'Week'])[['OLR', 'Z-score']].agg(['median']).reset_index()
+
+        return grouped
+    
     @staticmethod
-    def monthly_averages(df):
-        monthly_avg = df.resample('ME').mean()
-        monthly_avg['Year'] = monthly_avg.index.year
-        monthly_avg['Month'] = monthly_avg.index.month
-        year_month_avg = monthly_avg.groupby(['Year', 'Month']).mean()
-        return year_month_avg
+    def restructure_data_months_in_year(df):
+        """
+        Restructures data to generate more complicated temporal averages.
+        
+        Parameters:
+        - df (pd.DataFrame): DataFrame with a datetime index.
+        
+        Returns:
+        - Tuple containing DataFrames for weekly and monthly resampled data.
+        """
+        df = df.reset_index()
+        # Ensure 'Date' is a datetime type if not already
+        df['Date'] = pd.to_datetime(df['Date'])
+        df['Year'] = df['Date'].dt.year
+        df['Month'] = df['Date'].dt.month
+
+        # Calculate median and IQR for each Month-Week bin across all years
+        grouped_stats = df.groupby(['Month'])['OLR'].agg(['median', lambda x: x.quantile(0.75) - x.quantile(0.25)]).rename(columns={'<lambda_0>': 'IQR'}).reset_index()
+
+        # Merge the statistical data back to the original DataFrame to compute Z-scores
+        df = df.merge(grouped_stats, on=['Month'])
+
+        # Calculate robust Z-scores
+        df['Z-score'] = (df['OLR'] - df['median']) / df['IQR']
+
+        # Group by Year, Month, and Week and calculate the mean or median OLR
+        grouped = df.groupby(['Year', 'Month'])[['OLR', 'Z-score']].agg(['median']).reset_index()
+
+        return grouped
+    
     
 
 class DataPlotter:
@@ -122,7 +238,7 @@ class DataPlotter:
         self.dataset = dataset
         self.df = self.dataset.data
     
-    def add_grey_box(self, ax, df, plot_type):
+    def add_grey_box(self, ax, unique_years, plot_type):
         """
         Adds grey boxes to the plot for every other year.
 
@@ -130,9 +246,7 @@ class DataPlotter:
         - ax (matplotlib.axes.Axes): The axes object to add the grey boxes to.
         - df (pd.DataFrame): DataFrame with 'Year' column.
         """
-        unique_years = sorted(df['Year'].unique())
         for i, year in enumerate(unique_years):
-            
             if plot_type == 'violin':
                 if i % 2 == 0:
                     ax.axvspan(i-0.5, i+0.5, color='grey', alpha=0.2, zorder=0)
@@ -141,201 +255,142 @@ class DataPlotter:
                     ax.axvspan(year, year+1, color='grey', alpha=0.2, zorder=0)
         return ax
 
-    def plot_yearly_trend(self):
-        plt.figure(figsize=(12, 6))
-        sns.violinplot(x=self.dataset.data.index.year, y='OLR_mean', data=self.dataset.data)
-        plt.title('Yearly Violin Plot of Daily Average OLR')
-        plt.xlabel('Year')
-        plt.ylabel('Daily Average OLR')
-        plt.xticks(rotation=45)
-        plt.tight_layout()
-        plt.savefig(os.path.join(self.dataset.base_path, f"olr_yearly_trend.png"), bbox_inches='tight')
-        plt.close()
-
-    def plot_monthly_trend(self):
-        plt.figure(figsize=(12, 6))
-        sns.violinplot(x=self.dataset.data.index.month, y='OLR_mean', data=self.dataset.data)
-        plt.title('Yearly Violin Plot of Daily Average OLR')
-        plt.xlabel('Year')
-        plt.ylabel('Daily Average OLR')
-        plt.xticks(rotation=45)
-        plt.tight_layout()
-        plt.savefig(os.path.join(self.dataset.base_path, f"olr_monthly_trend.png"), bbox_inches='tight')
-        plt.close()
-
-
-    def plot_daily_trend(self):
-        plt.figure(figsize=(12, 6))
-        sns.violinplot(x=self.dataset.data.index.day, y='OLR_mean', data=self.dataset.data)
-        plt.title('Yearly Violin Plot of Daily Average OLR')
-        plt.xlabel('Year')
-        plt.ylabel('Daily Average OLR')
-        plt.xticks(rotation=45)
-        plt.tight_layout()
-        plt.savefig(os.path.join(self.dataset.base_path, f"olr_daily_trend.png"), bbox_inches='tight')
-        plt.close()
-
-    def plot_overall_trend(self, plot_type='violin'):
-        # Create a subplot layout
-        _, ax = plt.subplots(figsize=(12, 6), dpi=300)
-        
-        df = self.dataset.data
-
-        if plot_type == "violin":
-            # Create formatting inputs
-            xlabel = 'Year'
-
-            # Add 'Year' and 'Month'
-            df['Year'] = df.index.year
-            df['Month'] = df.index.month_name().str[:3]
-
-            # Violin Plot with Colors: visualises the distribution of data values for each spring month across years
-            sns.violinplot(x='Year', y='OLR_mean', hue='Month', data=df, ax=ax, palette="muted", split=False)
-
-            # Strip Plot: adds individual data points to the violin plot for detailed data visualization
-            sns.stripplot(x='Year', y='OLR_mean', hue='Month', data=df, ax=ax, palette='dark:k', size=3, jitter=False, dodge=True)
-
-            # Add grey box for visual separation of every other year for enhanced readability
-            ax = self.add_grey_box(ax, df, plot_type)
-
-            # Handling the legend to ensure clarity in distinguishing between different months
-            handles, labels = ax.get_legend_handles_labels()
-            ax.legend(handles[:3], labels[:3], title='Month')
-        elif plot_type == "line":
-            # Create formatting inputs
-            xlabel = 'Date'
-            
-            df = DataPlotter.make_date_axis_continuous(df)
-            df['Year'] = df.index.year
-            df['Year-Month'] = df.index.strftime('%Y-%m')
-
-            # Drop non-numeric columns before resampling
-            numeric_df = df.select_dtypes(include=[np.number])
-            # Resample and aggregate only numeric columns
-            weekly_mean_df = numeric_df.resample('W').agg(['min', 'mean', 'max'])
-            monthly_mean_df = numeric_df.resample('M').agg(['min', 'mean', 'max'])
-            # Fix time axis
-            weekly_mean_df = DataPlotter.make_date_axis_continuous(weekly_mean_df)
-            monthly_mean_df = DataPlotter.make_date_axis_continuous(monthly_mean_df, number_of_days=15)
-            # Drop NaNs (creates gaps between years to avoid unclear datarepresentation)
-            weekly_mean_df.dropna(inplace=False)
-            monthly_mean_df.dropna(inplace=False)
-
-            # Track legend entries
-            legend_entries = []
-
-            # Create colours 
-            palette = sns.color_palette(n_colors=2)
-    
-            # Scatter plot for daily measurements
-            ax.scatter(df['Year-Month-Day'], df['OLR_mean'], label=f'Daily OLR_mean', marker='.', s=1, color='black', alpha=0.75)
-
-            # Line plot for weekly mean
-            # weekly_color = np.clip(np.array(color) * 0.9, 0, 1)  # Darken the color
-            weekly_line = ax.plot(weekly_mean_df['Year-Month-Day'], weekly_mean_df['OLR_mean']['mean'], label=f'Weekly Mean OLR', ls='-', lw=1, color=palette[0])
-            
-            # Line plot for monthly mean
-            # monthly_color = np.clip(np.array(color) * 0.8, 0, 1)  # Darken the color further
-            monthly_line = ax.plot(monthly_mean_df['Year-Month-Day'], monthly_mean_df['OLR_mean']['mean'], label=f'Monthly Mean OLR', ls='-', lw=2, marker='o', markersize=4, color=palette[1])
-            
-            # Add legend entry for this column
-            legend_entries.append((weekly_line, monthly_line))
-
-            ax.set_xticks(self.dataset.data['Year'].unique())
-            # Add grey box for visual separation of every other year for enhanced readability
-            self.add_grey_box(ax, self.dataset.data, plot_type)
-
-        # Customizing the plot with titles and labels
-        ax.set_title(f"MAM Average OLR at Nadir")
-        ax.set_xlabel(xlabel)
-        ax.set_ylabel(r"OLR (mW m$^{{-2}})$")
-        # ax.set_ylim([0.16, 0.3])
-        ax.grid(axis='y', linestyle=':', color='k')
-        ax.tick_params(axis='both', labelsize=10)
-
-        plt.tight_layout()
-        plt.savefig(os.path.join(self.dataset.base_path, f"olr_trend_{plot_type}.png"), bbox_inches='tight', dpi=300)
-        plt.close()
-        
-    def plot_overall_trend_anomaly(self, plot_type='line'):
-        # Create formatting inputs
-        xlabel = 'Date'
-        # Create a subplot layout
-        _, ax = plt.subplots(figsize=(12, 6), dpi=300)
-        # Create colours 
-        palette = sns.color_palette(n_colors=2)
+    def plot_overall_trend(self, plot_type='absolute'):
+        # Plotting parameters
+        _, axes = plt.subplots(3, 1, figsize=(9, 9), dpi=300, sharex=True)
+        unique_years = sorted(self.df.index.year.unique())
+        palette = sns.color_palette(n_colors=3)
 
         # Get data
-        weekly_df, monthly_df = Dataset.prepare_and_resample_data()
+        daily_df, weekly_df, monthly_df, yearly_df = Dataset.resample_data(self.df)
 
-        # Scatter plot for daily measurements, lines for weekly and monthly
-        ax.scatter(self.df['Year-Month-Day'], self.df['OLR_mean'], label=f'Daily OLR_mean', marker='.', s=1, color='black', alpha=0.75)
-        ax.plot(weekly_df['Year-Month-Day'], weekly_df['OLR_mean']['mean'], label=f'Weekly Mean OLR', ls='-', lw=1, color=palette[0])
-        ax.plot(monthly_df['Year-Month-Day'], monthly_df['OLR_mean']['mean'], label=f'Monthly Mean OLR', ls='-', lw=2, marker='o', markersize=4, color=palette[1])
-        
-        # Add legend entry for this column
-        ax.legend()
-        # Add grey box for visual separation of every other year for enhanced readability
-        self.add_grey_box(ax, self.dataset.data, plot_type)
+        # Plot each trend in a separate subplot
+        axes[0].scatter(daily_df['Date_continuous'], daily_df['OLR'], label='Daily', marker='.', s=2, color='black', alpha=0.75)
+        axes[0].set_title("IASI Integrated Radiances: MAM")
 
-        # Customizing the plot with titles and labels
-        ax.set_title(f"MAM Average OLR at Nadir")
-        ax.set_xlabel(xlabel)
-        ax.set_ylabel(r"OLR (mW m$^{{-2}})$")
-        # ax.set_ylim([0.16, 0.3])
-        ax.set_xticks(self.dataset.data['Year'].unique())
-        ax.grid(axis='y', linestyle=':', color='k')
-        ax.tick_params(axis='both', labelsize=10)
+        axes[0].plot(weekly_df['Date_continuous'], weekly_df['OLR'], label='Weekly Mean', ls='-', lw=2, marker='o', markersize=4, color=palette[0])
+        # axes[0].set_xlabel('Year')
+        axes[0].set_ylabel(r"IIR $mW m^{-2}$")
+
+        axes[1].plot(monthly_df['Date_continuous'], monthly_df['OLR'], label='Monthly Mean', ls='-', lw=2, marker='o', markersize=4, color=palette[1])
+        # axes[1].set_xlabel('Month')
+        axes[1].set_ylabel(r"IIR $mW m^{-2}$")
+
+        axes[2].plot(yearly_df['Date_continuous'], yearly_df['OLR'], label='Yearly Mean', ls='-', lw=2, marker='o', markersize=4, color=palette[2])
+        axes[2].set_xlabel('Year')
+        axes[2].set_ylabel(r"IIR $mW m^{-2}$")
+
+        # Grey boxes, legends, and grid for each axis
+        for ax in axes:
+            self.add_grey_box(ax, unique_years, plot_type='line')
+            ax.legend(loc='lower right')
+            ax.grid(axis='y', linestyle=':', color='k')
+            ax.tick_params(axis='both', labelsize=10)
 
         plt.tight_layout()
         plt.savefig(os.path.join(self.dataset.base_path, f"olr_trend_{plot_type}.png"), bbox_inches='tight', dpi=300)
         plt.close()
 
+    def plot_temporal_trends_weekdays(self, plot_type='anomaly'):
+        # Plotting parameters
+        _, axes = plt.subplots(3, 1, figsize=(9, 9), dpi=300)
+        unique_years = sorted(self.df.index.year.unique())
+        palette = sns.color_palette(n_colors=len(unique_years))
+        axes = axes.flatten()
+        weekdays = ['Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat', 'Sun']
+        months = ['March', 'April', 'May']
 
-    def plot_weekday_averages(self):
-        df = Dataset.weekday_averages(self.df)
+        if plot_type == 'absolute':
+            quantity = 'OLR'
+        elif plot_type == 'anomaly':
+            quantity = 'Z-score'
 
-        g = sns.FacetGrid(df, col='Year', row='Month', hue='Weekday', height=3, aspect=2, margin_titles=True, palette='viridis')
-        g.map(sns.barplot, 'Weekday', 'OLR_mean')
-        g.add_legend()
-        g.set_axis_labels('Weekday', 'Average Value')
-        g.set_titles(col_template='Year: {col_name}', row_template='Month: {row_name}')
-        plt.xticks(rotation=45)
-        plt.show()
-
-    def plot_weekly_trends(self):
-        df = Dataset.weekly_averages(self.df)
+        # Get data
+        grouped = Dataset.restructure_data_weekdays(self.df)
         
-        plt.figure(figsize=(12, 6))
-        years = sorted(df.index.get_level_values('Year').unique())
-        for year in years:
-            # Select data for the current year and plot
-            year_data = df.xs(year, level='Year')
-            plt.plot(year_data.index, year_data['OLR_mean'], label=f'Year {year}', marker='o', linestyle='-')
+        # Plot each month in a subplot
+        for imonth, (month, ax) in enumerate(zip(months, axes)):
+            data = grouped[grouped['Month'] == imonth + 3]
+            for iyear, year in enumerate(data['Year'].unique()):
+                ax.plot(data[data['Year'] == year]['Weekday'], data[data['Year'] == year][quantity]['median'], ls='-', lw=2, marker='o', markersize=4, color=palette[iyear], label=str(year))
+            ax.set_title(month)
+            ax.set_xticks(range(7))
+            ax.set_xticklabels(weekdays)
+            ax.legend(title='Year', loc='right')
+            ax.grid(axis='y', linestyle=':', color='k')
+            ax.tick_params(axis='both', labelsize=10)
 
-        plt.title('Weekly Average Values for March, April, May Across Years')
-        plt.xlabel('Week Number')
-        plt.ylabel('Average Value')
-        plt.legend(title='Year')
-        plt.grid(True)
-        plt.show()
+        plt.tight_layout()
+        plt.savefig(os.path.join(self.dataset.base_path, f"olr_trend_weekdays_{plot_type}.png"), bbox_inches='tight', dpi=300)
+        plt.close()
+    
+    def plot_temporal_trends_weeks_in_month(self, plot_type='absolute'):
+        # Plotting parameters
+        _, axes = plt.subplots(3, 1, figsize=(9, 9), dpi=300)
+        unique_years = sorted(self.df.index.year.unique())
+        palette = sns.color_palette(n_colors=len(unique_years))
+        axes = axes.flatten()
+        days = [1, 2, 3, 4, 5]
+        months = ['March', 'April', 'May']
 
-    def plot_monthly_averages(self):
-        df = Dataset.monthly_averages(self.df)
-        df = df.reset_index()
-        pivot_df = df.pivot(index='Year', columns='Month', values='OLR_mean')
+        if plot_type == 'absolute':
+            quantity = 'OLR'
+        elif plot_type == 'anomaly':
+            quantity = 'Z-score'
 
-        plt.figure(figsize=(12, 6))
-        sns.heatmap(pivot_df, cmap='coolwarm', annot=True)
-        plt.title('Monthly Average Values Over Years')
-        plt.xlabel('Month')
-        plt.ylabel('Year')
-        plt.show()
+        # Get data
+        grouped = Dataset.restructure_data_weeks_in_month(self.df)
+        
+        # Plot each month in a subplot
+        for imonth, (month, ax) in enumerate(zip(months, axes)):
+            data = grouped[grouped['Month'] == imonth + 3]
+            for iyear, year in enumerate(data['Year'].unique()):
+                ax.plot(data[data['Year'] == year]['Week'], data[data['Year'] == year][quantity]['median'], ls='-', lw=2, marker='o', markersize=4, color=palette[iyear], label=str(year))
+            ax.set_title(month)
+            ax.set_xticks(days)
+            ax.set_xticklabels(days)
+            ax.legend(title='Year', loc='right')
+            ax.grid(axis='y', linestyle=':', color='k')
+            ax.tick_params(axis='both', labelsize=10)
+            if imonth == 2:
+                ax.set_xlabel('Week Number')
 
-    def decompose_time_series(self, freq=12):
-        decomposition = seasonal_decompose(self.df['OLR_mean'], model='additive', period=freq)
-        decomposition.plot()
-        plt.show()
+        plt.tight_layout()
+        plt.savefig(os.path.join(self.dataset.base_path, f"olr_trend_weeks_in_month_{plot_type}.png"), bbox_inches='tight', dpi=300)
+        plt.close()
+
+    def plot_temporal_trends_months_in_year(self, plot_type='absolute'):
+        # Plotting parameters
+        _, axes = plt.subplots(1, 1, figsize=(9, 3), dpi=300)
+        unique_years = sorted(self.df.index.year.unique())
+        palette = sns.color_palette(n_colors=len(unique_years))
+        months = ['March', 'April', 'May']
+
+        if plot_type == 'absolute':
+            quantity = 'OLR'
+        elif plot_type == 'anomaly':
+            quantity = 'Z-score'
+
+        # Get data
+        grouped = Dataset.restructure_data_months_in_year(self.df)
+
+        # Plot each month in a subplot
+        for iyear, year in enumerate(grouped['Year'].unique()):
+            data = grouped[grouped['Year'] == year]
+            print(data.head())
+            axes.plot(data[data['Year'] == year]['Month'], data[data['Year'] == year][quantity]['median'], ls='-', lw=2, marker='o', markersize=4, color=palette[iyear], label=str(year))
+            axes.set_title('IIR')
+            axes.set_xticks([3, 4, 5])
+            axes.set_xticklabels(months)
+            axes.legend(title='Year', loc='right')
+            axes.grid(axis='y', linestyle=':', color='k')
+            axes.tick_params(axis='both', labelsize=10)
+            axes.set_xlabel('Month')
+
+        plt.tight_layout()
+        plt.savefig(os.path.join(self.dataset.base_path, f"olr_trend_months_in_year_{plot_type}.png"), bbox_inches='tight', dpi=300)
+        plt.close()
+
 
 def main():
     # base_path = "G://My Drive//Research//Postdoc_2_CNRS_LATMOS//data//machine_learning//"
@@ -345,17 +400,11 @@ def main():
     dataset = Dataset(base_path, start_date, end_date)
     plotter = DataPlotter(dataset)
 
-    
-    # plotter.plot_yearly_trend()
-    # plotter.plot_monthly_trend()
-    # plotter.plot_daily_trend()
     # plotter.plot_overall_trend()
-    # plotter.plot_overall_trend_anomaly()
+    # plotter.plot_temporal_trends_weekdays()
+    plotter.plot_temporal_trends_weeks_in_month() 
+    plotter.plot_temporal_trends_months_in_year() 
     
-    # plotter.plot_weekday_averages()
-    plotter.plot_weekly_trends()
-    # plotter.plot_monthly_averages()
-    # plotter.decompose_time_series()
 
 if __name__ == "__main__":
     main()
