@@ -220,7 +220,7 @@ y = combined_data['OLR_mean']
 # columns = X.columns#['cc_200', 'cc_300']
 # X_fixed = fix_outliers(X, columns)
 
-plot_era5_fields_by_olr_quintiles(X, y)
+# plot_era5_fields_by_olr_quintiles(X, y)
 
 # preprocess_and_fit(X, y)
 
