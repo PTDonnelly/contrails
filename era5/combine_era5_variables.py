@@ -40,8 +40,8 @@ def custom_sort(col):
     # Return a tuple that first sorts by level, then by variable name
     return (variable, level)
 
-def pivot_and_save_daily_data(daily_data, output_dir_path):
-    """Pivots data to have variables as columns and saves the daily data to CSV files."""
+def save_daily_data(daily_data, output_dir_path):
+    """Saves the daily data to CSV files."""
     for date_str, dfs in tqdm(daily_data.items()):
         # Initialize the combined DataFrame with the first DataFrame in the list
         combined_df = dfs[0]
@@ -64,7 +64,7 @@ def process_era5_files(processed_files_dir, output_dir):
     output_dir_path = Path(output_dir)
     output_dir_path.mkdir(parents=True, exist_ok=True)
     daily_data = gather_daily_data(processed_files_dir)
-    pivot_and_save_daily_data(daily_data, output_dir_path)
+    save_daily_data(daily_data, output_dir_path)
 
 # Example usage
 processed_files_dir = '/data/pdonnelly/era5/processed_files'
