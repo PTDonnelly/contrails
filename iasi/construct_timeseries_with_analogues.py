@@ -54,12 +54,8 @@ def extract_analogues_and_correlations(dates_file, cor_file):
     date_columns = pd.DataFrame(sorted_dates, columns=[f'date_{i}' for i in range(dates.shape[1])])
     cor_columns = pd.DataFrame(sorted_cors, columns=[f'cor_{i}' for i in range(cor.shape[1])])
 
-    combined_df = pd.concat([pd.DataFrame({'lat_bin': lat_bins, 'lon_bin': lon_bins}), date_columns, cor_columns], axis=1)
-
-    # # Remove duplicate boundary point
-    # combined_df = combined_df[combined_df['lon_bin'] != 0]
-
-    return combined_df
+    combined_analogues_df = pd.concat([pd.DataFrame({'lat_bin': lat_bins, 'lon_bin': lon_bins}), date_columns, cor_columns], axis=1)
+    return combined_analogues_df
 
 def remove_duplicates_from_data(analogue_df, analogue_file_path, best_date):
     # Convert the Date column to datetime format for comparison
@@ -154,7 +150,7 @@ def construct_daily_mean(target_date, iasi_path, combined_df):
     if os.path.exists(iasi_file_path):
         iasi_df = pd.read_csv(iasi_file_path, sep="\t", engine='python')
     else:
-        return None
+        return None, None
     iasi_df = remove_duplicates_from_data(iasi_df, iasi_file_path, target_date)
     iasi_df = downscale_map(iasi_df)
 
@@ -182,12 +178,37 @@ def construct_daily_mean(target_date, iasi_path, combined_df):
                         reconstructed_iasi_df = pd.concat([reconstructed_iasi_df, matched_df])
                         break  # Exit the loop once a valid file is found
     
-    # Plot for posterity
-    plot_maps(iasi_path, iasi_df, reconstructed_iasi_df, target_date)
+    # # Plot for posterity
+    # plot_maps(iasi_path, iasi_df, reconstructed_iasi_df, target_date)
     
-    # Calculate the average OLR for the reconstructed data
-    reconstructed_daily_average = reconstructed_iasi_df['OLR_mean'].mean()
-    return reconstructed_daily_average
+    # Calculate the average OLR for the original and reconstructed data
+    reconstructed_mean = reconstructed_iasi_df['OLR_mean'].mean()
+    reconstructed_std = reconstructed_iasi_df['OLR_mean'].std()
+    return reconstructed_mean, reconstructed_std
+
+def calculate_daily_average(era5_iasi_df):
+    era5_iasi_df['Date'] = pd.to_datetime(era5_iasi_df['Date'])
+    daily_avg_df = era5_iasi_df.groupby('Date')['OLR_mean'].agg(['mean', 'std']).reset_index()
+    daily_avg_df.rename(columns={'mean': 'OLR_mean_original', 'std': 'OLR_std_original'}, inplace=True)
+    return daily_avg_df
+
+def combine_daily_averages(era5_iasi_combined_df, reconstructed_daily_average_df):
+    # Merge the new daily averages into the existing DataFrame based on the Date column
+    era5_iasi_combined_df['Date'] = pd.to_datetime(era5_iasi_combined_df['Date'])
+    reconstructed_daily_average_df['Date'] = pd.to_datetime(reconstructed_daily_average_df['Date'])
+    
+    # Duplicate the OLR_mean and std column
+    era5_iasi_combined_df['OLR_mean_analogue'] = era5_iasi_combined_df['OLR_mean_original']
+    era5_iasi_combined_df['OLR_std_analogue'] = era5_iasi_combined_df['OLR_std_original']
+    
+    # Identify the dates that need updating
+    dates_to_update = reconstructed_daily_average_df['Date']
+
+    # Update only the rows that need changing in the duplicated column
+    mask = era5_iasi_combined_df['Date'].isin(dates_to_update)
+    era5_iasi_combined_df.loc[mask, 'OLR_mean_analogue'] = reconstructed_daily_average_df.set_index('Date').loc[era5_iasi_combined_df.loc[mask, 'Date']]['OLR_mean_analogue'].values
+    era5_iasi_combined_df.loc[mask, 'OLR_std_analogue'] = reconstructed_daily_average_df.set_index('Date').loc[era5_iasi_combined_df.loc[mask, 'Date']]['OLR_std_analogue'].values
+    return era5_iasi_combined_df
 
 def main():
     # Base paths for data
@@ -202,7 +223,7 @@ def main():
     days = spring_2020_dates.day
 
     # Construct the new time series
-    daily_average_list = []
+    reconstructed_daily_average_list = []
 
     for year, month, day in zip(years, months, days):
         target_date = f"{year}-{month:02d}-{day:02d}"
@@ -212,29 +233,24 @@ def main():
 
         # Check if both files exist
         if os.path.exists(dates_file_path) and os.path.exists(cor_file_path):
-            combined_df = extract_analogues_and_correlations(dates_file_path, cor_file_path)
-            daily_average = construct_daily_mean(target_date, iasi_path, combined_df)
-            daily_average_list.append({'Date': target_date, 'OLR_mean': daily_average})
-    
-    # Convert daily_average_list to a DataFrame and save
-    daily_average_df = pd.DataFrame(daily_average_list)
+            combined_analogues_df = extract_analogues_and_correlations(dates_file_path, cor_file_path)
+            reconstructed_mean, reconstructed_std = construct_daily_mean(target_date, iasi_path, combined_analogues_df)
+            if reconstructed_mean and reconstructed_std:
+                reconstructed_daily_average_list.append({'Date': target_date,
+                                        'OLR_mean_analogue': reconstructed_mean, 'OLR_std_analogue': reconstructed_std})
+    # Convert reconstructed_daily_average_list to a DataFrame
+    reconstructed_daily_average_df = pd.DataFrame(reconstructed_daily_average_list)
 
     # Read in the era5_iasi_combined file
-    era5_iasi_combined_df = pd.read_csv(os.path.join(output_path, "era5_iasi_combined.csv"), sep='\t')
+    era5_iasi_df = pd.read_csv(os.path.join(output_path, "era5_iasi_combined.csv"), sep='\t')
+    # Calculate daily average of OLR_mean column
+    original_daily_average_df = calculate_daily_average(era5_iasi_df)
 
-    # Merge the new daily averages into the existing DataFrame based on the Date column
-    era5_iasi_combined_df['Date'] = pd.to_datetime(era5_iasi_combined_df['Date'])
-    daily_average_df['Date'] = pd.to_datetime(daily_average_df['Date'])
-    
-    # Identify the dates that need updating
-    dates_to_update = daily_average_df['Date']
-
-    # Update only the rows that need changing
-    mask = era5_iasi_combined_df['Date'].isin(dates_to_update)
-    era5_iasi_combined_df.loc[mask, 'OLR_mean_analogue'] = era5_iasi_combined_df.loc[mask, 'Date'].map(daily_average_df.set_index('Date')['OLR_mean'])
+    # Create daily average of all original data
+    era5_iasi_analogue_df = combine_daily_averages(original_daily_average_df, reconstructed_daily_average_df)
 
     # Save the updated DataFrame to a new file
-    era5_iasi_combined_df.to_csv(os.path.join(output_path, "era5_iasi_combined_analogue.csv"), sep='\t', index=False)
+    era5_iasi_analogue_df.to_csv(os.path.join(output_path, "era5_iasi_daily_real_with_analogue.csv"), sep='\t', index=False)
 
 if __name__ == "__main__":
     main()

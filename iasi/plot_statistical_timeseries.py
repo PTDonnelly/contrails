@@ -17,25 +17,32 @@ class Dataset:
         self.load_and_process_data()
 
     def load_and_process_data(self):
-        daily_averages = []
-        current_date = self.start_date
-        while current_date <= self.end_date:
-            year = current_date.strftime('%Y')
-            month = current_date.strftime('%m')
-            day = current_date.strftime('%d')
+        if "binned_olr" in str(self.base_path):
+            daily_averages = []
+            current_date = self.start_date
+            while current_date <= self.end_date:
+                year = current_date.strftime('%Y')
+                month = current_date.strftime('%m')
+                day = current_date.strftime('%d')
 
-            file_path = self.base_path / f"{year}/{month}/{day}/spectra_and_cloud_products_binned.csv"
-            if file_path.exists():
-                df = pd.read_csv(file_path, sep='\t')
-                df['Date'] = pd.to_datetime(df['Date'])
-                daily_average = df[['OLR_mean']].mean()
-                daily_average['Date'] = current_date
-                daily_averages.append(daily_average)
-            current_date += timedelta(days=1)
-        
-        self.data = pd.DataFrame(daily_averages)
-        self.data.set_index('Date', inplace=True)
-        self.data.rename(columns={'OLR_mean': 'OLR'}, inplace=True)
+                file_path = self.base_path / f"{year}/{month}/{day}/spectra_and_cloud_products_binned_analogue.csv"
+                if file_path.exists():
+                    df = pd.read_csv(file_path, sep='\t')
+                    df['Date'] = pd.to_datetime(df['Date'])
+                    daily_average = df[['OLR_mean', 'OLR_mean_analogue']].mean()
+                    daily_average['Date'] = current_date
+                    daily_averages.append(daily_average)
+                current_date += timedelta(days=1)
+            
+            self.data = pd.DataFrame(daily_averages)
+            self.data.set_index('Date', inplace=True)
+            self.data.rename(columns={'OLR_mean': 'OLR', 'OLR_analogue': 'OLR_analogue'}, inplace=True)
+        elif "machine_learning" in str(self.base_path):
+            # Read in the era5_iasi_combined file
+            self.data = pd.read_csv(os.path.join(self.base_path, "era5_iasi_daily_real_with_analogue.csv"), sep='\t')
+            self.data['Date'] = pd.to_datetime(self.data['Date'])
+            self.data.set_index('Date', inplace=True)
+            self.data.rename(columns={'OLR_mean_original': 'OLR', 'OLR_std_original': 'OLR_error'}, inplace=True)
         return
 
     @staticmethod
@@ -393,17 +400,17 @@ class DataPlotter:
 
 
 def main():
-    # base_path = "G://My Drive//Research//Postdoc_2_CNRS_LATMOS//data//machine_learning//"
-    base_path = "G:\\My Drive\\Research\\Postdoc_2_CNRS_LATMOS\\data\\iasi\\binned_olr\\"
+    base_path = "G://My Drive//Research//Postdoc_2_CNRS_LATMOS//data//machine_learning//"
+    # base_path = "G:\\My Drive\\Research\\Postdoc_2_CNRS_LATMOS\\data\\iasi\\binned_olr\\"
     start_date = "2018-03-01"
     end_date = "2023-05-31"
     dataset = Dataset(base_path, start_date, end_date)
     plotter = DataPlotter(dataset)
 
-    # plotter.plot_overall_trend()
-    # plotter.plot_temporal_trends_weekdays()
-    plotter.plot_temporal_trends_weeks_in_month() 
-    plotter.plot_temporal_trends_months_in_year() 
+    plotter.plot_overall_trend()
+    # # plotter.plot_temporal_trends_weekdays()
+    # plotter.plot_temporal_trends_weeks_in_month() 
+    # plotter.plot_temporal_trends_months_in_year() 
     
 
 if __name__ == "__main__":
