@@ -93,7 +93,7 @@ class Dataset:
     @staticmethod
     def group_and_aggregate(df, group):
         # Group along time domain and aggregate OLR
-        df = df.groupby(group)[['OLR', 'Z-score']].agg(['median'])
+        df = df.groupby(group)[['OLR', 'OLR_mean_analogue', 'Z-score']].agg(['median'])
         
         # Reset index to format group labels as regular columns
         df = df.reset_index()
@@ -272,9 +272,11 @@ class DataPlotter:
         daily_df, weekly_df, monthly_df, yearly_df = Dataset.resample_data(self.df)
 
         # Plot each trend in a separate subplot
+        axes[0].scatter(daily_df['Date_continuous'], daily_df['OLR_mean_analogue'], label='Daily (analogue)', marker='.', s=2, color='red', alpha=0.75)
         axes[0].scatter(daily_df['Date_continuous'], daily_df['OLR'], label='Daily', marker='.', s=2, color='black', alpha=0.75)
         axes[0].set_title("IASI Integrated Radiances: MAM")
 
+        axes[0].plot(weekly_df['Date_continuous'], weekly_df['OLR_mean_analogue'], label='Weekly Mean (analogue)', ls='-', lw=2, marker='o', markersize=4, color='red')
         axes[0].plot(weekly_df['Date_continuous'], weekly_df['OLR'], label='Weekly Mean', ls='-', lw=2, marker='o', markersize=4, color=palette[0])
         # axes[0].set_xlabel('Year')
         axes[0].set_ylabel(r"IIR $mW m^{-2}$")
