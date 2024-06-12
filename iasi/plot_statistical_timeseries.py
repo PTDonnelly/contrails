@@ -271,6 +271,20 @@ class DataPlotter:
         # Get data
         daily_df, weekly_df, monthly_df, yearly_df = Dataset.resample_data(self.df)
 
+        # Create a subset where the columns are not equal
+        subset_df = daily_df[daily_df['OLR_mean_analogue', 'median'] != daily_df['OLR', 'median']]
+
+        # Store the columns in a variable
+        olr_difference_subset = subset_df[['OLR_mean_analogue', 'OLR']]
+        olr_difference_subset[('Ratio', '')] = (100 * (olr_difference_subset[('OLR', 'median')] / olr_difference_subset[('OLR_mean_analogue', 'median')])) - 100
+        olr_difference_subset[('Mean', '')] = np.mean(olr_difference_subset[('Ratio', '')])
+        olr_difference_subset[('Std', '')] = np.std(olr_difference_subset[('Ratio', '')])
+
+        print(olr_difference_subset)
+        
+        # exit()
+
+
         # Plot each trend in a separate subplot
         axes[0].scatter(daily_df['Date_continuous'], daily_df['OLR_mean_analogue'], label='Daily (analogue)', marker='.', s=2, color='red', alpha=0.75)
         axes[0].scatter(daily_df['Date_continuous'], daily_df['OLR'], label='Daily', marker='.', s=2, color='black', alpha=0.75)
