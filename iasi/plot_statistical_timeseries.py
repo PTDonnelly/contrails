@@ -1,3 +1,4 @@
+from calendar import month, week
 import os
 import numpy as np
 import pandas as pd
@@ -39,7 +40,7 @@ class Dataset:
             self.data.rename(columns={'OLR_mean': 'OLR', 'OLR_analogue': 'OLR_analogue'}, inplace=True)
         elif "machine_learning" in str(self.base_path):
             # Read in the era5_iasi_combined file
-            self.data = pd.read_csv(os.path.join(self.base_path, "era5_iasi_daily_real_with_analogue.csv"), sep='\t')
+            self.data = pd.read_csv(os.path.join(self.base_path, "all_iasi_daily_real_with_analogue.csv"), sep='\t')
             self.data['Date'] = pd.to_datetime(self.data['Date'])
             self.data.set_index('Date', inplace=True)
             self.data.rename(columns={'OLR_mean_original': 'OLR', 'OLR_std_original': 'OLR_error'}, inplace=True)
@@ -51,8 +52,9 @@ class Dataset:
         median = df['OLR'].median()
         iqr = df['OLR'].quantile(0.75) - df['OLR'].quantile(0.25)
         
-        # Calculate the robust Z-score
+        # Calculate the robust Z-score, store it and IQR
         df['Z-score'] = (df['OLR'] - median) / iqr
+        df['IQR'] = iqr
         return df
 
     @staticmethod
@@ -93,7 +95,7 @@ class Dataset:
     @staticmethod
     def group_and_aggregate(df, group):
         # Group along time domain and aggregate OLR
-        df = df.groupby(group)[['OLR', 'OLR_mean_analogue', 'Z-score']].agg(['median'])
+        df = df.groupby(group)[['OLR', 'OLR_mean_analogue', 'Z-score', 'IQR']].agg(['median'])
         
         # Reset index to format group labels as regular columns
         df = df.reset_index()
@@ -136,7 +138,6 @@ class Dataset:
         weekly_df = Dataset.group_and_aggregate(df, group=['Year', 'Week'])
         monthly_df = Dataset.group_and_aggregate(df, group=['Year', 'Month'])
         yearly_df = Dataset.group_and_aggregate(df, group=['Year'])
-
         return daily_df, weekly_df, monthly_df, yearly_df
     
     @staticmethod
@@ -262,53 +263,95 @@ class DataPlotter:
                     ax.axvspan(year, year+1, color='grey', alpha=0.2, zorder=0)
         return ax
 
-    def plot_overall_trend(self, plot_type='absolute'):
-        # Plotting parameters
-        _, axes = plt.subplots(3, 1, figsize=(9, 9), dpi=300, sharex=True)
-        unique_years = sorted(self.df.index.year.unique())
-        palette = sns.color_palette(n_colors=3)
-
-        # Get data
-        daily_df, weekly_df, monthly_df, yearly_df = Dataset.resample_data(self.df)
-
+    def get_statistics_on_olr_difference(self, daily_df):
         # Create a subset where the columns are not equal
         subset_df = daily_df[daily_df['OLR_mean_analogue', 'median'] != daily_df['OLR', 'median']]
-
         # Store the columns in a variable
         olr_difference_subset = subset_df[['OLR_mean_analogue', 'OLR']]
         olr_difference_subset[('Ratio', '')] = (100 * (olr_difference_subset[('OLR', 'median')] / olr_difference_subset[('OLR_mean_analogue', 'median')])) - 100
         olr_difference_subset[('Mean', '')] = np.mean(olr_difference_subset[('Ratio', '')])
         olr_difference_subset[('Std', '')] = np.std(olr_difference_subset[('Ratio', '')])
+        # Separate data for March and April assuming 'Day' column represents day of the year
+        # and that March is day 60-90, April is day 91-120 (example day ranges)
+        march_df = olr_difference_subset[(subset_df[('Day', '')] >= 76) & (subset_df[('Day', '')] <= 90)]
+        april_df = olr_difference_subset[(subset_df[('Day', '')] >= 91) & (subset_df[('Day', '')] <= 104)]
+        # Calculate mean and standard deviation for March
+        march_mean = np.mean(march_df[('Ratio', '')])
+        march_std = np.std(march_df[('Ratio', '')])
+        # Calculate mean and standard deviation for April
+        april_mean = np.mean(april_df[('Ratio', '')])
+        april_std = np.std(april_df[('Ratio', '')])
+        # Adding the mean and standard deviation columns to the original subset
+        olr_difference_subset[('March_Mean', '')] = march_mean
+        olr_difference_subset[('March_Std', '')] = march_std
+        olr_difference_subset[('April_Mean', '')] = april_mean
+        olr_difference_subset[('April_Std', '')] = april_std
 
-        print(olr_difference_subset)
-        
-        # exit()
+    def plot_overall_trend(self, plot_type='absolute'):
+        # Plotting parameters
+        _, axes = plt.subplots(2, 1, figsize=(9, 6), dpi=300, sharex=True)
+        unique_years = sorted(self.df.index.year.unique())
+        palette = sns.color_palette(n_colors=3)
 
+        # Convert start_date and end_date to datetime objects
+        start_date = self.dataset.start_date
+        end_date = self.dataset.end_date
+        # Filter the DataFrame to only include rows within the specified date range
+        filtered_df = self.df[(self.df.index >= start_date) & (self.df.index <= end_date)]
+
+        # Convert start_date and end_date to integers representing the year
+        start_year = int(start_date.strftime('%Y'))
+        end_year = int(end_date.strftime('%Y'))
+        # Get unique years from the filtered DataFrame and filter them to only include years within the range
+        unique_years = sorted(filtered_df.index.year.unique())
+        unique_years = [year for year in unique_years if start_year <= year <= end_year]
+
+        # Get data
+        daily_df, weekly_df, monthly_df, yearly_df = Dataset.resample_data(filtered_df)
+        self.get_statistics_on_olr_difference(daily_df)
 
         # Plot each trend in a separate subplot
-        axes[0].scatter(daily_df['Date_continuous'], daily_df['OLR_mean_analogue'], label='Daily (analogue)', marker='.', s=2, color='red', alpha=0.75)
+        # axes[0].scatter(daily_df['Date_continuous'], daily_df['OLR_mean_analogue'], label='Daily (analogue)', marker='.', s=2, color='red', alpha=0.75)
         axes[0].scatter(daily_df['Date_continuous'], daily_df['OLR'], label='Daily', marker='.', s=2, color='black', alpha=0.75)
-        axes[0].set_title("IASI Integrated Radiances: MAM")
+        axes[0].set_title("IASI Integrated Radiances: MAM", fontsize=20)
+        ymin, ymax = 0.3, 0.5
+        axes[0].set_ylim([ymin, ymax])
+        axes[0].set_yticks(np.arange(ymin, ymax + 0.0001, (ymax-ymin)/4))
 
-        axes[0].plot(weekly_df['Date_continuous'], weekly_df['OLR_mean_analogue'], label='Weekly Mean (analogue)', ls='-', lw=2, marker='o', markersize=4, color='red')
+        axes[0].plot(weekly_df['Date_continuous'], weekly_df['OLR_mean_analogue'], label='Weekly Mean (counterfactual)', ls='-', lw=2, marker='o', markersize=4, color='red')
         axes[0].plot(weekly_df['Date_continuous'], weekly_df['OLR'], label='Weekly Mean', ls='-', lw=2, marker='o', markersize=4, color=palette[0])
-        # axes[0].set_xlabel('Year')
-        axes[0].set_ylabel(r"IIR $mW m^{-2}$")
+        axes[0].set_ylabel(r"IIR $W m^{-2}$", fontsize=14)
 
-        axes[1].plot(monthly_df['Date_continuous'], monthly_df['OLR'], label='Monthly Mean', ls='-', lw=2, marker='o', markersize=4, color=palette[1])
-        # axes[1].set_xlabel('Month')
-        axes[1].set_ylabel(r"IIR $mW m^{-2}$")
+        axes[1].plot(monthly_df['Date_continuous'], monthly_df['OLR_mean_analogue'], label='Monthly Mean (counterfactual)', ls='-', lw=2, marker='o', markersize=4, color='red')
+        axes[1].plot(monthly_df['Date_continuous'], monthly_df['OLR'], label='Monthly Mean', ls='-', lw=2, marker='o', markersize=4, color=palette[2])
+        axes[1].fill_between(monthly_df['Date_continuous'],
+                             monthly_df['OLR']['median'] - monthly_df['IQR']['median'],
+                             monthly_df['OLR']['median'] + monthly_df['IQR']['median'],
+                             color=palette[2], alpha=0.2, label='IQR')
+        axes[1].set_ylabel(r"IIR $W m^{-2}$", fontsize=14)
+        ymin, ymax = 0.34, 0.44
+        axes[1].set_ylim([ymin, ymax])
+        axes[1].set_yticks(np.arange(ymin, ymax + 0.0001, (ymax-ymin)/5))
 
-        axes[2].plot(yearly_df['Date_continuous'], yearly_df['OLR'], label='Yearly Mean', ls='-', lw=2, marker='o', markersize=4, color=palette[2])
-        axes[2].set_xlabel('Year')
-        axes[2].set_ylabel(r"IIR $mW m^{-2}$")
+        # axes[2].plot(yearly_df['Date_continuous'], yearly_df['OLR_mean_analogue'], label='Yearly Mean (analogue)', ls='-', lw=2, marker='o', markersize=4, color='red')
+        # axes[2].plot(yearly_df['Date_continuous'], yearly_df['OLR'], label='Yearly Mean', ls='-', lw=2, marker='o', markersize=4, color=palette[2])
+        # axes[2].fill_between(yearly_df['Date_continuous'],
+        #                      yearly_df['OLR']['median'] - yearly_df['IQR']['median'],
+        #                      yearly_df['OLR']['median'] + yearly_df['IQR']['median'],
+        #                      color=palette[2], alpha=0.2, label='IQR')
+        axes[1].set_xlabel('Year', fontsize=14)
+        axes[1].set_ylabel(r"IIR $W m^{-2}$", fontsize=14)
+        ymin, ymax = 0.34, 0.44
+        axes[1].set_ylim([ymin, ymax])
+        axes[1].set_yticks(np.arange(ymin, ymax + 0.0001, (ymax-ymin)/5))
 
         # Grey boxes, legends, and grid for each axis
         for ax in axes:
             self.add_grey_box(ax, unique_years, plot_type='line')
+            ax.set_xlim([unique_years[0], unique_years[-1]])
             ax.legend(loc='lower right')
             ax.grid(axis='y', linestyle=':', color='k')
-            ax.tick_params(axis='both', labelsize=10)
+            ax.tick_params(axis='both', labelsize=14)
 
         plt.tight_layout()
         plt.savefig(os.path.join(self.dataset.base_path, f"olr_trend_{plot_type}.png"), bbox_inches='tight', dpi=300)
@@ -384,9 +427,24 @@ class DataPlotter:
 
     def plot_temporal_trends_months_in_year(self, plot_type='absolute'):
         # Plotting parameters
-        _, axes = plt.subplots(1, 1, figsize=(9, 3), dpi=300)
+        # Plotting parameters
+        _, axes = plt.subplots(3, 1, figsize=(9, 9), dpi=300, sharex=True)
         unique_years = sorted(self.df.index.year.unique())
-        palette = sns.color_palette(n_colors=len(unique_years))
+        palette = sns.color_palette(n_colors=3)
+
+        # Convert start_date and end_date to datetime objects
+        start_date = self.dataset.start_date
+        end_date = self.dataset.end_date
+        # Filter the DataFrame to only include rows within the specified date range
+        filtered_df = self.df[(self.df.index >= start_date) & (self.df.index <= end_date)]
+
+        # Convert start_date and end_date to integers representing the year
+        start_year = int(start_date.strftime('%Y'))
+        end_year = int(end_date.strftime('%Y'))
+        # Get unique years from the filtered DataFrame and filter them to only include years within the range
+        unique_years = sorted(filtered_df.index.year.unique())
+        unique_years = [year for year in unique_years if start_year <= year <= end_year]
+
         months = ['March', 'April', 'May']
 
         if plot_type == 'absolute':
@@ -418,7 +476,7 @@ class DataPlotter:
 def main():
     base_path = "G://My Drive//Research//Postdoc_2_CNRS_LATMOS//data//machine_learning//"
     # base_path = "G:\\My Drive\\Research\\Postdoc_2_CNRS_LATMOS\\data\\iasi\\binned_olr\\"
-    start_date = "2018-03-01"
+    start_date = "2014-03-01"
     end_date = "2023-05-31"
     dataset = Dataset(base_path, start_date, end_date)
     plotter = DataPlotter(dataset)

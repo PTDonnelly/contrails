@@ -242,7 +242,7 @@ def main():
     reconstructed_daily_average_df = pd.DataFrame(reconstructed_daily_average_list)
 
     # Read in the era5_iasi_combined file
-    era5_iasi_df = pd.read_csv(os.path.join(output_path, "era5_iasi_combined.csv"), sep='\t')
+    era5_iasi_df = pd.read_csv(os.path.join(output_path, "all_iasi_combined.csv"), sep='\t')
     # Calculate daily average of OLR_mean column
     original_daily_average_df = calculate_daily_average(era5_iasi_df)
 
@@ -250,7 +250,7 @@ def main():
     era5_iasi_analogue_df = combine_daily_averages(original_daily_average_df, reconstructed_daily_average_df)
 
     # Save the updated DataFrame to a new file
-    era5_iasi_analogue_df.to_csv(os.path.join(output_path, "era5_iasi_daily_real_with_analogue.csv"), sep='\t', index=False)
+    era5_iasi_analogue_df.to_csv(os.path.join(output_path, "all_iasi_daily_real_with_analogue.csv"), sep='\t', index=False)
 
 if __name__ == "__main__":
     main()
